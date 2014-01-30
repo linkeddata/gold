@@ -10,7 +10,7 @@ var (
 <script>
 jQuery.ajaxPrefilter(function(options) {
     if (options.crossDomain) {
-        options.url = "/_proxy?uri=" + encodeURIComponent(options.url);
+        options.url = "https://data.fm/proxy?uri=" + encodeURIComponent(options.url);
     }
 });
 jQuery(document).ready(function() {
