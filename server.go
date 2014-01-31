@@ -13,8 +13,9 @@ import (
 )
 
 var (
-	debug = flag.Bool("debug", false, "output extra logging")
-	root  = flag.String("root", "/tmp", "path to file storage root")
+	debug  = flag.Bool("debug", false, "output extra logging")
+	root   = flag.String("root", ".", "path to file storage root")
+	stream = flag.Bool("stream", false, "stream responses (experimental)")
 
 	methodsAll = []string{
 		"GET", "PUT", "POST", "OPTIONS", "HEAD", "MKCOL", "DELETE", "PATCH",
@@ -61,7 +62,8 @@ type Handler struct{ http.Handler }
 
 func (h Handler) ServeHTTP(w http.ResponseWriter, req0 *http.Request) {
 	var (
-		err error
+		data string
+		err  error
 	)
 
 	defer func() {
@@ -150,36 +152,41 @@ func (h Handler) ServeHTTP(w http.ResponseWriter, req0 *http.Request) {
 			return
 		}
 
-		errCh := make(chan error, 8)
-		go func() {
-			// streaming
-			rf, wf, err := os.Pipe()
-			if err != nil {
-				errCh <- err
-				return
-			}
+		if *stream {
+			errCh := make(chan error, 8)
 			go func() {
-				defer wf.Close()
-				err := g.WriteFile(wf, contentType)
+				rf, wf, err := os.Pipe()
 				if err != nil {
 					errCh <- err
+					return
 				}
+				go func() {
+					defer wf.Close()
+					err := g.WriteFile(wf, contentType)
+					if err != nil {
+						errCh <- err
+					}
+				}()
+				go func() {
+					defer rf.Close()
+					_, err := io.Copy(w, rf)
+					if err != nil {
+						errCh <- err
+					} else {
+						errCh <- nil
+					}
+				}()
 			}()
-			go func() {
-				defer rf.Close()
-				_, err := io.Copy(w, rf)
-				if err != nil {
-					errCh <- err
-				} else {
-					errCh <- nil
-				}
-			}()
-		}()
-		err := <-errCh
+			err = <-errCh
+		} else {
+			data, err = g.Write(contentType)
+		}
 		if err != nil {
 			log.Println(err)
 			w.WriteHeader(500)
 			fmt.Fprint(w, err)
+		} else if len(data) > 0 {
+			fmt.Fprint(w, data)
 		}
 
 	case "PATCH":

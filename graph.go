@@ -136,6 +136,28 @@ func term2C(t rdf.Term) crdf.Term {
 	return nil
 }
 
+func (g *Graph) Write(mime string) (string, error) {
+	serializerName := mimeSerializer[mime]
+	if len(serializerName) == 0 {
+		serializerName = "turtle"
+	}
+	serializer := crdf.NewSerializer(serializerName)
+	defer serializer.Free()
+
+	ch := make(chan *crdf.Statement, 1024)
+	go func() {
+		for triple := range g.IterTriples() {
+			ch <- &crdf.Statement{
+				Subject:   term2C(triple.Subject),
+				Predicate: term2C(triple.Predicate),
+				Object:    term2C(triple.Object),
+			}
+		}
+		close(ch)
+	}()
+	return serializer.Serialize(ch, g.baseUri)
+}
+
 func (g *Graph) WriteFile(file *os.File, mime string) error {
 	serializerName := mimeSerializer[mime]
 	if len(serializerName) == 0 {
@@ -147,17 +169,17 @@ func (g *Graph) WriteFile(file *os.File, mime string) error {
 	if err != nil {
 		return err
 	}
-	out := make(chan *crdf.Statement)
+	ch := make(chan *crdf.Statement, 1024)
 	go func() {
 		for triple := range g.IterTriples() {
-			out <- &crdf.Statement{
+			ch <- &crdf.Statement{
 				Subject:   term2C(triple.Subject),
 				Predicate: term2C(triple.Predicate),
 				Object:    term2C(triple.Object),
 			}
 		}
-		close(out)
+		close(ch)
 	}()
-	serializer.AddN(out)
+	serializer.AddN(ch)
 	return nil
 }
