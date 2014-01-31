@@ -1,6 +1,6 @@
 # gold
 
-Linked Data server in Go
+Linked Data server for Go
 
 [![Build Status](https://travis-ci.org/linkeddata/gold.png)](https://travis-ci.org/linkeddata/gold)
 
@@ -9,6 +9,8 @@ Linked Data server in Go
 Use the `go get` command eg.
 
     go get github.com/linkeddata/gold/gold-server
+
+(requires go >= 1.2)
 
 ## License
 
