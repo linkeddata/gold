@@ -1,20 +1,59 @@
 package gold
 
 import (
+	"flag"
 	"fmt"
 	"io/ioutil"
 	"log"
+	"net"
 	"net/http"
 	"strings"
 )
 
 var (
+	debug = flag.Bool("debug", false, "output extra logging")
+
 	methodsAll = []string{
 		"GET", "PUT", "POST", "OPTIONS", "HEAD", "MKCOL", "DELETE", "PATCH",
 	}
 )
 
 type httpRequest http.Request
+
+func (req httpRequest) BaseURI() string {
+	scheme := "http"
+	if req.TLS != nil || req.Header.Get("X-Forwarded-Proto") == "https" {
+		scheme += "s"
+	}
+	host, port, err := net.SplitHostPort(req.Host)
+	if err != nil {
+		log.Printf("SplitHostPort(%q) error: %s", req.Host, err)
+	}
+	if len(host) == 0 {
+		host = "localhost"
+	}
+	if len(port) > 0 {
+		port = ":" + port
+	}
+	if (scheme == "https" && port == ":443") || (scheme == "http" && port == ":80") {
+		port = ""
+	}
+	return scheme + "://" + host + port + req.URL.Path
+}
+
+func (req httpRequest) Auth() string {
+	user := ""
+	if req.TLS != nil && req.TLS.HandshakeComplete {
+		user, _ = WebIDTLSAuth(req.TLS)
+	}
+	if len(user) == 0 {
+		host, _, _ := net.SplitHostPort(req.RemoteAddr)
+		remoteAddr := net.ParseIP(host)
+		user = "dns:" + remoteAddr.String()
+	}
+	return user
+}
+
 type Handler struct{ http.Handler }
 
 func (h Handler) ServeHTTP(w http.ResponseWriter, req0 *http.Request) {
@@ -23,8 +62,11 @@ func (h Handler) ServeHTTP(w http.ResponseWriter, req0 *http.Request) {
 		err  error
 
 		req = (*httpRequest)(req0)
-		g   = new(Graph)
 	)
+
+	g := NewGraph(req.BaseURI())
+	user := req.Auth()
+	w.Header().Set("User", user)
 
 	defer func() {
 		req.Body.Close()
@@ -67,7 +109,10 @@ func (h Handler) ServeHTTP(w http.ResponseWriter, req0 *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", origin)
 	}
 
-	log.Printf("%s: %s\n%+v\n", req.Method, string(data), g)
+	if *debug {
+		log.Printf("(%s) %s: %q\n%+v\n", user, req.Method, string(data), g)
+		log.Printf("(%s) %+v\n", user, req)
+	}
 
 	switch req.Method {
 	case "OPTIONS":
