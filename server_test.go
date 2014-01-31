@@ -11,6 +11,17 @@ var (
 	handler = Handler{}
 )
 
+func TestOPTIONS(t *testing.T) {
+	testflight.WithServer(handler, func(r *testflight.Requester) {
+		request, _ := http.NewRequest("OPTIONS", "/", nil)
+		request.Header.Add("Accept", "text/turtle")
+		request.Header.Add("Access-Control-Request-Headers", "Triples")
+		request.Header.Add("Access-Control-Request-Method", "PATCH")
+		response := r.Do(request)
+		assert.Equal(t, 200, response.StatusCode)
+	})
+}
+
 func TestTurtlePOST(t *testing.T) {
 	testflight.WithServer(handler, func(r *testflight.Requester) {
 		response := r.Post("/abc", "text/turtle", "<a> <b> <c1> .")
