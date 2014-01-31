@@ -190,7 +190,10 @@ func (h Handler) ServeHTTP(w http.ResponseWriter, req0 *http.Request) {
 		}
 
 	case "PATCH":
-		// TODO: PATCH
+		if dataMime == "application/json" {
+			g.ParseFile(path)
+			g.JSONPatch(req.Body)
+		}
 
 	case "POST", "PUT":
 		if req.Method == "POST" {
@@ -207,7 +210,7 @@ func (h Handler) ServeHTTP(w http.ResponseWriter, req0 *http.Request) {
 		}
 		w.Header().Set("Triples", fmt.Sprintf("%d", g.Store.Num()))
 
-		f, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY, 0644)
+		f, err := os.OpenFile(path, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
 		if err != nil {
 			w.WriteHeader(500)
 			fmt.Fprint(w, err)

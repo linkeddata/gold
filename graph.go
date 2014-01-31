@@ -1,9 +1,11 @@
 package gold
 
 import (
+	"encoding/json"
 	rdf "github.com/kierdavis/argo"
 	crdf "github.com/presbrey/goraptor"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"os"
 )
@@ -21,7 +23,7 @@ func init() {
 		mimeParser[syntax.MimeType] = syntax.Name
 	}
 	mimeParser["text/n3"] = mimeParser["text/turtle"]
-	// mimeParser["application/json"] = "internal"
+	mimeParser["application/json"] = "internal"
 	mimeParser["application/sparql-update"] = "internal"
 
 	for name, syntax := range crdf.SerializerSyntax {
@@ -111,6 +113,10 @@ func (g *Graph) Parse(reader io.Reader, mime string) {
 }
 
 func (g *Graph) ParseFile(filename string) {
+	_, err := os.Stat(filename)
+	if os.IsNotExist(err) {
+		return
+	}
 	parser := crdf.NewParser("turtle")
 	defer parser.Free()
 	out := parser.ParseFile(filename, g.baseUri)
@@ -187,5 +193,40 @@ func (g *Graph) WriteFile(file *os.File, mime string) error {
 		close(ch)
 	}()
 	serializer.AddN(ch)
+	return nil
+}
+
+type jsonPatch map[string]map[string][]struct {
+	Value string `json:"value"`
+	Type  string `json:"type"`
+}
+
+func (g *Graph) JSONPatch(r io.Reader) error {
+	v := make(jsonPatch)
+	data, err := ioutil.ReadAll(r)
+	if err != nil {
+		return err
+	}
+	err = json.Unmarshal(data, &v)
+	if err != nil {
+		return err
+	}
+	for s, sv := range v {
+		for p, pv := range sv {
+			subject := rdf.NewResource(s)
+			predicate := rdf.NewResource(p)
+			for triple := range g.Filter(subject, predicate, nil) {
+				g.Remove(triple)
+			}
+			for _, o := range pv {
+				switch o.Type {
+				case "uri":
+					g.AddTriple(subject, predicate, rdf.NewResource(o.Value))
+				case "literal":
+					g.AddTriple(subject, predicate, rdf.NewLiteral(o.Value))
+				}
+			}
+		}
+	}
 	return nil
 }
