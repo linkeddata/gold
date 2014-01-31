@@ -3,15 +3,18 @@ package gold
 import (
 	"flag"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"net"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strings"
 )
 
 var (
 	debug = flag.Bool("debug", false, "output extra logging")
+	root  = flag.String("root", "/tmp", "path to file storage root")
 
 	methodsAll = []string{
 		"GET", "PUT", "POST", "OPTIONS", "HEAD", "MKCOL", "DELETE", "PATCH",
@@ -58,42 +61,35 @@ type Handler struct{ http.Handler }
 
 func (h Handler) ServeHTTP(w http.ResponseWriter, req0 *http.Request) {
 	var (
-		data []byte
-		err  error
-
-		req = (*httpRequest)(req0)
+		err error
 	)
 
-	g := NewGraph(req.BaseURI())
+	defer func() {
+		req0.Body.Close()
+	}()
+	req := (*httpRequest)(req0)
+	path := *root + req.URL.Path
 	user := req.Auth()
 	w.Header().Set("User", user)
 
-	defer func() {
-		req.Body.Close()
-	}()
 	dataMime := req.Header.Get("Content-Type")
 	dataMime = strings.Split(dataMime, ";")[0]
-	dataParser := parserMime[dataMime]
-	if len(dataMime) > 0 && len(dataParser) == 0 {
+	if len(dataMime) > 0 && len(mimeParser[dataMime]) == 0 {
 		w.WriteHeader(415)
-		// TODO: RDF errors
 		fmt.Fprintln(w, "Unsupported Media Type:", dataMime)
 		return
-	} else if len(dataMime) > 0 {
-		data, err = ioutil.ReadAll(req.Body)
-		if err != nil {
-			w.WriteHeader(400) // Bad Request
-			fmt.Fprintln(w, err)
-			return
-		}
 	}
 
 	// Content Negotiation
+	contentType := "text/turtle"
 	acceptList, _ := req.Accept()
-	cMime, err := acceptList.Negotiate(serializerMimes...)
-	if err != nil {
-		w.WriteHeader(406) // Not Acceptable
-		fmt.Fprintln(w, err)
+	if len(acceptList) > 0 && acceptList[0].SubType != "*" {
+		contentType, err = acceptList.Negotiate(serializerMimes...)
+		if err != nil {
+			w.WriteHeader(406) // Not Acceptable
+			fmt.Fprintln(w, err)
+			return
+		}
 	}
 
 	// CORS
@@ -101,7 +97,12 @@ func (h Handler) ServeHTTP(w http.ResponseWriter, req0 *http.Request) {
 	w.Header().Set("Access-Control-Max-Age", "60")
 	w.Header().Set("MS-Author-Via", "DAV, SPARQL")
 
-	// TODO: check WAC
+	g := NewGraph(req.BaseURI())
+	if *debug {
+		log.Printf("user=%s req=%+v\n%+v\n\n", user, req, g)
+	}
+
+	// TODO: WAC
 	origin := ""
 	origins := req.Header["Origin"] // all CORS requests
 	if len(origins) > 0 {
@@ -109,17 +110,12 @@ func (h Handler) ServeHTTP(w http.ResponseWriter, req0 *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", origin)
 	}
 
-	if *debug {
-		log.Printf("(%s) %s: %q\n%+v\n", user, req.Method, string(data), g)
-		log.Printf("(%s) %+v\n", user, req)
-	}
-
 	switch req.Method {
 	case "OPTIONS":
 		w.Header().Set("Accept-Patch", "application/json")
 		w.Header().Set("Accept-Post", "text/turtle,application/json")
 
-		// TODO: check WAC
+		// TODO: WAC
 		corsReqH := req.Header["Access-Control-Request-Headers"] // CORS preflight only
 		if len(corsReqH) > 0 {
 			w.Header().Set("Access-Control-Allow-Headers", strings.Join(corsReqH, ", "))
@@ -138,27 +134,108 @@ func (h Handler) ServeHTTP(w http.ResponseWriter, req0 *http.Request) {
 		return
 
 	case "GET", "HEAD":
-		if req.Method != "GET" {
-			w.WriteHeader(200)
-			return
-		}
-		if cMime == "text/html" {
+		w.Header().Set("Content-Type", contentType)
+		if req.Method == "GET" && contentType == "text/html" {
 			w.Header().Set("Content-Type", "text/html")
 			w.WriteHeader(200)
 			fmt.Fprint(w, tabulatorSkin)
 			return
 		}
-		w.WriteHeader(204)
-		return
+
+		g.ParseFile(path)
+		w.Header().Set("Triples", fmt.Sprintf("%d", g.Store.Num()))
+
+		if req.Method == "HEAD" {
+			w.WriteHeader(200)
+			return
+		}
+
+		errCh := make(chan error, 8)
+		go func() {
+			// streaming
+			rf, wf, err := os.Pipe()
+			if err != nil {
+				errCh <- err
+				return
+			}
+			go func() {
+				defer wf.Close()
+				err := g.WriteFile(wf, contentType)
+				if err != nil {
+					errCh <- err
+				}
+			}()
+			go func() {
+				defer rf.Close()
+				_, err := io.Copy(w, rf)
+				if err != nil {
+					errCh <- err
+				} else {
+					errCh <- nil
+				}
+			}()
+		}()
+		err := <-errCh
+		if err != nil {
+			log.Println(err)
+			w.WriteHeader(500)
+			fmt.Fprint(w, err)
+		}
 
 	case "PATCH":
-	case "POST":
-	case "PUT":
-	case "DELETE":
-	case "MKCOL":
-	}
+		// TODO: PATCH
 
-	w.WriteHeader(405)
-	fmt.Fprintln(w, "Method Not Allowed:", req.Method)
+	case "POST", "PUT":
+		if req.Method == "POST" {
+			g.ParseFile(path)
+		}
+		os.MkdirAll(filepath.Dir(path), 0755)
+		g.Parse(req.Body, dataMime)
+		w.Header().Set("Triples", fmt.Sprintf("%d", g.Store.Num()))
+
+		f, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY, 0644)
+		if err != nil {
+			w.WriteHeader(500)
+			fmt.Fprint(w, err)
+			return
+		}
+		defer f.Close()
+		g.WriteFile(f, "")
+
+	case "DELETE":
+		err := os.Remove(path)
+		if err != nil {
+			if os.IsNotExist(err) {
+				w.WriteHeader(404)
+				return
+			}
+			w.WriteHeader(500)
+			fmt.Fprint(w, err)
+		} else {
+			_, err := os.Stat(path)
+			if err == nil {
+				w.WriteHeader(409)
+			}
+		}
+
+	case "MKCOL":
+		err := os.MkdirAll(path, 0755)
+		if err != nil {
+			w.WriteHeader(500)
+			fmt.Fprint(w, err)
+			return
+		} else {
+			_, err := os.Stat(path)
+			if err != nil {
+				w.WriteHeader(409)
+				fmt.Fprint(w, err)
+			}
+		}
+
+	default:
+		w.WriteHeader(405)
+		fmt.Fprintln(w, "Method Not Allowed:", req.Method)
+
+	}
 	return
 }
