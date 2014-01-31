@@ -8,7 +8,7 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"path/filepath"
+	_path "path"
 	"strings"
 )
 
@@ -16,6 +16,7 @@ var (
 	debug  = flag.Bool("debug", false, "output extra logging")
 	root   = flag.String("root", ".", "path to file storage root")
 	stream = flag.Bool("stream", false, "stream responses (experimental)")
+	vhosts = flag.Bool("vhosts", false, "append serverName to path on disk")
 
 	methodsAll = []string{
 		"GET", "PUT", "POST", "OPTIONS", "HEAD", "MKCOL", "DELETE", "PATCH",
@@ -62,15 +63,20 @@ type Handler struct{ http.Handler }
 
 func (h Handler) ServeHTTP(w http.ResponseWriter, req0 *http.Request) {
 	var (
-		data string
-		err  error
+		err error
+
+		data, path string
 	)
 
 	defer func() {
 		req0.Body.Close()
 	}()
 	req := (*httpRequest)(req0)
-	path := *root + req.URL.Path
+	if *vhosts {
+		path = _path.Join(*root, req.Host, req.URL.Path)
+	} else {
+		path = _path.Join(*root, req.URL.Path)
+	}
 	user := req.Auth()
 	w.Header().Set("User", user)
 
@@ -136,6 +142,8 @@ func (h Handler) ServeHTTP(w http.ResponseWriter, req0 *http.Request) {
 		return
 
 	case "GET", "HEAD":
+		// magicType := magicmime.TypeByFile(path)
+
 		w.Header().Set("Content-Type", contentType)
 		if req.Method == "GET" && contentType == "text/html" {
 			w.Header().Set("Content-Type", "text/html")
@@ -145,7 +153,7 @@ func (h Handler) ServeHTTP(w http.ResponseWriter, req0 *http.Request) {
 		}
 
 		stat, err := os.Stat(path)
-		if err != nil {
+		if os.IsNotExist(err) {
 			w.WriteHeader(404)
 			return
 		} else if stat.IsDir() {
@@ -209,7 +217,7 @@ func (h Handler) ServeHTTP(w http.ResponseWriter, req0 *http.Request) {
 		if req.Method == "POST" {
 			g.ParseFile(path)
 		}
-		os.MkdirAll(filepath.Dir(path), 0755)
+		os.MkdirAll(_path.Dir(path), 0755)
 
 		if dataMime == "application/sparql-update" {
 			sparql := NewSPARQL(g.baseUri)
