@@ -31,7 +31,7 @@ func (req httpRequest) BaseURI() string {
 	}
 	host, port, err := net.SplitHostPort(req.Host)
 	if err != nil {
-		log.Printf("SplitHostPort(%q) error: %s", req.Host, err)
+		host = req.Host
 	}
 	if len(host) == 0 {
 		host = "localhost"
@@ -197,7 +197,14 @@ func (h Handler) ServeHTTP(w http.ResponseWriter, req0 *http.Request) {
 			g.ParseFile(path)
 		}
 		os.MkdirAll(filepath.Dir(path), 0755)
-		g.Parse(req.Body, dataMime)
+
+		if dataMime == "application/sparql-update" {
+			sparql := NewSPARQL(g.baseUri)
+			sparql.Parse(req.Body)
+			g.SPARQLUpdate(sparql)
+		} else {
+			g.Parse(req.Body, dataMime)
+		}
 		w.Header().Set("Triples", fmt.Sprintf("%d", g.Store.Num()))
 
 		f, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY, 0644)

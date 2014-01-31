@@ -21,6 +21,8 @@ func init() {
 		mimeParser[syntax.MimeType] = syntax.Name
 	}
 	mimeParser["text/n3"] = mimeParser["text/turtle"]
+	// mimeParser["application/json"] = "internal"
+	mimeParser["application/sparql-update"] = "internal"
 
 	for name, syntax := range crdf.SerializerSyntax {
 		switch name {
@@ -126,9 +128,13 @@ func term2C(t rdf.Term) crdf.Term {
 		node := crdf.Uri(t.URI)
 		return &node
 	case *rdf.Literal:
+		dt := ""
+		if t.Datatype != nil {
+			dt = t.Datatype.(*rdf.Resource).URI
+		}
 		node := crdf.Literal{
 			Value:    t.Value,
-			Datatype: t.Datatype.(rdf.Resource).URI,
+			Datatype: dt,
 			Lang:     t.Language,
 		}
 		return &node
