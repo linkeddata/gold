@@ -28,7 +28,6 @@ func (sparql *SPARQL) Parse(r io.Reader) error {
 		return err
 	}
 	body := string(bytes)
-
 	lst := []string{}
 
 	angles := 0
