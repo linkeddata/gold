@@ -32,7 +32,7 @@ func TestTurtlePOST(t *testing.T) {
 func TestTurtlePUT(t *testing.T) {
 	testflight.WithServer(handler, func(r *testflight.Requester) {
 		response := r.Put("/abc", "text/turtle", "<d> <e> <f> .")
-		assert.Equal(t, 200, response.StatusCode)
+		assert.Equal(t, 201, response.StatusCode)
 	})
 	testflight.WithServer(handler, func(r *testflight.Requester) {
 		request, _ := http.NewRequest("GET", "/abc", nil)
@@ -43,9 +43,34 @@ func TestTurtlePUT(t *testing.T) {
 	})
 }
 
+func TestMKCOL(t *testing.T) {
+	testflight.WithServer(handler, func(r *testflight.Requester) {
+		request, _ := http.NewRequest("MKCOL", "/_folder", nil)
+		response := r.Do(request)
+		assert.Equal(t, 201, response.StatusCode)
+	})
+	testflight.WithServer(handler, func(r *testflight.Requester) {
+		request, _ := http.NewRequest("GET", "/_folder", nil)
+		response := r.Do(request)
+		assert.Equal(t, 501, response.StatusCode)
+	})
+}
+
 func TestDELETE(t *testing.T) {
 	testflight.WithServer(handler, func(r *testflight.Requester) {
 		response := r.Delete("/abc", "", "")
 		assert.Equal(t, 200, response.StatusCode)
+	})
+	testflight.WithServer(handler, func(r *testflight.Requester) {
+		response := r.Get("/abc")
+		assert.Equal(t, 404, response.StatusCode)
+	})
+	testflight.WithServer(handler, func(r *testflight.Requester) {
+		response := r.Delete("/_folder", "", "")
+		assert.Equal(t, 200, response.StatusCode)
+	})
+	testflight.WithServer(handler, func(r *testflight.Requester) {
+		response := r.Get("/_folder")
+		assert.Equal(t, 404, response.StatusCode)
 	})
 }

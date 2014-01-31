@@ -144,7 +144,17 @@ func (h Handler) ServeHTTP(w http.ResponseWriter, req0 *http.Request) {
 			return
 		}
 
-		g.ParseFile(path)
+		stat, err := os.Stat(path)
+		if err != nil {
+			w.WriteHeader(404)
+			return
+		} else if stat.IsDir() {
+			w.WriteHeader(501)
+			return
+		} else {
+			g.ParseFile(path)
+		}
+
 		w.Header().Set("Triples", fmt.Sprintf("%d", g.Store.Num()))
 
 		if req.Method == "HEAD" {
@@ -217,7 +227,12 @@ func (h Handler) ServeHTTP(w http.ResponseWriter, req0 *http.Request) {
 			return
 		}
 		defer f.Close()
-		g.WriteFile(f, "")
+		err = g.WriteFile(f, "")
+		if err != nil {
+			w.WriteHeader(500)
+		} else if req.Method == "PUT" {
+			w.WriteHeader(201)
+		}
 
 	case "DELETE":
 		err := os.Remove(path)
@@ -248,6 +263,7 @@ func (h Handler) ServeHTTP(w http.ResponseWriter, req0 *http.Request) {
 				fmt.Fprint(w, err)
 			}
 		}
+		w.WriteHeader(201)
 
 	default:
 		w.WriteHeader(405)

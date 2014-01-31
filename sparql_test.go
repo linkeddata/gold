@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-func TestSPARQLInsertData(t *testing.T) {
+func TestSPARQLInsert(t *testing.T) {
 	sparql := NewSPARQL("https://test/")
 	sparql.Parse(strings.NewReader("INSERT DATA { <a> <b> <c> . }"))
 	if len(sparql.queries) != 1 {
