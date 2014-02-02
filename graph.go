@@ -1,6 +1,7 @@
 package gold
 
 import (
+	"crypto/tls"
 	"encoding/json"
 	rdf "github.com/kierdavis/argo"
 	crdf "github.com/presbrey/goraptor"
@@ -15,7 +16,13 @@ var (
 	mimeSerializer  = map[string]string{}
 	serializerMimes = []string{}
 
-	httpClient = &http.Client{}
+	httpClient = &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: true,
+			},
+		},
+	}
 )
 
 func init() {

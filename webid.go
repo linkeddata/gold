@@ -3,6 +3,7 @@ package gold
 import (
 	"crypto/rsa"
 	"crypto/tls"
+	"encoding/asn1"
 	"fmt"
 	rdf "github.com/kierdavis/argo"
 	"sync"
@@ -28,6 +29,7 @@ func pkeyTypeNE(pkey interface{}) (t, n, e string) {
 }
 
 func WebIDTLSAuth(state *tls.ConnectionState) (uri string, err error) {
+	claim := ""
 	uri = ""
 	err = nil
 
@@ -39,10 +41,16 @@ func WebIDTLSAuth(state *tls.ConnectionState) (uri string, err error) {
 			if len(x.Value) < 5 {
 				continue
 			}
-			claim := string(x.Value[4:])
+
+			v := asn1.RawValue{}
+			_, err = asn1.Unmarshal(x.Value, &v)
+			if err == nil {
+				claim = string(v.Bytes[2:])
+			}
 			if len(claim) == 0 {
 				continue
 			}
+
 			pkey := state.PeerCertificates[0].PublicKey
 			t, n, e := pkeyTypeNE(pkey)
 			if len(t) == 0 {
