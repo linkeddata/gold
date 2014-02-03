@@ -73,7 +73,11 @@ func (h Handler) ServeHTTP(w http.ResponseWriter, req0 *http.Request) {
 	}()
 	req := (*httpRequest)(req0)
 	if *vhosts {
-		path = _path.Join(*root, req.Host, req.URL.Path)
+		host, _, _ := net.SplitHostPort(req.Host)
+		if len(host) == 0 {
+			host = req.Host
+		}
+		path = _path.Join(*root, host, req.URL.Path)
 	} else {
 		path = _path.Join(*root, req.URL.Path)
 	}
