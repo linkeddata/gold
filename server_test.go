@@ -1,6 +1,7 @@
 package gold
 
 import (
+	"fmt"
 	"github.com/drewolson/testflight"
 	"github.com/stretchr/testify/assert"
 	"net/http"
@@ -217,4 +218,105 @@ func TestInvalidContent(t *testing.T) {
 		response := r.Post("/test", "text/csv", "a\tb\tc\n")
 		assert.Equal(t, 415, response.StatusCode)
 	})
+}
+
+func BenchmarkPUT(b *testing.B) {
+	e := 0
+	testflight.WithServer(handler, func(r *testflight.Requester) {
+		for i := 0; i < b.N; i++ {
+			x := r.Put("/_bench/test", "text/turtle", "<d> <e> <f> .")
+			if x.StatusCode != 201 {
+				e += 1
+			}
+		}
+	})
+	if e > 0 {
+		b.Log(fmt.Sprintf("%d/%d failed", e, b.N))
+		b.Fail()
+	}
+}
+
+func BenchmarkPUTNew(b *testing.B) {
+	e := 0
+	testflight.WithServer(handler, func(r *testflight.Requester) {
+		for i := 0; i < b.N; i++ {
+			x := r.Put(fmt.Sprintf("/_bench/test%d", i), "text/turtle", "<d> <e> <f> .")
+			if x.StatusCode != 201 {
+				e += 1
+			}
+		}
+	})
+	if e > 0 {
+		b.Log(fmt.Sprintf("%d/%d failed", e, b.N))
+		b.Fail()
+	}
+}
+
+func BenchmarkPATCH(b *testing.B) {
+	e := 0
+	testflight.WithServer(handler, func(r *testflight.Requester) {
+		for i := 0; i < b.N; i++ {
+			request, _ := http.NewRequest("PATCH", "/_bench/test", strings.NewReader(`{"a":{"b":[{"type":"literal","value":"`+fmt.Sprintf("%d", b.N)+`"}]}}`))
+			request.Header.Add("Content-Type", "application/json")
+			if r := r.Do(request); r.StatusCode != 200 {
+				e += 1
+			}
+		}
+	})
+	if e > 0 {
+		b.Log(fmt.Sprintf("%d/%d failed", e, b.N))
+		b.Fail()
+	}
+}
+
+func BenchmarkGETjson(b *testing.B) {
+	e := 0
+	testflight.WithServer(handler, func(r *testflight.Requester) {
+		for i := 0; i < b.N; i++ {
+			request, _ := http.NewRequest("GET", "/_bench/test", nil)
+			request.Header.Add("Content-Type", "application/json")
+			if r := r.Do(request); r.StatusCode != 200 {
+				e += 1
+			}
+		}
+	})
+	if e > 0 {
+		b.Log(fmt.Sprintf("%d/%d failed", e, b.N))
+		b.Fail()
+	}
+}
+
+func BenchmarkGETturtle(b *testing.B) {
+	e := 0
+	testflight.WithServer(handler, func(r *testflight.Requester) {
+		for i := 0; i < b.N; i++ {
+			request, _ := http.NewRequest("GET", "/_bench/test", nil)
+			request.Header.Add("Content-Type", "text/turtle")
+			if r := r.Do(request); r.StatusCode != 200 {
+				e += 1
+			}
+		}
+	})
+	if e > 0 {
+		b.Log(fmt.Sprintf("%d/%d failed", e, b.N))
+		b.Fail()
+	}
+}
+
+func BenchmarkGETxml(b *testing.B) {
+	e := 0
+	testflight.WithServer(handler, func(r *testflight.Requester) {
+		for i := 0; i < b.N; i++ {
+			request, _ := http.NewRequest("GET", "/_bench/test", nil)
+			request.Header.Add("Accept", "application/rdf+xml")
+			if r := r.Do(request); r.StatusCode != 200 {
+				fmt.Println(r.StatusCode)
+				e += 1
+			}
+		}
+	})
+	if e > 0 {
+		b.Log(fmt.Sprintf("%d/%d failed", e, b.N))
+		b.Fail()
+	}
 }
