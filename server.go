@@ -207,27 +207,23 @@ func (h Handler) ServeHTTP(w http.ResponseWriter, req0 *http.Request) {
 			fmt.Fprint(w, data)
 		}
 
-	case "PATCH":
-		if dataMime == "application/json" {
+	case "PATCH", "POST", "PUT":
+		if req.Method != "PUT" {
 			g.ParseFile(path)
+		}
+		switch dataMime {
+		case "application/json":
 			g.JSONPatch(req.Body)
-		}
-
-	case "POST", "PUT":
-		if req.Method == "POST" {
-			g.ParseFile(path)
-		}
-		os.MkdirAll(_path.Dir(path), 0755)
-
-		if dataMime == "application/sparql-update" {
+		case "application/sparql-update":
 			sparql := NewSPARQL(g.baseUri)
 			sparql.Parse(req.Body)
 			g.SPARQLUpdate(sparql)
-		} else {
+		default:
 			g.Parse(req.Body, dataMime)
 		}
 		w.Header().Set("Triples", fmt.Sprintf("%d", g.Store.Num()))
 
+		os.MkdirAll(_path.Dir(path), 0755)
 		f, err := os.OpenFile(path, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
 		if err != nil {
 			w.WriteHeader(500)

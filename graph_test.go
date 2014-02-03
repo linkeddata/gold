@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func TestJsonPATCH(t *testing.T) {
+func TestPatch(t *testing.T) {
 	var (
 		buf   string
 		err   error

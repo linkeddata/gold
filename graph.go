@@ -8,6 +8,7 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"os"
 )
 
@@ -218,10 +219,13 @@ func (g *Graph) JSONPatch(r io.Reader) error {
 	if err != nil {
 		return err
 	}
+	base, _ := url.Parse(g.baseUri)
 	for s, sv := range v {
+		su, _ := base.Parse(s)
 		for p, pv := range sv {
-			subject := rdf.NewResource(s)
-			predicate := rdf.NewResource(p)
+			pu, _ := base.Parse(p)
+			subject := rdf.NewResource(su.String())
+			predicate := rdf.NewResource(pu.String())
 			for triple := range g.Filter(subject, predicate, nil) {
 				g.Remove(triple)
 			}
