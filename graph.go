@@ -7,6 +7,7 @@ import (
 	crdf "github.com/presbrey/goraptor"
 	"io"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -124,13 +125,17 @@ func (g *Graph) ParseFile(filename string) {
 	_, err := os.Stat(filename)
 	if os.IsNotExist(err) {
 		return
+	} else if err != nil {
+		log.Println(err)
+		return
 	}
-	parser := crdf.NewParser("turtle")
-	defer parser.Free()
-	out := parser.ParseFile(filename, g.baseUri)
-	for s := range out {
-		g.AddStatement(s)
+	f, err := os.OpenFile(filename, os.O_RDONLY, 0)
+	if err != nil {
+		log.Println(err)
+		return
 	}
+	defer f.Close()
+	g.Parse(f, "text/turtle")
 }
 
 func term2C(t rdf.Term) crdf.Term {
