@@ -2,4 +2,4 @@ language: go
 go: 1.2
 install: go get -t -v ./...
 before_install:
- - sudo apt-get install -qq libraptor2-dev
+ - sudo apt-get install -qq libraptor2-dev libmagic-dev
