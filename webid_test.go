@@ -54,7 +54,7 @@ func TestWebIDTLSAuth(t *testing.T) {
 	g.AddTriple(keyTerm, ns["cert"].Get("exponent"), rdf.NewLiteral(fmt.Sprintf("%d", priv.E)))
 	gN3, _ := g.Write("text/turtle")
 
-	req, err := http.NewRequest("PUT", g.baseUri, strings.NewReader(gN3))
+	req, err := http.NewRequest("PUT", g.URI(), strings.NewReader(gN3))
 	assert.NoError(t, err)
 	resp, err := httpClient.Do(req)
 	assert.NoError(t, err)
@@ -105,7 +105,7 @@ func TestWebIDTLSAuth(t *testing.T) {
 		},
 	}
 
-	req, err = http.NewRequest("DELETE", g.baseUri, nil)
+	req, err = http.NewRequest("DELETE", g.URI(), nil)
 	assert.NoError(t, err)
 	resp, err = client.Do(req)
 	assert.NoError(t, err)

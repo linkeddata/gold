@@ -10,7 +10,7 @@ type SPARQLQuery struct {
 	verb string
 	body string
 
-	graph *Graph
+	graph AnyGraph
 }
 
 type SPARQL struct {

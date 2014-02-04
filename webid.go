@@ -66,8 +66,8 @@ func WebIDTLSAuth(state *tls.ConnectionState) (uri string, err error) {
 			}
 
 			g := NewGraph(claim)
-			g.Load(claim)
-			for keyT := range g.Filter(g.Term(), ns["cert"].Get("key"), nil) {
+			g.LoadURI(claim)
+			for keyT := range g.Filter(rdf.NewResource(g.URI()), ns["cert"].Get("key"), nil) {
 				for _ = range g.Filter(keyT.Object, ns["rdf"].Get("type"), ns["cert"].Get(t)) {
 					for _ = range g.Filter(keyT.Object, ns["cert"].Get("modulus"), rdf.NewLiteral(n)) {
 						for _ = range g.Filter(keyT.Object, ns["cert"].Get("exponent"), rdf.NewLiteral(e)) {

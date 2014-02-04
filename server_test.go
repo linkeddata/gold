@@ -223,22 +223,23 @@ func TestInvalidContent(t *testing.T) {
 
 func TestRawContent(t *testing.T) {
 	testflight.WithServer(handler, func(r *testflight.Requester) {
-		icon, err := http.Get("http://www.w3.org/RDF/icons/rdf_w3c_icon.128")
+		icon, err := http.Get("https://0.gravatar.com/avatar/e8381df69a211c61835c312e95ca3397?d")
 		assert.NoError(t, err)
 		assert.Equal(t, icon.StatusCode, 200)
+		ctype := icon.Header.Get(HCType)
 		iconb, err := ioutil.ReadAll(icon.Body)
 		assert.NoError(t, err)
 		assert.NotEmpty(t, iconb)
 		err = icon.Body.Close()
 		assert.NoError(t, err)
 
-		response := r.Put("/test.gif", "image/gif", string(iconb))
+		response := r.Put("/test.raw", ctype, string(iconb))
 		assert.Equal(t, 201, response.StatusCode)
-		response = r.Get("/test.gif")
+		response = r.Get("/test.raw")
 		assert.Equal(t, response.StatusCode, 200)
-		assert.Equal(t, response.RawResponse.Header.Get(HCType), "image/gif")
+		assert.Equal(t, response.RawResponse.Header.Get(HCType), ctype)
 		assert.Equal(t, len(response.Body), icon.ContentLength)
-		response = r.Delete("/test.gif", "", "")
+		response = r.Delete("/test.raw", "", "")
 		assert.Equal(t, response.StatusCode, 200)
 	})
 }

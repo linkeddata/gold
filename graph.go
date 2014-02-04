@@ -13,6 +13,18 @@ import (
 	"os"
 )
 
+type AnyGraph interface {
+	Len() int
+	URI() string
+	Parse(io.Reader, string)
+	LoadFile(string)
+	JSONPatch(io.Reader) error
+	SPARQLUpdate(*SPARQL)
+	IterTriples() chan *rdf.Triple
+	Write(string) (string, error)
+	WriteFile(*os.File, string) error
+}
+
 var (
 	mimeParser      = map[string]string{}
 	mimeSerializer  = map[string]string{}
@@ -51,15 +63,16 @@ func init() {
 type Graph struct {
 	*rdf.Graph
 
-	baseTerm rdf.Term
-	baseUri  string
+	uri  string
+	term rdf.Term
 }
 
-func NewGraph(baseUri string) *Graph {
+func NewGraph(uri string) *Graph {
 	return &Graph{
-		Graph:    rdf.NewGraph(rdf.NewIndexStore()),
-		baseTerm: rdf.NewResource(baseUri),
-		baseUri:  baseUri,
+		Graph: rdf.NewGraph(rdf.NewIndexStore()),
+
+		uri:  uri,
+		term: rdf.NewResource(uri),
 	}
 }
 
@@ -68,11 +81,11 @@ func (g *Graph) Len() int {
 }
 
 func (g *Graph) Term() rdf.Term {
-	return g.baseTerm
+	return g.term
 }
 
 func (g *Graph) URI() string {
-	return g.baseUri
+	return g.uri
 }
 
 func term2term(term crdf.Term) rdf.Term {
@@ -97,23 +110,6 @@ func (g *Graph) AddStatement(st *crdf.Statement) {
 	g.AddTriple(s, p, o)
 }
 
-func (g *Graph) Load(uri string) (err error) {
-	q, err := http.NewRequest("GET", uri, nil)
-	if err != nil {
-		return
-	}
-	q.Header.Set("Accept", "text/turtle,text/n3,application/rdf+xml")
-	r, err := httpClient.Do(q)
-	if err != nil {
-		return
-	}
-	if r != nil {
-		defer r.Body.Close()
-		g.Parse(r.Body, r.Header.Get("Content-Type"))
-	}
-	return
-}
-
 func (g *Graph) Parse(reader io.Reader, mime string) {
 	parserName := mimeParser[mime]
 	if len(parserName) == 0 {
@@ -121,13 +117,13 @@ func (g *Graph) Parse(reader io.Reader, mime string) {
 	}
 	parser := crdf.NewParser(parserName)
 	defer parser.Free()
-	out := parser.Parse(reader, g.baseUri)
+	out := parser.Parse(reader, g.uri)
 	for s := range out {
 		g.AddStatement(s)
 	}
 }
 
-func (g *Graph) ParseFile(filename string) {
+func (g *Graph) LoadFile(filename string) {
 	_, err := os.Stat(filename)
 	if os.IsNotExist(err) {
 		return
@@ -142,6 +138,23 @@ func (g *Graph) ParseFile(filename string) {
 	}
 	defer f.Close()
 	g.Parse(f, "text/turtle")
+}
+
+func (g *Graph) LoadURI(uri string) (err error) {
+	q, err := http.NewRequest("GET", uri, nil)
+	if err != nil {
+		return
+	}
+	q.Header.Set("Accept", "text/turtle,text/n3,application/rdf+xml")
+	r, err := httpClient.Do(q)
+	if err != nil {
+		return
+	}
+	if r != nil {
+		defer r.Body.Close()
+		g.Parse(r.Body, r.Header.Get("Content-Type"))
+	}
+	return
 }
 
 func term2C(t rdf.Term) crdf.Term {
@@ -186,7 +199,7 @@ func (g *Graph) Write(mime string) (string, error) {
 		}
 		close(ch)
 	}()
-	return serializer.Serialize(ch, g.baseUri)
+	return serializer.Serialize(ch, g.uri)
 }
 
 func (g *Graph) WriteFile(file *os.File, mime string) error {
@@ -196,7 +209,7 @@ func (g *Graph) WriteFile(file *os.File, mime string) error {
 	}
 	serializer := crdf.NewSerializer(serializerName)
 	defer serializer.Free()
-	err := serializer.SetFile(file, g.baseUri)
+	err := serializer.SetFile(file, g.uri)
 	if err != nil {
 		return err
 	}
@@ -230,7 +243,7 @@ func (g *Graph) JSONPatch(r io.Reader) error {
 	if err != nil {
 		return err
 	}
-	base, _ := url.Parse(g.baseUri)
+	base, _ := url.Parse(g.uri)
 	for s, sv := range v {
 		su, _ := base.Parse(s)
 		for p, pv := range sv {

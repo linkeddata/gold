@@ -115,7 +115,7 @@ func (h Handler) ServeHTTP(w http.ResponseWriter, req0 *http.Request) {
 	w.Header().Set("Access-Control-Max-Age", "60")
 	w.Header().Set("MS-Author-Via", "DAV, SPARQL")
 
-	g := NewGraph(req.BaseURI())
+	g := Graphs(req.BaseURI())
 	if *debug {
 		log.Printf("user=%s req=%+v\n%+v\n\n", user, req, g)
 	}
@@ -189,7 +189,7 @@ func (h Handler) ServeHTTP(w http.ResponseWriter, req0 *http.Request) {
 		}
 
 		if maybeRDF {
-			g.ParseFile(path)
+			g.LoadFile(path)
 			if g.Len() == 0 {
 				maybeRDF = false
 			} else {
@@ -263,13 +263,13 @@ func (h Handler) ServeHTTP(w http.ResponseWriter, req0 *http.Request) {
 
 	case "PATCH", "POST", "PUT":
 		if req.Method != "PUT" {
-			g.ParseFile(path)
+			g.LoadFile(path)
 		}
 		switch dataMime {
 		case "application/json":
 			g.JSONPatch(req.Body)
 		case "application/sparql-update":
-			sparql := NewSPARQL(g.baseUri)
+			sparql := NewSPARQL(g.URI())
 			sparql.Parse(req.Body)
 			g.SPARQLUpdate(sparql)
 		default:
