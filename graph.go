@@ -34,6 +34,8 @@ func init() {
 	mimeParser["text/n3"] = mimeParser["text/turtle"]
 	mimeParser["application/json"] = "internal"
 	mimeParser["application/sparql-update"] = "internal"
+	delete(mimeParser, "")
+	delete(mimeParser, "text/html")
 
 	for name, syntax := range crdf.SerializerSyntax {
 		switch name {

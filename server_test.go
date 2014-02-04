@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/drewolson/testflight"
 	"github.com/stretchr/testify/assert"
+	"io/ioutil"
 	"net/http"
 	"strings"
 	"testing"
@@ -217,6 +218,28 @@ func TestInvalidContent(t *testing.T) {
 	testflight.WithServer(handler, func(r *testflight.Requester) {
 		response := r.Post("/test", "text/csv", "a\tb\tc\n")
 		assert.Equal(t, 415, response.StatusCode)
+	})
+}
+
+func TestRawContent(t *testing.T) {
+	testflight.WithServer(handler, func(r *testflight.Requester) {
+		icon, err := http.Get("http://www.w3.org/RDF/icons/rdf_w3c_icon.128")
+		assert.NoError(t, err)
+		assert.Equal(t, icon.StatusCode, 200)
+		iconb, err := ioutil.ReadAll(icon.Body)
+		assert.NoError(t, err)
+		assert.NotEmpty(t, iconb)
+		err = icon.Body.Close()
+		assert.NoError(t, err)
+
+		response := r.Put("/test.gif", "image/gif", string(iconb))
+		assert.Equal(t, 201, response.StatusCode)
+		response = r.Get("/test.gif")
+		assert.Equal(t, response.StatusCode, 200)
+		assert.Equal(t, response.RawResponse.Header.Get(HCType), "image/gif")
+		assert.Equal(t, len(response.Body), icon.ContentLength)
+		response = r.Delete("/test.gif", "", "")
+		assert.Equal(t, response.StatusCode, 200)
 	})
 }
 

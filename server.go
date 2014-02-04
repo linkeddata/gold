@@ -3,6 +3,7 @@ package gold
 import (
 	"flag"
 	"fmt"
+	"github.com/presbrey/magicmime"
 	"io"
 	"log"
 	"net"
@@ -11,6 +12,8 @@ import (
 	_path "path"
 	"strings"
 )
+
+const HCType = "Content-Type"
 
 var (
 	debug  = flag.Bool("debug", false, "output extra logging")
@@ -84,9 +87,10 @@ func (h Handler) ServeHTTP(w http.ResponseWriter, req0 *http.Request) {
 	user := req.Auth()
 	w.Header().Set("User", user)
 
-	dataMime := req.Header.Get("Content-Type")
+	dataMime := req.Header.Get(HCType)
 	dataMime = strings.Split(dataMime, ";")[0]
-	if len(dataMime) > 0 && len(mimeParser[dataMime]) == 0 {
+	dataHasParser := len(mimeParser[dataMime]) > 0
+	if len(dataMime) > 0 && !dataHasParser && req.Method != "PUT" {
 		w.WriteHeader(415)
 		fmt.Fprintln(w, "Unsupported Media Type:", dataMime)
 		return
@@ -146,31 +150,75 @@ func (h Handler) ServeHTTP(w http.ResponseWriter, req0 *http.Request) {
 		return
 
 	case "GET", "HEAD":
-		// magicType := magicmime.TypeByFile(path)
+		var (
+			magicType string
+			maybeRDF  bool
+		)
 
-		w.Header().Set("Content-Type", contentType)
-		if req.Method == "GET" && contentType == "text/html" {
-			w.Header().Set("Content-Type", "text/html")
-			w.WriteHeader(200)
-			fmt.Fprint(w, tabulatorSkin)
+		status := 501
+		stat, serr := os.Stat(path)
+		switch {
+		case os.IsNotExist(serr):
+			status = 404
+		case stat.IsDir():
+			if contentType == "text/html" {
+				_, xerr := os.Stat(path + "/index.html")
+				if xerr == nil {
+					status = 200
+					magicType = "text/html"
+					path = _path.Join(path, "index.html")
+				}
+			}
+		default:
+			status = 200
+			magicType, _ = magicmime.TypeByFile(path)
+			maybeRDF = magicType == "text/plain"
+		}
+
+		if status != 200 {
+			if req.Method == "GET" && contentType == "text/html" {
+				w.Header().Set(HCType, contentType)
+				w.WriteHeader(200)
+				fmt.Fprint(w, tabulatorSkin)
+				return
+			}
+			w.WriteHeader(status)
 			return
 		}
 
-		stat, err := os.Stat(path)
-		if os.IsNotExist(err) {
-			w.WriteHeader(404)
-			return
-		} else if stat.IsDir() {
-			w.WriteHeader(501)
-			return
-		} else {
+		if maybeRDF {
 			g.ParseFile(path)
+			if g.Store.Num() == 0 {
+				maybeRDF = false
+			} else {
+				w.Header().Set(HCType, contentType)
+				w.Header().Set("Triples", fmt.Sprintf("%d", g.Store.Num()))
+			}
 		}
 
-		w.Header().Set("Triples", fmt.Sprintf("%d", g.Store.Num()))
+		if !maybeRDF && len(magicType) > 0 {
+			switch path[len(path)-5:] {
+			case ".html":
+				magicType = "text/html"
+			}
+			w.Header().Set(HCType, magicType)
+			w.WriteHeader(status)
+			if req.Method == "HEAD" {
+				w.WriteHeader(status)
+				return
+			}
+			if status == 200 {
+				f, err := os.Open(path)
+				if err == nil {
+					defer f.Close()
+					io.Copy(w, f)
+				}
+			}
+			return
+		}
 
 		if req.Method == "HEAD" {
-			w.WriteHeader(200)
+			w.WriteHeader(status)
 			return
 		}
 
@@ -223,9 +271,14 @@ func (h Handler) ServeHTTP(w http.ResponseWriter, req0 *http.Request) {
 			sparql.Parse(req.Body)
 			g.SPARQLUpdate(sparql)
 		default:
-			g.Parse(req.Body, dataMime)
+			if dataHasParser {
+				g.Parse(req.Body, dataMime)
+			}
 		}
-		w.Header().Set("Triples", fmt.Sprintf("%d", g.Store.Num()))
+
+		if dataHasParser {
+			w.Header().Set("Triples", fmt.Sprintf("%d", g.Store.Num()))
+		}
 
 		os.MkdirAll(_path.Dir(path), 0755)
 		f, err := os.OpenFile(path, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
@@ -235,7 +288,11 @@ func (h Handler) ServeHTTP(w http.ResponseWriter, req0 *http.Request) {
 			return
 		}
 		defer f.Close()
-		err = g.WriteFile(f, "")
+		if dataHasParser {
+			err = g.WriteFile(f, "")
+		} else {
+			_, err = io.Copy(f, req.Body)
+		}
 		if err != nil {
 			w.WriteHeader(500)
 		} else if req.Method == "PUT" {
