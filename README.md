@@ -8,7 +8,7 @@ Linked Data server for Go
 
 Use the `go get` command eg.
 
-    go get github.com/linkeddata/gold/gold-server
+    go get github.com/linkeddata/gold/server
 
 (requires go >= 1.2)
 
