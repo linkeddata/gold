@@ -1,7 +1,8 @@
 package gold
 
 var (
-	tabulatorSkin = `<!DOCTYPE html>
+	Skins = map[string]string{
+		"tabulator": `<!DOCTYPE html>
 <html id="docHTML">
 <head>
     <link type="text/css" rel="stylesheet" href="https://w3.scripts.mit.edu/tabulator/tabbedtab.css" />
@@ -27,5 +28,6 @@ jQuery(document).ready(function() {
     <table id="outline"></table>
 </div>
 </body>
-</html>`
+</html>`,
+	}
 )

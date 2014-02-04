@@ -63,6 +63,10 @@ func NewGraph(baseUri string) *Graph {
 	}
 }
 
+func (g *Graph) Len() int {
+	return g.Store.Num()
+}
+
 func (g *Graph) Term() rdf.Term {
 	return g.baseTerm
 }

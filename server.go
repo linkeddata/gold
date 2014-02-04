@@ -16,10 +16,12 @@ import (
 const HCType = "Content-Type"
 
 var (
-	debug  = flag.Bool("debug", false, "output extra logging")
-	root   = flag.String("root", ".", "path to file storage root")
-	stream = flag.Bool("stream", false, "stream responses (experimental)")
-	vhosts = flag.Bool("vhosts", false, "append serverName to path on disk")
+	debug    = flag.Bool("debug", false, "output extra logging")
+	dirIndex = flag.String("dirIndex", "index.html", "filename used for directory indexing (empty to disable)")
+	root     = flag.String("root", ".", "path to file storage root")
+	skin     = flag.String("skin", "tabulator", "default view for HTML clients")
+	stream   = flag.Bool("stream", false, "stream responses (experimental)")
+	vhosts   = flag.Bool("vhosts", false, "append serverName to path on disk")
 
 	methodsAll = []string{
 		"GET", "PUT", "POST", "OPTIONS", "HEAD", "MKCOL", "DELETE", "PATCH",
@@ -161,12 +163,12 @@ func (h Handler) ServeHTTP(w http.ResponseWriter, req0 *http.Request) {
 		case os.IsNotExist(serr):
 			status = 404
 		case stat.IsDir():
-			if contentType == "text/html" {
-				_, xerr := os.Stat(path + "/index.html")
+			if len(*dirIndex) > 0 && contentType == "text/html" {
+				_, xerr := os.Stat(path + "/" + *dirIndex)
 				if xerr == nil {
 					status = 200
 					magicType = "text/html"
-					path = _path.Join(path, "index.html")
+					path = _path.Join(path, *dirIndex)
 				}
 			}
 		default:
@@ -179,7 +181,7 @@ func (h Handler) ServeHTTP(w http.ResponseWriter, req0 *http.Request) {
 			if req.Method == "GET" && contentType == "text/html" {
 				w.Header().Set(HCType, contentType)
 				w.WriteHeader(200)
-				fmt.Fprint(w, tabulatorSkin)
+				fmt.Fprint(w, Skins[*skin])
 				return
 			}
 			w.WriteHeader(status)
@@ -188,11 +190,11 @@ func (h Handler) ServeHTTP(w http.ResponseWriter, req0 *http.Request) {
 
 		if maybeRDF {
 			g.ParseFile(path)
-			if g.Store.Num() == 0 {
+			if g.Len() == 0 {
 				maybeRDF = false
 			} else {
 				w.Header().Set(HCType, contentType)
-				w.Header().Set("Triples", fmt.Sprintf("%d", g.Store.Num()))
+				w.Header().Set("Triples", fmt.Sprintf("%d", g.Len()))
 			}
 		}
 
@@ -277,7 +279,7 @@ func (h Handler) ServeHTTP(w http.ResponseWriter, req0 *http.Request) {
 		}
 
 		if dataHasParser {
-			w.Header().Set("Triples", fmt.Sprintf("%d", g.Store.Num()))
+			w.Header().Set("Triples", fmt.Sprintf("%d", g.Len()))
 		}
 
 		os.MkdirAll(_path.Dir(path), 0755)
