@@ -52,7 +52,7 @@ func TestWebIDTLSAuth(t *testing.T) {
 	g.AddTriple(keyTerm, ns["rdf"].Get("type"), ns["cert"].Get("RSAPublicKey"))
 	g.AddTriple(keyTerm, ns["cert"].Get("modulus"), rdf.NewLiteral(fmt.Sprintf("%x", priv.N)))
 	g.AddTriple(keyTerm, ns["cert"].Get("exponent"), rdf.NewLiteral(fmt.Sprintf("%d", priv.E)))
-	gN3, _ := g.Write("text/turtle")
+	gN3, _ := g.Serialize("text/turtle")
 
 	req, err := http.NewRequest("PUT", g.URI(), strings.NewReader(gN3))
 	assert.NoError(t, err)

@@ -8,20 +8,25 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
+	"strings"
 )
 
 type AnyGraph interface {
 	Len() int
+	Path() string
 	URI() string
 	Parse(io.Reader, string)
-	LoadFile(string)
+	Serialize(string) (string, error)
+
 	JSONPatch(io.Reader) error
 	SPARQLUpdate(*SPARQL)
 	IterTriples() chan *rdf.Triple
-	Write(string) (string, error)
+
+	ReadFile(string)
 	WriteFile(*os.File, string) error
 }
 
@@ -80,6 +85,21 @@ func (g *Graph) Len() int {
 	return g.Store.Num()
 }
 
+func (g *Graph) Path() (path string) {
+	lst := strings.SplitN(g.uri, "://", 2)
+	if *vhosts {
+		paths := strings.SplitN(lst[1], "/", 2)
+		host, _, _ := net.SplitHostPort(paths[0])
+		if len(host) == 0 {
+			host = paths[0]
+		}
+		path = strings.Join([]string{host, paths[1]}, "/")
+	} else {
+		path = strings.SplitN(lst[1], "/", 2)[1]
+	}
+	return strings.Join([]string{*root, path}, "/")
+}
+
 func (g *Graph) Term() rdf.Term {
 	return g.term
 }
@@ -123,7 +143,7 @@ func (g *Graph) Parse(reader io.Reader, mime string) {
 	}
 }
 
-func (g *Graph) LoadFile(filename string) {
+func (g *Graph) ReadFile(filename string) {
 	_, err := os.Stat(filename)
 	if os.IsNotExist(err) {
 		return
@@ -180,7 +200,7 @@ func term2C(t rdf.Term) crdf.Term {
 	return nil
 }
 
-func (g *Graph) Write(mime string) (string, error) {
+func (g *Graph) Serialize(mime string) (string, error) {
 	serializerName := mimeSerializer[mime]
 	if len(serializerName) == 0 {
 		serializerName = "turtle"

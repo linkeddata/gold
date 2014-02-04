@@ -26,7 +26,18 @@ var (
 	methodsAll = []string{
 		"GET", "PUT", "POST", "OPTIONS", "HEAD", "MKCOL", "DELETE", "PATCH",
 	}
+
+	magic *magicmime.Magic
 )
+
+func init() {
+	var err error
+
+	magic, err = magicmime.NewMagic()
+	if err != nil {
+		panic(err)
+	}
+}
 
 type httpRequest http.Request
 
@@ -77,15 +88,6 @@ func (h Handler) ServeHTTP(w http.ResponseWriter, req0 *http.Request) {
 		req0.Body.Close()
 	}()
 	req := (*httpRequest)(req0)
-	if *vhosts {
-		host, _, _ := net.SplitHostPort(req.Host)
-		if len(host) == 0 {
-			host = req.Host
-		}
-		path = _path.Join(*root, host, req.URL.Path)
-	} else {
-		path = _path.Join(*root, req.URL.Path)
-	}
 	user := req.Auth()
 	w.Header().Set("User", user)
 
@@ -115,10 +117,11 @@ func (h Handler) ServeHTTP(w http.ResponseWriter, req0 *http.Request) {
 	w.Header().Set("Access-Control-Max-Age", "60")
 	w.Header().Set("MS-Author-Via", "DAV, SPARQL")
 
-	g := Graphs(req.BaseURI())
+	g := NewGraph(req.BaseURI())
 	if *debug {
 		log.Printf("user=%s req=%+v\n%+v\n\n", user, req, g)
 	}
+	path = g.Path()
 
 	// TODO: WAC
 	origin := ""
@@ -173,7 +176,7 @@ func (h Handler) ServeHTTP(w http.ResponseWriter, req0 *http.Request) {
 			}
 		default:
 			status = 200
-			magicType, _ = magicmime.TypeByFile(path)
+			magicType, _ = magic.TypeByFile(path)
 			maybeRDF = magicType == "text/plain"
 		}
 
@@ -189,7 +192,7 @@ func (h Handler) ServeHTTP(w http.ResponseWriter, req0 *http.Request) {
 		}
 
 		if maybeRDF {
-			g.LoadFile(path)
+			g.ReadFile(path)
 			if g.Len() == 0 {
 				maybeRDF = false
 			} else {
@@ -199,9 +202,11 @@ func (h Handler) ServeHTTP(w http.ResponseWriter, req0 *http.Request) {
 		}
 
 		if !maybeRDF && len(magicType) > 0 {
-			switch path[len(path)-5:] {
-			case ".html":
-				magicType = "text/html"
+			if len(path) > 4 {
+				switch path[len(path)-5:] {
+				case ".html":
+					magicType = "text/html"
+				}
 			}
 			w.Header().Set(HCType, magicType)
 			w.WriteHeader(status)
@@ -251,7 +256,7 @@ func (h Handler) ServeHTTP(w http.ResponseWriter, req0 *http.Request) {
 			}()
 			err = <-errCh
 		} else {
-			data, err = g.Write(contentType)
+			data, err = g.Serialize(contentType)
 		}
 		if err != nil {
 			log.Println(err)
@@ -263,7 +268,7 @@ func (h Handler) ServeHTTP(w http.ResponseWriter, req0 *http.Request) {
 
 	case "PATCH", "POST", "PUT":
 		if req.Method != "PUT" {
-			g.LoadFile(path)
+			g.ReadFile(path)
 		}
 		switch dataMime {
 		case "application/json":
