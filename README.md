@@ -16,7 +16,7 @@ Setup Go + dependencies:
 
     mkdir ~/go; export GOPATH=~/go
 
-Use the `go get` command eg.
+Use the `go get` command:
 
     go get github.com/linkeddata/gold/server
 

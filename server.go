@@ -33,7 +33,7 @@ var (
 func init() {
 	var err error
 
-	magic, err = magicmime.NewMagic()
+	magic, err = magicmime.New()
 	if err != nil {
 		panic(err)
 	}
