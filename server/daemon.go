@@ -13,6 +13,7 @@ import (
 
 var (
 	bind        = flag.String("bind", "", "bind address (empty: fcgi)")
+	debug       = flag.Bool("debug", false, "output extra logging")
 	tlsCertFile = flag.String("tlsCertFile", "", "TLS certificate eg. cert.pem")
 	tlsKeyFile  = flag.String("tlsKeyFile", "", "TLS certificate eg. key.pem")
 
@@ -53,6 +54,7 @@ LMEOXuCrAMT/nApK629bgSlTU6P9PZd+05yRbHt4Ds1S
 
 func init() {
 	flag.Parse()
+	gold.Debug = *debug
 }
 
 func main() {

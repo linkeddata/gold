@@ -16,7 +16,8 @@ import (
 const HCType = "Content-Type"
 
 var (
-	debug    = flag.Bool("debug", false, "output extra logging")
+	Debug = false
+
 	dirIndex = flag.String("dirIndex", "index.html", "filename used for directory indexing (empty to disable)")
 	root     = flag.String("root", ".", "path to file storage root")
 	skin     = flag.String("skin", "tabulator", "default view for HTML clients")
@@ -118,7 +119,7 @@ func (h Handler) ServeHTTP(w http.ResponseWriter, req0 *http.Request) {
 	w.Header().Set("MS-Author-Via", "DAV, SPARQL")
 
 	g := NewGraph(req.BaseURI())
-	if *debug {
+	if Debug {
 		log.Printf("user=%s req=%+v\n%+v\n\n", user, req, g)
 	}
 	path = g.Path()
