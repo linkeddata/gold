@@ -1,9 +1,11 @@
 package gold
 
 import (
+	"bytes"
 	"io"
 	"io/ioutil"
 	"strings"
+	"text/scanner"
 )
 
 type SPARQLQuery struct {
@@ -19,45 +21,56 @@ type SPARQL struct {
 }
 
 func NewSPARQL(baseUri string) *SPARQL {
-	return &SPARQL{baseUri: baseUri}
+	return &SPARQL{
+		baseUri: baseUri,
+		queries: []SPARQLQuery{},
+	}
 }
 
-func (sparql *SPARQL) Parse(r io.Reader) error {
-	bytes, err := ioutil.ReadAll(r)
-	if err != nil {
-		return err
-	}
-	body := string(bytes)
-	lst := []string{}
+func (sparql *SPARQL) Parse(src io.Reader) error {
+	b, _ := ioutil.ReadAll(src)
+	s := new(scanner.Scanner).Init(bytes.NewReader(b))
+	s.Mode = scanner.ScanIdents | scanner.ScanStrings
 
-	angles := 0
-	curlys := 0
-	quotes := 0
-	buf := ""
-	for _, s := range strings.Split(body, ";") {
-		buf += s
-		angles += strings.Count(s, "<")
-		angles -= strings.Count(s, ">")
-		curlys += strings.Count(s, "{")
-		curlys -= strings.Count(s, "}")
-		quotes += strings.Count(s, "\"")
-		if angles == 0 && curlys == 0 && quotes%2 == 0 {
-			lst = append(lst, buf)
-			buf = ""
+	start := 0
+	level := 0
+	verb := ""
+	tok := s.Scan()
+	for tok != scanner.EOF {
+		switch tok {
+		case -2:
+			if level == 0 {
+				if len(verb) > 0 {
+					verb += " "
+				}
+				verb += s.TokenText()
+			}
+
+		case 123: // {
+			if level == 0 {
+				start = s.Position.Offset
+			}
+			level += 1
+
+		case 125: // }
+			level -= 1
+			if level == 0 {
+				query := SPARQLQuery{
+					body:  string(b[start+1 : s.Position.Offset]),
+					graph: NewGraph(sparql.baseUri),
+					verb:  verb,
+				}
+				query.graph.Parse(strings.NewReader(query.body), "text/turtle")
+				sparql.queries = append(sparql.queries, query)
+			}
+
+		case 59: // ;
+			verb = ""
 		}
+
+		tok = s.Scan()
 	}
 
-	for _, s := range lst {
-		b0 := strings.Index(s, "{")
-		b1 := strings.Index(s, "}")
-		query := SPARQLQuery{
-			verb:  strings.TrimSpace(s[0:b0]),
-			body:  strings.TrimSpace(s[b0+1 : b1]),
-			graph: NewGraph(sparql.baseUri),
-		}
-		query.graph.Parse(strings.NewReader(query.body), "text/turtle")
-		sparql.queries = append(sparql.queries, query)
-	}
 	return nil
 }
 
