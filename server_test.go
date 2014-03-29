@@ -125,7 +125,7 @@ func TestMKCOL(t *testing.T) {
 	testflight.WithServer(handler, func(r *testflight.Requester) {
 		request, _ := http.NewRequest("MKCOL", "/abc", nil)
 		response := r.Do(request)
-		assert.Equal(t, 500, response.StatusCode)
+		assert.Equal(t, 409, response.StatusCode)
 
 		request, _ = http.NewRequest("MKCOL", "/_folder", nil)
 		response = r.Do(request)

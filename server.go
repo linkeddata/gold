@@ -338,7 +338,12 @@ func (h Handler) ServeHTTP(w http.ResponseWriter, req0 *http.Request) {
 	case "MKCOL":
 		err := os.MkdirAll(path, 0755)
 		if err != nil {
-			w.WriteHeader(500)
+			switch err.(type) {
+			case *os.PathError:
+				w.WriteHeader(409)
+			default:
+				w.WriteHeader(500)
+			}
 			fmt.Fprint(w, err)
 			return
 		} else {
