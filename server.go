@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/presbrey/magicmime"
 	"io"
+	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
@@ -168,13 +169,24 @@ func (h Handler) ServeHTTP(w http.ResponseWriter, req0 *http.Request) {
 			status = 404
 		case stat.IsDir():
 			if len(*dirIndex) > 0 && contentType == "text/html" {
+				// eg. DirectoryIndex index.html
 				_, xerr := os.Stat(path + "/" + *dirIndex)
 				if xerr == nil {
 					status = 200
 					magicType = "text/html"
 					path = _path.Join(path, *dirIndex)
 				}
+			} else {
+				// TODO: RDF
+				if infos, err := ioutil.ReadDir(path); err == nil {
+					for _, info := range infos {
+						log.Printf("%+v\n", info)
+					}
+					w.WriteHeader(501)
+					return
+				}
 			}
+
 		default:
 			status = 200
 			magicType, _ = magic.TypeByFile(path)
