@@ -1,7 +1,6 @@
 package gold
 
 import (
-	"flag"
 	"fmt"
 	"github.com/presbrey/magicmime"
 	"io"
@@ -19,11 +18,8 @@ const HCType = "Content-Type"
 var (
 	Debug     = false
 	DirIndex  = []string{"index.html", "index.htm"}
+	Skin      = "tabulator"
 	Streaming = false // experimental
-
-	root   = flag.String("root", ".", "path to file storage root")
-	skin   = flag.String("skin", "tabulator", "default view for HTML clients")
-	vhosts = flag.Bool("vhosts", false, "append serverName to path on disk")
 
 	methodsAll = []string{
 		"GET", "PUT", "POST", "OPTIONS", "HEAD", "MKCOL", "DELETE", "PATCH",
@@ -77,9 +73,37 @@ func (req httpRequest) Auth() string {
 	return user
 }
 
-type Handler struct{ http.Handler }
+type Server struct {
+	http.Handler
 
-func (h Handler) ServeHTTP(w http.ResponseWriter, req0 *http.Request) {
+	root   string
+	vhosts bool
+}
+
+func NewServer(root string, vhosts bool) (s *Server) {
+	s = new(Server)
+	s.root = root
+	s.vhosts = vhosts
+	return
+}
+
+func (s *Server) GraphPath(g AnyGraph) (path string) {
+	lst := strings.SplitN(g.URI(), "://", 2)
+	if s.vhosts {
+		paths := strings.SplitN(lst[1], "/", 2)
+		host, _, _ := net.SplitHostPort(paths[0])
+		if len(host) == 0 {
+			host = paths[0]
+		}
+		path = strings.Join([]string{host, paths[1]}, "/")
+	} else {
+		path = strings.SplitN(lst[1], "/", 2)[1]
+	}
+	return strings.Join([]string{s.root, path}, "/")
+
+}
+
+func (h *Server) ServeHTTP(w http.ResponseWriter, req0 *http.Request) {
 	var (
 		err error
 
@@ -123,7 +147,7 @@ func (h Handler) ServeHTTP(w http.ResponseWriter, req0 *http.Request) {
 	if Debug {
 		log.Printf("user=%s req=%+v\n%+v\n\n", user, req, g)
 	}
-	path = g.Path()
+	path = h.GraphPath(g)
 
 	// TODO: WAC
 	origin := ""
@@ -200,7 +224,7 @@ func (h Handler) ServeHTTP(w http.ResponseWriter, req0 *http.Request) {
 			if req.Method == "GET" && contentType == "text/html" {
 				w.Header().Set(HCType, contentType)
 				w.WriteHeader(200)
-				fmt.Fprint(w, Skins[*skin])
+				fmt.Fprint(w, Skins[Skin])
 				return
 			}
 			w.WriteHeader(status)

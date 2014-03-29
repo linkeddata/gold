@@ -11,7 +11,7 @@ import (
 )
 
 var (
-	handler = Handler{}
+	handler = NewServer(".", false)
 
 	testDelete = true
 )

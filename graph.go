@@ -8,16 +8,13 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
-	"net"
 	"net/http"
 	"net/url"
 	"os"
-	"strings"
 )
 
 type AnyGraph interface {
 	Len() int
-	Path() string
 	URI() string
 	Parse(io.Reader, string)
 	Serialize(string) (string, error)
@@ -83,21 +80,6 @@ func NewGraph(uri string) *Graph {
 
 func (g *Graph) Len() int {
 	return g.Store.Num()
-}
-
-func (g *Graph) Path() (path string) {
-	lst := strings.SplitN(g.uri, "://", 2)
-	if *vhosts {
-		paths := strings.SplitN(lst[1], "/", 2)
-		host, _, _ := net.SplitHostPort(paths[0])
-		if len(host) == 0 {
-			host = paths[0]
-		}
-		path = strings.Join([]string{host, paths[1]}, "/")
-	} else {
-		path = strings.SplitN(lst[1], "/", 2)[1]
-	}
-	return strings.Join([]string{*root, path}, "/")
 }
 
 func (g *Graph) Term() rdf.Term {

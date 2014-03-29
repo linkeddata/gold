@@ -12,10 +12,13 @@ import (
 )
 
 var (
-	bind        = flag.String("bind", "", "bind address (empty: fcgi)")
-	debug       = flag.Bool("debug", false, "output extra logging")
-	tlsCertFile = flag.String("tlsCertFile", "", "TLS certificate eg. cert.pem")
-	tlsKeyFile  = flag.String("tlsKeyFile", "", "TLS certificate eg. key.pem")
+	bind    = flag.String("bind", "", "bind address (empty: fcgi)")
+	debug   = flag.Bool("debug", false, "output extra logging")
+	root    = flag.String("root", ".", "path to file storage root")
+	skin    = flag.String("skin", "tabulator", "default view for HTML clients")
+	tlsCert = flag.String("tlsCertFile", "", "TLS certificate eg. cert.pem")
+	tlsKey  = flag.String("tlsKeyFile", "", "TLS certificate eg. key.pem")
+	vhosts  = flag.Bool("vhosts", false, "append serverName to path on disk")
 
 	tlsConfig = &tls.Config{
 		ClientAuth: tls.RequestClientCert,
@@ -55,21 +58,22 @@ LMEOXuCrAMT/nApK629bgSlTU6P9PZd+05yRbHt4Ds1S
 func init() {
 	flag.Parse()
 	gold.Debug = *debug
+	gold.Skin = *skin
 }
 
 func main() {
 	var err error
 
-	handler := gold.Handler{}
+	handler := gold.NewServer(*root, *vhosts)
 	if bind == nil || len(*bind) == 0 {
 		err = fcgi.Serve(nil, handler)
 	} else {
 		srv := &http.Server{Addr: *bind, Handler: handler}
 		tlsConfig.Certificates = make([]tls.Certificate, 1)
-		if len(*tlsCertFile) == 0 && len(*tlsKeyFile) == 0 {
+		if len(*tlsCert) == 0 && len(*tlsKey) == 0 {
 			tlsConfig.Certificates[0], err = tls.X509KeyPair(tlsTestCert, tlsTestKey)
 		} else {
-			tlsConfig.Certificates[0], err = tls.LoadX509KeyPair(*tlsCertFile, *tlsKeyFile)
+			tlsConfig.Certificates[0], err = tls.LoadX509KeyPair(*tlsCert, *tlsKey)
 		}
 		if err == nil {
 			conn, err := net.Listen("tcp", *bind)
