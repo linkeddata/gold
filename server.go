@@ -17,13 +17,13 @@ import (
 const HCType = "Content-Type"
 
 var (
-	Debug = false
+	Debug     = false
+	DirIndex  = []string{"index.html", "index.htm"}
+	Streaming = false // experimental
 
-	dirIndex = flag.String("dirIndex", "index.html", "filename used for directory indexing (empty to disable)")
-	root     = flag.String("root", ".", "path to file storage root")
-	skin     = flag.String("skin", "tabulator", "default view for HTML clients")
-	stream   = flag.Bool("stream", false, "stream responses (experimental)")
-	vhosts   = flag.Bool("vhosts", false, "append serverName to path on disk")
+	root   = flag.String("root", ".", "path to file storage root")
+	skin   = flag.String("skin", "tabulator", "default view for HTML clients")
+	vhosts = flag.Bool("vhosts", false, "append serverName to path on disk")
 
 	methodsAll = []string{
 		"GET", "PUT", "POST", "OPTIONS", "HEAD", "MKCOL", "DELETE", "PATCH",
@@ -157,6 +157,7 @@ func (h Handler) ServeHTTP(w http.ResponseWriter, req0 *http.Request) {
 		return
 
 	case "GET", "HEAD":
+		// TODO: glob(*)
 		var (
 			magicType string
 			maybeRDF  bool
@@ -168,13 +169,15 @@ func (h Handler) ServeHTTP(w http.ResponseWriter, req0 *http.Request) {
 		case os.IsNotExist(serr):
 			status = 404
 		case stat.IsDir():
-			if len(*dirIndex) > 0 && contentType == "text/html" {
-				// eg. DirectoryIndex index.html
-				_, xerr := os.Stat(path + "/" + *dirIndex)
-				if xerr == nil {
-					status = 200
-					magicType = "text/html"
-					path = _path.Join(path, *dirIndex)
+			if len(DirIndex) > 0 && contentType == "text/html" {
+				for _, dirIndex := range DirIndex {
+					_, xerr := os.Stat(path + "/" + dirIndex)
+					if xerr == nil {
+						status = 200
+						magicType = "text/html"
+						path = _path.Join(path, dirIndex)
+						break
+					}
 				}
 			} else {
 				// TODO: RDF
@@ -242,7 +245,7 @@ func (h Handler) ServeHTTP(w http.ResponseWriter, req0 *http.Request) {
 			return
 		}
 
-		if *stream {
+		if Streaming {
 			errCh := make(chan error, 8)
 			go func() {
 				rf, wf, err := os.Pipe()

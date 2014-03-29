@@ -152,13 +152,15 @@ func TestHEAD(t *testing.T) {
 }
 
 func TestStreaming(t *testing.T) {
-	*stream = true
+	Streaming = true
+	defer func() {
+		Streaming = false
+	}()
 	testflight.WithServer(handler, func(r *testflight.Requester) {
 		response := r.Get("/abc")
 		assert.Equal(t, 200, response.StatusCode)
 		assert.Equal(t, response.Body, "@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n\n<d>\n    <e> <f> .\n\n")
 	})
-	*stream = false
 }
 
 func TestDELETE(t *testing.T) {
