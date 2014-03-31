@@ -2,6 +2,7 @@ package gold
 
 import (
 	"fmt"
+	rdf "github.com/kierdavis/argo"
 	"github.com/presbrey/magicmime"
 	"io"
 	"io/ioutil"
@@ -206,11 +207,24 @@ func (h *Server) ServeHTTP(w http.ResponseWriter, req0 *http.Request) {
 			} else {
 				// TODO: RDF
 				if infos, err := ioutil.ReadDir(path); err == nil {
+					magicType = "text/turtle"
 					for _, info := range infos {
-						log.Printf("%+v\n", info)
+						var s, o rdf.Term
+						if info.IsDir() {
+							s = rdf.NewResource(info.Name() + "/")
+							o = rdf.NewResource("http://www.w3.org/ns/posix/stat#Directory")
+						} else {
+							s = rdf.NewResource(info.Name())
+							o = rdf.NewResource("http://www.w3.org/ns/posix/stat#File")
+						}
+						g.AddTriple(s, rdf.NewResource("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), o)
+						// add mtime (TODO: find a way to avoid testing the mtime, as it changes all the time)
+						//g.AddTriple(s, rdf.NewResource("http://www.w3.org/ns/posix/stat#mtime"), rdf.NewLiteral(fmt.Sprintf("%d", info.ModTime().Unix())))
+						g.AddTriple(s, rdf.NewResource("http://www.w3.org/ns/posix/stat#size"), rdf.NewLiteral(fmt.Sprintf("%d", info.Size())))
 					}
-					w.WriteHeader(501)
-					return
+					// set status
+					status = 200
+					maybeRDF = true
 				}
 			}
 

@@ -137,7 +137,26 @@ func TestMKCOL(t *testing.T) {
 
 		request, _ = http.NewRequest("GET", "/_folder", nil)
 		response = r.Do(request)
-		assert.Equal(t, 501, response.StatusCode)
+		assert.Equal(t, 200, response.StatusCode)
+	})
+}
+
+func TestLISTDIR(t *testing.T) {
+	testflight.WithServer(handler, func(r *testflight.Requester) {
+		request, _ := http.NewRequest("MKCOL", "/_folder/dir", nil)
+		response := r.Do(request)
+		assert.Equal(t, 201, response.StatusCode)
+
+		response = r.Post("/_folder/abc", "text/turtle", "")
+		assert.Empty(t, response.Body)
+		assert.Equal(t, 200, response.StatusCode)
+
+		request, _ = http.NewRequest("GET", "/_folder", nil)
+		request.Header.Add("Accept", "text/turtle")
+		response = r.Do(request)
+
+		assert.Equal(t, 200, response.StatusCode)
+		assert.Equal(t, response.Body, "@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n\n<abc>\n    a <http://www.w3.org/ns/posix/stat#File> ;\n    <http://www.w3.org/ns/posix/stat#size> \"62\" .\n\n<dir/>\n    a <http://www.w3.org/ns/posix/stat#Directory> ;\n    <http://www.w3.org/ns/posix/stat#size> \"4096\" .\n\n")
 	})
 }
 
@@ -174,12 +193,22 @@ func TestDELETE(t *testing.T) {
 
 		response = r.Get("/abc")
 		assert.Equal(t, 404, response.StatusCode)
+
+		response = r.Delete("/_folder/abc", "", "")
+		assert.Equal(t, 200, response.StatusCode)
+
+		response = r.Get("/_folder/abc")
+		assert.Equal(t, 404, response.StatusCode)
 	})
 }
 
 func TestDELETEFolder(t *testing.T) {
 	testflight.WithServer(handler, func(r *testflight.Requester) {
-		response := r.Delete("/_folder", "", "")
+		response := r.Delete("/_folder/dir", "", "")
+		assert.Empty(t, response.Body)
+		assert.Equal(t, 200, response.StatusCode)
+
+		response = r.Delete("/_folder", "", "")
 		assert.Empty(t, response.Body)
 		assert.Equal(t, 200, response.StatusCode)
 
