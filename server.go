@@ -117,6 +117,7 @@ func (h *Server) ServeHTTP(w http.ResponseWriter, req0 *http.Request) {
 	req := (*httpRequest)(req0)
 	user := req.Auth()
 	w.Header().Set("User", user)
+	acl := NewWAC(req, h, user)
 
 	dataMime := req.Header.Get(HCType)
 	dataMime = strings.Split(dataMime, ";")[0]
@@ -189,6 +190,10 @@ func (h *Server) ServeHTTP(w http.ResponseWriter, req0 *http.Request) {
 		)
 
 		status := 501
+		if !acl.AllowRead() {
+			status = 403
+			break
+		}
 		stat, serr := os.Stat(path)
 		switch {
 		case os.IsNotExist(serr):
@@ -320,6 +325,10 @@ func (h *Server) ServeHTTP(w http.ResponseWriter, req0 *http.Request) {
 		}
 
 	case "PATCH", "POST", "PUT":
+		if !acl.AllowWrite() && !acl.AllowAppend() {
+			w.WriteHeader(403)
+			return
+		}
 		if req.Method != "PUT" {
 			g.ReadFile(path)
 		}
@@ -360,6 +369,10 @@ func (h *Server) ServeHTTP(w http.ResponseWriter, req0 *http.Request) {
 		}
 
 	case "DELETE":
+		if !acl.AllowWrite() && !acl.AllowAppend() {
+			w.WriteHeader(403)
+			return
+		}
 		err := os.Remove(path)
 		if err != nil {
 			if os.IsNotExist(err) {
@@ -376,6 +389,10 @@ func (h *Server) ServeHTTP(w http.ResponseWriter, req0 *http.Request) {
 		}
 
 	case "MKCOL":
+		if !acl.AllowWrite() && !acl.AllowAppend() {
+			w.WriteHeader(403)
+			return
+		}
 		err := os.MkdirAll(path, 0755)
 		if err != nil {
 			switch err.(type) {
