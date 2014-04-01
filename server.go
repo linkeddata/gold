@@ -218,8 +218,8 @@ func (h *Server) ServeHTTP(w http.ResponseWriter, req0 *http.Request) {
 							o = rdf.NewResource("http://www.w3.org/ns/posix/stat#File")
 						}
 						g.AddTriple(s, rdf.NewResource("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), o)
-						// add mtime (TODO: find a way to avoid testing the mtime, as it changes all the time)
-						//g.AddTriple(s, rdf.NewResource("http://www.w3.org/ns/posix/stat#mtime"), rdf.NewLiteral(fmt.Sprintf("%d", info.ModTime().Unix())))
+						// TODO: find a way to avoid testing the mtime, as it changes all the time)
+						g.AddTriple(s, rdf.NewResource("http://www.w3.org/ns/posix/stat#mtime"), rdf.NewLiteral(fmt.Sprintf("%d", info.ModTime().Unix())))
 						g.AddTriple(s, rdf.NewResource("http://www.w3.org/ns/posix/stat#size"), rdf.NewLiteral(fmt.Sprintf("%d", info.Size())))
 					}
 					// set status
