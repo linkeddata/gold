@@ -102,23 +102,81 @@ func term2term(term crdf.Term) rdf.Term {
 	return nil
 }
 
-func (g *Graph) All(s rdf.Term, p rdf.Term, o rdf.Term) []*rdf.Triple {
-	var triples []*rdf.Triple
-	for triple := range g.Filter(s, p, o) {
-		triples = append(triples, triple)
-	}
-	if len(triples) > 0 {
-		return triples
-	} else {
-		return nil
-	}
-}
-
 func (g *Graph) One(s rdf.Term, p rdf.Term, o rdf.Term) *rdf.Triple {
-	for triple := range g.Filter(s, p, o) {
-		return triple
+	for triple := range g.IterTriples() {
+		if s != nil {
+			if p != nil {
+				if o != nil {
+					if triple.Subject.Equal(s) && triple.Predicate.Equal(p) && triple.Object.Equal(o) {
+						return triple
+					}
+				} else {
+					if triple.Subject.Equal(s) && triple.Predicate.Equal(p) {
+						return triple
+					}
+				}
+			} else {
+				if triple.Subject.Equal(s) {
+					return triple
+				}
+			}
+		} else if p != nil {
+			if o != nil {
+				if triple.Predicate.Equal(p) && triple.Object.Equal(o) {
+					return triple
+				}
+			} else {
+				if triple.Predicate.Equal(p) {
+					return triple
+				}
+			}
+		} else if o != nil {
+			if triple.Object.Equal(o) {
+				return triple
+			}
+		} else {
+			return triple
+		}
 	}
 	return nil
+}
+
+func (g *Graph) All(s rdf.Term, p rdf.Term, o rdf.Term) []*rdf.Triple {
+	var triples []*rdf.Triple
+	for triple := range g.IterTriples() {
+		if s != nil {
+			if p != nil {
+				if o != nil {
+					if triple.Subject.Equal(s) && triple.Predicate.Equal(p) && triple.Object.Equal(o) {
+						triples = append(triples, triple)
+					}
+				} else {
+					if triple.Subject.Equal(s) && triple.Predicate.Equal(p) {
+						triples = append(triples, triple)
+					}
+				}
+			} else {
+				if triple.Subject.Equal(s) {
+					triples = append(triples, triple)
+				}
+			}
+		} else if p != nil {
+			if o != nil {
+				if triple.Predicate.Equal(p) && triple.Object.Equal(o) {
+					triples = append(triples, triple)
+				}
+			} else {
+				if triple.Predicate.Equal(p) {
+					triples = append(triples, triple)
+				}
+			}
+		} else if o != nil {
+			if triple.Object.Equal(o) {
+				triples = append(triples, triple)
+			}
+		}
+	}
+	return triples
 }
 
 func (g *Graph) AddStatement(st *crdf.Statement) {
