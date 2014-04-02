@@ -3,6 +3,7 @@ package gold
 import (
 	"fmt"
 	"github.com/drewolson/testflight"
+	rdf "github.com/kierdavis/argo"
 	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"net/http"
@@ -151,12 +152,27 @@ func TestLISTDIR(t *testing.T) {
 		assert.Empty(t, response.Body)
 		assert.Equal(t, 200, response.StatusCode)
 
-		request, _ = http.NewRequest("GET", "/_folder", nil)
+		request, _ = http.NewRequest("GET", "/_folder/", nil)
 		request.Header.Add("Accept", "text/turtle")
 		response = r.Do(request)
 
 		assert.Equal(t, 200, response.StatusCode)
-		//assert.Equal(t, response.Body, "@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n\n<abc>\n    a <http://www.w3.org/ns/posix/stat#File> ;\n    <http://www.w3.org/ns/posix/stat#size> \"62\" .\n\n<dir/>\n    a <http://www.w3.org/ns/posix/stat#Directory> ;\n    <http://www.w3.org/ns/posix/stat#size> \"4096\" .\n\n")
+
+		rdfs := rdf.NewNamespace("http://www.w3.org/1999/02/22-rdf-syntax-ns#")
+		posix := rdf.NewNamespace("http://www.w3.org/ns/posix/stat#")
+
+		g := NewGraph("/_folder/")
+		g.Parse(strings.NewReader(response.Body), "text/turtle")
+
+		f := rdf.NewResource("/_folder/abc")
+		assert.Equal(t, g.One(f, rdfs.Get("type"), nil).Object, posix.Get("File"))
+		assert.NotNil(t, g.One(f, posix.Get("size"), nil))
+		assert.NotNil(t, g.One(f, posix.Get("mtime"), nil))
+
+		d := rdf.NewResource("/_folder/dir/")
+		assert.Equal(t, g.One(d, rdfs.Get("type"), nil).Object, posix.Get("Directory"))
+		assert.NotNil(t, g.One(d, posix.Get("size"), nil))
+		assert.NotNil(t, g.One(d, posix.Get("mtime"), nil))
 	})
 }
 
