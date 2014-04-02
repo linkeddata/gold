@@ -32,9 +32,9 @@ func TestPatch(t *testing.T) {
 
 func TestOne(t *testing.T) {
 	g := NewGraph("http://test/")
-
 	g.AddTriple(rdf.NewResource("a"), rdf.NewResource("b"), rdf.NewResource("c"))
 	g.AddTriple(rdf.NewResource("a"), rdf.NewResource("b"), rdf.NewResource("d"))
+	g.AddTriple(rdf.NewResource("a"), rdf.NewResource("f"), rdf.NewLiteral("h"))
 	g.AddTriple(rdf.NewResource("g"), rdf.NewResource("b2"), rdf.NewResource("e"))
 
 	assert.Equal(t, g.One(rdf.NewResource("a"), nil, nil).String(), "<a> <b> <c> .")
@@ -52,14 +52,14 @@ func TestOne(t *testing.T) {
 
 func TestAll(t *testing.T) {
 	g := NewGraph("http://test/")
-
 	g.AddTriple(rdf.NewResource("a"), rdf.NewResource("b"), rdf.NewResource("c"))
 	g.AddTriple(rdf.NewResource("a"), rdf.NewResource("b"), rdf.NewResource("d"))
+	g.AddTriple(rdf.NewResource("a"), rdf.NewResource("f"), rdf.NewLiteral("h"))
 	g.AddTriple(rdf.NewResource("g"), rdf.NewResource("b2"), rdf.NewResource("e"))
 	g.AddTriple(rdf.NewResource("g"), rdf.NewResource("b2"), rdf.NewResource("c"))
 
 	assert.Equal(t, len(g.All(nil, nil, nil)), 0)
-	assert.Equal(t, len(g.All(rdf.NewResource("a"), nil, nil)), 2)
+	assert.Equal(t, len(g.All(rdf.NewResource("a"), nil, nil)), 3)
 	assert.Equal(t, len(g.All(nil, rdf.NewResource("b"), nil)), 2)
 	assert.Equal(t, len(g.All(nil, nil, rdf.NewResource("d"))), 1)
 	assert.Equal(t, len(g.All(nil, nil, rdf.NewResource("c"))), 2)
