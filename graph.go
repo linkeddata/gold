@@ -102,6 +102,25 @@ func term2term(term crdf.Term) rdf.Term {
 	return nil
 }
 
+func (g *Graph) All(s rdf.Term, p rdf.Term, o rdf.Term) []*rdf.Triple {
+	var triples []*rdf.Triple
+	for triple := range g.Filter(s, p, o) {
+		triples = append(triples, triple)
+	}
+	if len(triples) > 0 {
+		return triples
+	} else {
+		return nil
+	}
+}
+
+func (g *Graph) One(s rdf.Term, p rdf.Term, o rdf.Term) *rdf.Triple {
+	for triple := range g.Filter(s, p, o) {
+		return triple
+	}
+	return nil
+}
+
 func (g *Graph) AddStatement(st *crdf.Statement) {
 	s, p, o := term2term(st.Subject), term2term(st.Predicate), term2term(st.Object)
 	for triple := range g.Filter(s, p, nil) {
