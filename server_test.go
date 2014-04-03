@@ -5,8 +5,12 @@ import (
 	"github.com/drewolson/testflight"
 	rdf "github.com/kierdavis/argo"
 	"github.com/stretchr/testify/assert"
+	"io"
 	"io/ioutil"
+	"mime/multipart"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -119,6 +123,42 @@ func TestPUTTurtle(t *testing.T) {
 		response = r.Do(request)
 		assert.Equal(t, 200, response.StatusCode)
 		assert.Equal(t, response.Body, "@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n\n<d>\n    <e> <f> .\n\n")
+	})
+}
+
+func TestPUTMultiForm(t *testing.T) {
+	testflight.WithServer(handler, func(r *testflight.Requester) {
+		path := "./tests/img.jpg"
+		file, _ := os.Open(path)
+		defer file.Close()
+
+		bodyReader, bodyWriter := io.Pipe()
+		multiWriter := multipart.NewWriter(bodyWriter)
+		errChan := make(chan error, 1)
+		go func() {
+			defer bodyWriter.Close()
+			part, err := multiWriter.CreateFormFile("file", filepath.Base(path))
+			if err != nil {
+				errChan <- err
+				return
+			}
+			if _, err := io.Copy(part, file); err != nil {
+				errChan <- err
+				return
+			}
+			errChan <- multiWriter.Close()
+		}()
+
+		request, _ := http.NewRequest("PUT", "", bodyReader)
+		request.Header.Add("Content-Type", "multipart/form-data; boundary="+multiWriter.Boundary())
+		response := r.Do(request)
+		assert.Equal(t, 201, response.StatusCode)
+
+		response = r.Delete("/img.jpg", "", "")
+		assert.Equal(t, 200, response.StatusCode)
+
+		response = r.Get("/img.jpg")
+		assert.Equal(t, 404, response.StatusCode)
 	})
 }
 

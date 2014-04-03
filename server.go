@@ -350,17 +350,84 @@ func (h *Server) ServeHTTP(w http.ResponseWriter, req0 *http.Request) {
 		}
 
 		os.MkdirAll(_path.Dir(path), 0755)
-		f, err := os.OpenFile(path, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
-		if err != nil {
-			w.WriteHeader(500)
-			fmt.Fprint(w, err)
-			return
+
+		var (
+			f   *os.File
+			err error
+		)
+
+		if dataMime != "multipart/form-data" {
+			f, err = os.OpenFile(path, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
+			if err != nil {
+				w.WriteHeader(500)
+				fmt.Fprint(w, err)
+				return
+			}
+			defer f.Close()
 		}
-		defer f.Close()
+
 		if dataHasParser {
 			err = g.WriteFile(f, "")
 		} else {
-			_, err = io.Copy(f, req.Body)
+			if dataMime == "multipart/form-data" {
+				if Debug {
+					log.Println("Got multipart")
+				}
+				err := req0.ParseMultipartForm(100000)
+				if err != nil {
+					log.Printf("Cannot parse multipart data: %+v\n", err)
+				} else {
+					m := req0.MultipartForm
+					for elt := range m.File {
+						files := m.File[elt]
+						for i, _ := range files {
+							if Debug {
+								log.Printf("Preparing to write file: %+v\n", path+files[i].Filename)
+							}
+							// for each fileheader, get a handle to the actual file
+							file, err := files[i].Open()
+							defer file.Close()
+							if err != nil {
+								if Debug {
+									log.Printf("Cannot get file handler: %+v\n", err)
+								}
+								w.WriteHeader(500)
+								return
+							}
+							// create destination file making sure the path is writeable.
+							dst, err := os.Create(path + files[i].Filename)
+							defer dst.Close()
+							if err != nil {
+								if Debug {
+									log.Printf("Cannot create destination file: %+v\n", err)
+								}
+								w.WriteHeader(500)
+								return
+							}
+							// copy the uploaded file to the destination file
+							if _, err := io.Copy(dst, file); err != nil {
+								if Debug {
+									log.Printf("Cannot copy data to destination file: %+v\n", err)
+								}
+								w.WriteHeader(500)
+								return
+							}
+							if Debug {
+								log.Printf("Wrote file: %+v\n", path+files[i].Filename)
+							}
+						}
+					}
+				}
+			} else if dataMime == "application/x-www-form-urlencoded" {
+				err := req0.ParseForm()
+				if err != nil {
+					log.Printf("Cannot parse form data: %+v\n", err)
+				} else {
+					// parse form and write file
+				}
+			} else {
+				_, err = io.Copy(f, req.Body)
+			}
 		}
 		if err != nil {
 			w.WriteHeader(500)
