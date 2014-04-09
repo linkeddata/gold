@@ -187,7 +187,16 @@ func (h *Server) ServeHTTP(w http.ResponseWriter, req0 *http.Request) {
 		var (
 			magicType string
 			maybeRDF  bool
+			glob      bool
 		)
+
+		// check for glob
+		if strings.LastIndex(path, "*") == len(path)-1 {
+			glob = true
+			path = strings.TrimRight(path, "*")
+		} else {
+			glob = false
+		}
 
 		status := 501
 		if !acl.AllowRead() {
@@ -213,6 +222,7 @@ func (h *Server) ServeHTTP(w http.ResponseWriter, req0 *http.Request) {
 				// TODO: RDF
 				if infos, err := ioutil.ReadDir(path); err == nil {
 					magicType = "text/turtle"
+
 					for _, info := range infos {
 						var s, o rdf.Term
 						if info.IsDir() {
@@ -221,6 +231,22 @@ func (h *Server) ServeHTTP(w http.ResponseWriter, req0 *http.Request) {
 						} else {
 							s = rdf.NewResource(info.Name())
 							o = rdf.NewResource("http://www.w3.org/ns/posix/stat#File")
+
+							// add type if RDF resource
+							f := path + info.Name()
+							kb := NewGraph(f)
+							kb.ReadFile(f)
+							if kb.Len() > 0 {
+								st := kb.One(rdf.NewResource(f), rdf.NewResource("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), nil)
+								if st.Object != nil {
+									g.AddTriple(s, rdf.NewResource("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), st.Object)
+								}
+							}
+
+							// add triples from resource (globbing)
+							if glob {
+								// add triples from kb
+							}
 						}
 						g.AddTriple(s, rdf.NewResource("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), o)
 						g.AddTriple(s, rdf.NewResource("http://www.w3.org/ns/posix/stat#mtime"), rdf.NewLiteral(fmt.Sprintf("%d", info.ModTime().Unix())))
