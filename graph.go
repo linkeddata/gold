@@ -202,6 +202,22 @@ func (g *Graph) Parse(reader io.Reader, mime string) {
 	}
 }
 
+func (g *Graph) ParseBase(reader io.Reader, mime string, baseUri string) {
+	if len(baseUri) < 1 {
+		baseUri = g.uri
+	}
+	parserName := mimeParser[mime]
+	if len(parserName) == 0 {
+		parserName = "guess"
+	}
+	parser := crdf.NewParser(parserName)
+	defer parser.Free()
+	out := parser.Parse(reader, baseUri)
+	for s := range out {
+		g.AddStatement(s)
+	}
+}
+
 func (g *Graph) ReadFile(filename string) {
 	_, err := os.Stat(filename)
 	if os.IsNotExist(err) {
@@ -217,6 +233,23 @@ func (g *Graph) ReadFile(filename string) {
 	}
 	defer f.Close()
 	g.Parse(f, "text/turtle")
+}
+
+func (g *Graph) AppendFile(filename string, baseUri string) {
+	_, err := os.Stat(filename)
+	if os.IsNotExist(err) {
+		return
+	} else if err != nil {
+		log.Println(err)
+		return
+	}
+	f, err := os.OpenFile(filename, os.O_RDONLY, 0)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	defer f.Close()
+	g.ParseBase(f, "text/turtle", baseUri)
 }
 
 func (g *Graph) LoadURI(uri string) (err error) {
