@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	_path "path"
+	"path/filepath"
 	"strings"
 )
 
@@ -188,11 +189,13 @@ func (h *Server) ServeHTTP(w http.ResponseWriter, req0 *http.Request) {
 			magicType string
 			maybeRDF  bool
 			glob      bool
+			globPath  string
 		)
 
 		// check for glob
 		if strings.LastIndex(path, "*") == len(path)-1 {
 			glob = true
+			globPath = path
 			path = strings.TrimRight(path, "*")
 		} else {
 			glob = false
@@ -203,65 +206,78 @@ func (h *Server) ServeHTTP(w http.ResponseWriter, req0 *http.Request) {
 			status = 403
 			break
 		}
-		stat, serr := os.Stat(path)
-		switch {
-		case os.IsNotExist(serr):
-			status = 404
-		case stat.IsDir():
-			if len(DirIndex) > 0 && contentType == "text/html" {
-				for _, dirIndex := range DirIndex {
-					_, xerr := os.Stat(path + "/" + dirIndex)
-					if xerr == nil {
-						status = 200
-						magicType = "text/html"
-						path = _path.Join(path, dirIndex)
-						break
+
+		if glob {
+			matches, err := filepath.Glob(globPath)
+			if err == nil {
+				for _, file := range matches {
+					stat, serr := os.Stat(file)
+					if stat.IsDir() == false && serr == nil {
+						g.AppendFile(file, filepath.Base(file))
 					}
 				}
+
+				status = 200
 			} else {
-				// TODO: RDF
-				if infos, err := ioutil.ReadDir(path); err == nil {
-					magicType = "text/turtle"
-
-					for _, info := range infos {
-						var s, o rdf.Term
-						if info.IsDir() {
-							s = rdf.NewResource(info.Name() + "/")
-							o = rdf.NewResource("http://www.w3.org/ns/posix/stat#Directory")
-						} else {
-							s = rdf.NewResource(info.Name())
-							o = rdf.NewResource("http://www.w3.org/ns/posix/stat#File")
-
-							// add type if RDF resource
-							f := path + info.Name()
-							kb := NewGraph(f)
-							kb.ReadFile(f)
-							if kb.Len() > 0 {
-								st := kb.One(rdf.NewResource(f), rdf.NewResource("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), nil)
-								if st.Object != nil {
-									g.AddTriple(s, rdf.NewResource("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), st.Object)
-								}
-							}
-
-							// add triples from resource (globbing)
-							if glob {
-								// add triples from kb
-							}
-						}
-						g.AddTriple(s, rdf.NewResource("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), o)
-						g.AddTriple(s, rdf.NewResource("http://www.w3.org/ns/posix/stat#mtime"), rdf.NewLiteral(fmt.Sprintf("%d", info.ModTime().Unix())))
-						g.AddTriple(s, rdf.NewResource("http://www.w3.org/ns/posix/stat#size"), rdf.NewLiteral(fmt.Sprintf("%d", info.Size())))
-					}
-					// set status
-					status = 200
-					maybeRDF = true
+				if Debug {
+					log.Printf("%+v\n", err)
 				}
 			}
+		} else {
+			stat, serr := os.Stat(path)
+			switch {
+			case os.IsNotExist(serr):
+				status = 404
+			case stat.IsDir():
+				if len(DirIndex) > 0 && contentType == "text/html" {
+					for _, dirIndex := range DirIndex {
+						_, xerr := os.Stat(path + "/" + dirIndex)
+						if xerr == nil {
+							status = 200
+							magicType = "text/html"
+							path = _path.Join(path, dirIndex)
+							break
+						}
+					}
+				} else {
+					// TODO: RDF
+					if infos, err := ioutil.ReadDir(path); err == nil {
+						magicType = "text/turtle"
 
-		default:
-			status = 200
-			magicType, _ = magic.TypeByFile(path)
-			maybeRDF = magicType == "text/plain"
+						for _, info := range infos {
+							var s, o rdf.Term
+							if info.IsDir() {
+								s = rdf.NewResource(info.Name() + "/")
+								o = rdf.NewResource("http://www.w3.org/ns/posix/stat#Directory")
+							} else {
+								s = rdf.NewResource(info.Name())
+								o = rdf.NewResource("http://www.w3.org/ns/posix/stat#File")
+
+								// add type if RDF resource
+								f := path + info.Name()
+								kb := NewGraph(f)
+								kb.ReadFile(f)
+								if kb.Len() > 0 {
+									st := kb.One(rdf.NewResource(f), rdf.NewResource("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), nil)
+									if st.Object != nil {
+										g.AddTriple(s, rdf.NewResource("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), st.Object)
+									}
+								}
+							}
+							g.AddTriple(s, rdf.NewResource("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), o)
+							g.AddTriple(s, rdf.NewResource("http://www.w3.org/ns/posix/stat#mtime"), rdf.NewLiteral(fmt.Sprintf("%d", info.ModTime().Unix())))
+							g.AddTriple(s, rdf.NewResource("http://www.w3.org/ns/posix/stat#size"), rdf.NewLiteral(fmt.Sprintf("%d", info.Size())))
+						}
+						// set status
+						status = 200
+						maybeRDF = true
+					}
+				}
+			default:
+				status = 200
+				magicType, _ = magic.TypeByFile(path)
+				maybeRDF = magicType == "text/plain"
+			}
 		}
 
 		if status != 200 {
@@ -410,7 +426,6 @@ func (h *Server) ServeHTTP(w http.ResponseWriter, req0 *http.Request) {
 							if Debug {
 								log.Printf("Preparing to write file: %+v\n", path+files[i].Filename)
 							}
-							// for each fileheader, get a handle to the actual file
 							file, err := files[i].Open()
 							defer file.Close()
 							if err != nil {
@@ -420,7 +435,6 @@ func (h *Server) ServeHTTP(w http.ResponseWriter, req0 *http.Request) {
 								w.WriteHeader(500)
 								return
 							}
-							// create destination file making sure the path is writeable.
 							dst, err := os.Create(path + files[i].Filename)
 							defer dst.Close()
 							if err != nil {
@@ -430,7 +444,6 @@ func (h *Server) ServeHTTP(w http.ResponseWriter, req0 *http.Request) {
 								w.WriteHeader(500)
 								return
 							}
-							// copy the uploaded file to the destination file
 							if _, err := io.Copy(dst, file); err != nil {
 								if Debug {
 									log.Printf("Cannot copy data to destination file: %+v\n", err)

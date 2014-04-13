@@ -188,7 +188,7 @@ func TestLISTDIR(t *testing.T) {
 		response := r.Do(request)
 		assert.Equal(t, 201, response.StatusCode)
 
-		response = r.Post("/_folder/abc", "text/turtle", "@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n\n<> a <http://example.org/a> .")
+		response = r.Post("/_folder/abc", "text/turtle", "@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n\n<> a <http://example.org/abc> .")
 		assert.Empty(t, response.Body)
 		assert.Equal(t, 200, response.StatusCode)
 
@@ -205,7 +205,7 @@ func TestLISTDIR(t *testing.T) {
 		g.Parse(strings.NewReader(response.Body), "text/turtle")
 
 		f := rdf.NewResource("/_folder/abc")
-		assert.Equal(t, g.One(f, rdfs.Get("type"), rdf.NewResource("http://example.org/a")).Object, rdf.NewResource("http://example.org/a"))
+		assert.Equal(t, g.One(f, rdfs.Get("type"), rdf.NewResource("http://example.org/abc")).Object, rdf.NewResource("http://example.org/abc"))
 		assert.Equal(t, g.One(f, rdfs.Get("type"), posix.Get("File")).Object, posix.Get("File"))
 		assert.NotNil(t, g.One(f, posix.Get("size"), nil))
 		assert.NotNil(t, g.One(f, posix.Get("mtime"), nil))
@@ -219,10 +219,11 @@ func TestLISTDIR(t *testing.T) {
 
 func TestGlob(t *testing.T) {
 	testflight.WithServer(handler, func(r *testflight.Requester) {
-		response := r.Post("/_folder/1", "text/turtle", "@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n\n<> a <http://example.org/a>.")
+		response := r.Post("/_folder/1", "text/turtle", "@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n\n<> a <http://example.org/one>;\n"+
+			"    <http://example.org/b> <#c> .\n    <#c> a <http://example.org/e> .")
 		assert.Equal(t, 200, response.StatusCode)
 
-		response = r.Post("/_folder/2", "text/turtle", "@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n\n<> a <http://example.net/b>.")
+		response = r.Post("/_folder/2", "text/turtle", "@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n\n<> a <http://example.org/two>.")
 		assert.Equal(t, 200, response.StatusCode)
 
 		request, _ := http.NewRequest("GET", "/_folder/*", nil)
@@ -230,11 +231,14 @@ func TestGlob(t *testing.T) {
 
 		assert.Equal(t, 200, response.StatusCode)
 
-		// rdfs := rdf.NewNamespace("http://www.w3.org/1999/02/22-rdf-syntax-ns#")
+		rdfs := rdf.NewNamespace("http://www.w3.org/1999/02/22-rdf-syntax-ns#")
 		g := NewGraph("/_folder/")
 		g.Parse(strings.NewReader(response.Body), "text/turtle")
 
 		assert.NotEmpty(t, g)
+		assert.Equal(t, g.One(rdf.NewResource("/_folder/1"), rdfs.Get("type"), rdf.NewResource("http://example.org/one")).Object, rdf.NewResource("http://example.org/one"))
+		assert.Equal(t, g.One(rdf.NewResource("/_folder/1#c"), rdfs.Get("type"), rdf.NewResource("http://example.org/e")).Object, rdf.NewResource("http://example.org/e"))
+		assert.Equal(t, g.One(rdf.NewResource("/_folder/2"), rdfs.Get("type"), rdf.NewResource("http://example.org/two")).Object, rdf.NewResource("http://example.org/two"))
 
 		request, _ = http.NewRequest("DELETE", "/_folder/1", nil)
 		response = r.Do(request)
