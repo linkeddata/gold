@@ -6,7 +6,6 @@ import (
 	rdf "github.com/kierdavis/argo"
 	"github.com/stretchr/testify/assert"
 	"io"
-	"io/ioutil"
 	"mime/multipart"
 	"net/http"
 	"os"
@@ -129,8 +128,9 @@ func TestPUTTurtle(t *testing.T) {
 func TestPUTMultiForm(t *testing.T) {
 	testflight.WithServer(handler, func(r *testflight.Requester) {
 		path := "./tests/img.jpg"
-		file, _ := os.Open(path)
+		file, err := os.Open(path)
 		defer file.Close()
+		assert.NoError(t, err)
 
 		bodyReader, bodyWriter := io.Pipe()
 		multiWriter := multipart.NewWriter(bodyWriter)
@@ -340,22 +340,22 @@ func TestInvalidContent(t *testing.T) {
 
 func TestRawContent(t *testing.T) {
 	testflight.WithServer(handler, func(r *testflight.Requester) {
-		icon, err := http.Get("https://0.gravatar.com/avatar/e8381df69a211c61835c312e95ca3397?d")
+		path := "./tests/img.jpg"
+		file, err := os.Open(path)
+		defer file.Close()
 		assert.NoError(t, err)
-		assert.Equal(t, icon.StatusCode, 200)
-		ctype := icon.Header.Get(HCType)
-		iconb, err := ioutil.ReadAll(icon.Body)
+		stat, err := os.Stat(path)
+		iconb := make([]byte, stat.Size())
+		_, err = file.Read(iconb)
 		assert.NoError(t, err)
-		assert.NotEmpty(t, iconb)
-		err = icon.Body.Close()
-		assert.NoError(t, err)
+		ctype := "image/jpeg"
 
 		response := r.Put("/test.raw", ctype, string(iconb))
 		assert.Equal(t, 201, response.StatusCode)
 		response = r.Get("/test.raw")
 		assert.Equal(t, response.StatusCode, 200)
 		assert.Equal(t, response.RawResponse.Header.Get(HCType), ctype)
-		assert.Equal(t, len(response.Body), icon.ContentLength)
+		assert.Equal(t, len(response.Body), stat.Size())
 		response = r.Delete("/test.raw", "", "")
 		assert.Equal(t, response.StatusCode, 200)
 	})
