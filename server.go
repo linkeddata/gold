@@ -197,6 +197,7 @@ func (h *Server) ServeHTTP(w http.ResponseWriter, req0 *http.Request) {
 			glob = true
 			globPath = path
 			path = strings.TrimRight(path, "*")
+			// TODO: use Depth header (WebDAV)
 		} else {
 			glob = false
 		}
@@ -244,29 +245,39 @@ func (h *Server) ServeHTTP(w http.ResponseWriter, req0 *http.Request) {
 					if infos, err := ioutil.ReadDir(path); err == nil {
 						magicType = "text/turtle"
 
-						for _, info := range infos {
-							var s, o rdf.Term
-							if info.IsDir() {
-								s = rdf.NewResource(info.Name() + "/")
-								o = rdf.NewResource("http://www.w3.org/ns/posix/stat#Directory")
-							} else {
-								s = rdf.NewResource(info.Name())
-								o = rdf.NewResource("http://www.w3.org/ns/posix/stat#File")
+						// add triples for the missing requested dir (/.)
+						root := rdf.NewResource(req.BaseURI())
+						g.AddTriple(root, rdf.NewResource("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), rdf.NewResource("http://www.w3.org/ns/posix/stat#Directory"))
+						g.AddTriple(root, rdf.NewResource("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), rdf.NewResource("http://www.w3.org/ns/ldp#Container"))
 
-								// add type if RDF resource
-								f := path + info.Name()
-								kb := NewGraph(f)
-								kb.ReadFile(f)
-								if kb.Len() > 0 {
-									st := kb.One(rdf.NewResource(f), rdf.NewResource("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), nil)
-									if st.Object != nil {
-										g.AddTriple(s, rdf.NewResource("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), st.Object)
+						var s rdf.Term
+						for _, info := range infos {
+							if info != nil {
+								if req.Header.Get("http://www.w3.org/ns/ldp#PreferEmptyContainer") == "" {
+									if info.IsDir() {
+										s = rdf.NewResource(info.Name() + "/")
+										g.AddTriple(s, rdf.NewResource("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), rdf.NewResource("http://www.w3.org/ns/posix/stat#Directory"))
+										g.AddTriple(s, rdf.NewResource("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), rdf.NewResource("http://www.w3.org/ns/ldp#Container"))
+									} else {
+										s = rdf.NewResource(info.Name())
+										g.AddTriple(s, rdf.NewResource("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), rdf.NewResource("http://www.w3.org/ns/posix/stat#File"))
+										// add type if RDF resource
+										f := path + info.Name()
+										kb := NewGraph(f)
+										kb.ReadFile(f)
+										if kb.Len() > 0 {
+											st := kb.One(rdf.NewResource(f), rdf.NewResource("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), nil)
+											if st != nil && st.Object != nil {
+												g.AddTriple(s, rdf.NewResource("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), st.Object)
+											}
+										}
 									}
+									g.AddTriple(s, rdf.NewResource("http://www.w3.org/ns/posix/stat#mtime"), rdf.NewLiteral(fmt.Sprintf("%d", info.ModTime().Unix())))
+									g.AddTriple(s, rdf.NewResource("http://www.w3.org/ns/posix/stat#size"), rdf.NewLiteral(fmt.Sprintf("%d", info.Size())))
 								}
+								// add ldp member resource triple
+								g.AddTriple(root, rdf.NewResource("http://www.w3.org/ns/ldp#contains"), s)
 							}
-							g.AddTriple(s, rdf.NewResource("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), o)
-							g.AddTriple(s, rdf.NewResource("http://www.w3.org/ns/posix/stat#mtime"), rdf.NewLiteral(fmt.Sprintf("%d", info.ModTime().Unix())))
-							g.AddTriple(s, rdf.NewResource("http://www.w3.org/ns/posix/stat#size"), rdf.NewLiteral(fmt.Sprintf("%d", info.Size())))
 						}
 						// set status
 						status = 200
@@ -371,9 +382,54 @@ func (h *Server) ServeHTTP(w http.ResponseWriter, req0 *http.Request) {
 			w.WriteHeader(403)
 			return
 		}
+
+		// LDP
+		// @@ what happens if we get a POST to a container that is not a real dir?
+		// @@ does POSTing turtle to an LDPC (dir) URI automatically add triples to the .meta file
+		// TODO: treat case when no Slug exists
+		if req.Method == "POST" && len(req.Header.Get("Link")) > 0 {
+			link := ParseLinkHeader(req.Header.Get("Link")).MatchRel("type")
+			slug := req.Header.Get("Slug")
+			stat, err := os.Stat(path)
+			if link == "http://www.w3.org/ns/ldp#Resource" {
+				if err != nil {
+					fmt.Printf("Error reading path: %+v\n", err)
+				}
+				if len(slug) > 0 && stat.IsDir() {
+					if strings.HasSuffix(path, "/") {
+						path = path + slug
+					} else {
+						path = path + "/" + slug
+					}
+					w.Header().Set("Location", strings.TrimLeft(path, "."))
+				}
+			} else if link == "http://www.w3.org/ns/ldp#Container" {
+				if len(slug) > 0 && stat.IsDir() {
+					if strings.HasSuffix(slug, "/") == false {
+						slug = slug + "/"
+					}
+					if strings.HasSuffix(path, "/") {
+						path = path + slug
+					} else {
+						path = path + "/" + slug
+					}
+
+					err = os.MkdirAll(path, 0755)
+					if err != nil {
+						fmt.Fprint(w, err)
+					}
+
+					w.Header().Set("Location", strings.TrimLeft(path, "."))
+					path = path + ".meta"
+					w.Header().Set("Link", "<"+strings.TrimLeft(path, ".")+">; rel=meta")
+				}
+			}
+		}
+
 		if req.Method != "PUT" {
 			g.ReadFile(path)
 		}
+
 		switch dataMime {
 		case "application/json":
 			g.JSONPatch(req.Body)
@@ -391,11 +447,13 @@ func (h *Server) ServeHTTP(w http.ResponseWriter, req0 *http.Request) {
 			w.Header().Set("Triples", fmt.Sprintf("%d", g.Len()))
 		}
 
-		os.MkdirAll(_path.Dir(path), 0755)
+		err := os.MkdirAll(_path.Dir(path), 0755)
+		if err != nil {
+			fmt.Fprint(w, err)
+		}
 
 		var (
-			f   *os.File
-			err error
+			f *os.File
 		)
 
 		if dataMime != "multipart/form-data" {
@@ -468,6 +526,7 @@ func (h *Server) ServeHTTP(w http.ResponseWriter, req0 *http.Request) {
 				_, err = io.Copy(f, req.Body)
 			}
 		}
+
 		if err != nil {
 			w.WriteHeader(500)
 		} else if req.Method == "PUT" {
@@ -493,7 +552,6 @@ func (h *Server) ServeHTTP(w http.ResponseWriter, req0 *http.Request) {
 				w.WriteHeader(409)
 			}
 		}
-
 	case "MKCOL":
 		if !acl.AllowWrite() && !acl.AllowAppend() {
 			w.WriteHeader(403)
