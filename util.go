@@ -1,16 +1,19 @@
 package gold
 
 import (
+	"bytes"
+	"crypto/md5"
+	"crypto/rand"
+	"encoding/hex"
+	"fmt"
+	"io"
+	"io/ioutil"
+	"os"
 	"strings"
 )
 
 func init() {
 
-}
-
-type AnyLink interface {
-	MatchRel(string) string
-	MatchUri(string) bool
 }
 
 type linkheader struct {
@@ -122,4 +125,59 @@ func (l *linkheaders) MatchUri(uri string) bool {
 		}
 	}
 	return false
+}
+
+func newUUID() (string, error) {
+	uuid := make([]byte, 16)
+	n, err := io.ReadFull(rand.Reader, uuid)
+	if n != len(uuid) || err != nil {
+		return "", err
+	}
+	uuid[8] = uuid[8]&^0xc0 | 0x80
+	uuid[6] = uuid[6]&^0xf0 | 0x40
+	return hex.EncodeToString(uuid), nil
+}
+
+func NewETag(path string) (string, error) {
+	var (
+		hash []byte
+		md5s []string
+		err  error
+	)
+	stat, err := os.Stat(path)
+	if err != nil {
+		return "", err
+	}
+	switch {
+	case stat.IsDir():
+		if files, err := ioutil.ReadDir(path); err == nil {
+			if !strings.HasSuffix(path, "/") {
+				path = path + "/"
+			}
+			if len(files) == 0 {
+				md5s = append(md5s, path+stat.ModTime().String())
+			}
+			for _, file := range files {
+				h, err := NewETag(path + file.Name())
+				if err != nil {
+					return "", err
+				}
+				md5s = append(md5s, h)
+			}
+		}
+		h := md5.New()
+		io.Copy(h, bytes.NewBufferString(fmt.Sprintf("%s", md5s)))
+		hash = h.Sum([]byte(""))
+	default:
+		f, err := os.Open(path)
+		defer f.Close()
+		if err != nil {
+			return "", err
+		}
+		h := md5.New()
+		io.Copy(h, f)
+		hash = h.Sum([]byte(""))
+	}
+
+	return hex.EncodeToString(hash), err
 }

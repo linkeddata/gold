@@ -190,6 +190,7 @@ func (h *Server) ServeHTTP(w http.ResponseWriter, req0 *http.Request) {
 			maybeRDF  bool
 			glob      bool
 			globPath  string
+			etag      string
 		)
 
 		// check for glob
@@ -213,11 +214,10 @@ func (h *Server) ServeHTTP(w http.ResponseWriter, req0 *http.Request) {
 			if err == nil {
 				for _, file := range matches {
 					stat, serr := os.Stat(file)
-					if stat.IsDir() == false && serr == nil {
+					if !stat.IsDir() && serr == nil {
 						g.AppendFile(file, filepath.Base(file))
 					}
 				}
-
 				status = 200
 			} else {
 				if Debug {
@@ -245,10 +245,10 @@ func (h *Server) ServeHTTP(w http.ResponseWriter, req0 *http.Request) {
 					if infos, err := ioutil.ReadDir(path); err == nil {
 						magicType = "text/turtle"
 
-						// add triples for the missing requested dir (/.)
+						//TODO: add triples for the missing requested dir (/.) if they don't exist in the .meta file
 						root := rdf.NewResource(req.BaseURI())
 						g.AddTriple(root, rdf.NewResource("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), rdf.NewResource("http://www.w3.org/ns/posix/stat#Directory"))
-						g.AddTriple(root, rdf.NewResource("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), rdf.NewResource("http://www.w3.org/ns/ldp#Container"))
+						g.AddTriple(root, rdf.NewResource("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), rdf.NewResource("http://www.w3.org/ns/ldp#BasicContainer"))
 
 						var s rdf.Term
 						for _, info := range infos {
@@ -291,6 +291,16 @@ func (h *Server) ServeHTTP(w http.ResponseWriter, req0 *http.Request) {
 			}
 		}
 
+		if status != 404 {
+			etag, err = NewETag(path)
+			if err != nil {
+				w.WriteHeader(500)
+				fmt.Fprint(w, err)
+				return
+			}
+			w.Header().Set("ETag", etag)
+		}
+
 		if status != 200 {
 			if req.Method == "GET" && contentType == "text/html" {
 				w.Header().Set(HCType, contentType)
@@ -328,7 +338,13 @@ func (h *Server) ServeHTTP(w http.ResponseWriter, req0 *http.Request) {
 			if status == 200 {
 				f, err := os.Open(path)
 				if err == nil {
-					defer f.Close()
+					defer func() {
+						if err := f.Close(); err != nil {
+							w.WriteHeader(500)
+							fmt.Fprint(w, err)
+							return
+						}
+					}()
 					io.Copy(w, f)
 				}
 			}
@@ -384,42 +400,48 @@ func (h *Server) ServeHTTP(w http.ResponseWriter, req0 *http.Request) {
 		}
 
 		// LDP
-		// @@ what happens if we get a POST to a container that is not a real dir?
-		// @@ does POSTing turtle to an LDPC (dir) URI automatically add triples to the .meta file
-		// TODO: treat case when no Slug exists
+		// @@ what happens if we get a POST to an IndirectContainer (such as a file)?
 		if req.Method == "POST" && len(req.Header.Get("Link")) > 0 {
+			var uuid string
 			link := ParseLinkHeader(req.Header.Get("Link")).MatchRel("type")
-			slug := req.Header.Get("Slug")
-			stat, err := os.Stat(path)
-			if link == "http://www.w3.org/ns/ldp#Resource" {
-				if err != nil {
-					fmt.Printf("Error reading path: %+v\n", err)
-				}
+			if link == "http://www.w3.org/ns/ldp#Resource" || link == "http://www.w3.org/ns/ldp#BasicContainer" {
+				slug := req.Header.Get("Slug")
+				stat, err := os.Stat(path)
+
 				if len(slug) > 0 && stat.IsDir() {
-					if strings.HasSuffix(path, "/") {
-						path = path + slug
-					} else {
-						path = path + "/" + slug
+					if strings.HasPrefix(slug, "/") {
+						slug = strings.TrimLeft(slug, "/")
+					}
+				} else {
+					uuid, err = newUUID()
+					if err != nil {
+						w.WriteHeader(500)
+						fmt.Fprint(w, err)
+						return
+					}
+					slug = uuid
+				}
+				if strings.HasSuffix(path, "/") {
+					path = path + slug
+				} else {
+					path = path + "/" + slug
+				}
+
+				if link == "http://www.w3.org/ns/ldp#Resource" {
+					w.Header().Set("Location", strings.TrimLeft(path, "."))
+				} else if link == "http://www.w3.org/ns/ldp#BasicContainer" {
+					if !strings.HasSuffix(path, "/") {
+						path = path + "/"
 					}
 					w.Header().Set("Location", strings.TrimLeft(path, "."))
-				}
-			} else if link == "http://www.w3.org/ns/ldp#Container" {
-				if len(slug) > 0 && stat.IsDir() {
-					if strings.HasSuffix(slug, "/") == false {
-						slug = slug + "/"
-					}
-					if strings.HasSuffix(path, "/") {
-						path = path + slug
-					} else {
-						path = path + "/" + slug
-					}
 
 					err = os.MkdirAll(path, 0755)
 					if err != nil {
+						w.WriteHeader(500)
 						fmt.Fprint(w, err)
+						return
 					}
 
-					w.Header().Set("Location", strings.TrimLeft(path, "."))
 					path = path + ".meta"
 					w.Header().Set("Link", "<"+strings.TrimLeft(path, ".")+">; rel=meta")
 				}
@@ -449,7 +471,9 @@ func (h *Server) ServeHTTP(w http.ResponseWriter, req0 *http.Request) {
 
 		err := os.MkdirAll(_path.Dir(path), 0755)
 		if err != nil {
+			w.WriteHeader(500)
 			fmt.Fprint(w, err)
+			return
 		}
 
 		var (
