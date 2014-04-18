@@ -413,6 +413,7 @@ func (h *Server) ServeHTTP(w http.ResponseWriter, req0 *http.Request) {
 					fmt.Fprint(w, err)
 					return
 				}
+				uuid = uuid[:6]
 
 				if len(slug) > 0 && stat.IsDir() {
 					if strings.HasPrefix(slug, "/") {

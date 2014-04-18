@@ -142,7 +142,7 @@ func TestLDPPostLDPRNoSlug(t *testing.T) {
 		request.Header.Add("Accept", "text/turtle")
 		response = r.Do(request)
 		assert.Equal(t, 200, response.StatusCode)
-		assert.Equal(t, 8, len(filepath.Base(newLDPR)))
+		assert.Equal(t, 6, len(filepath.Base(newLDPR)))
 		assert.Equal(t, response.RawResponse.Header.Get("Triples"), "1")
 		assert.Equal(t, response.Body, "@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n\n<>\n    a <http://example.org/two> .\n\n")
 

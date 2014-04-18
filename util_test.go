@@ -44,7 +44,7 @@ func TestPreferHeaderParser(t *testing.T) {
 func TestNewUUID(t *testing.T) {
 	uuid, err := newUUID()
 	assert.Nil(t, err)
-	assert.Equal(t, 8, len(uuid))
+	assert.Equal(t, 32, len(uuid))
 }
 
 func TestETagMD5(t *testing.T) {

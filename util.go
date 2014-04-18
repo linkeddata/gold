@@ -135,7 +135,7 @@ func newUUID() (string, error) {
 	}
 	uuid[8] = uuid[8]&^0xc0 | 0x80
 	uuid[6] = uuid[6]&^0xf0 | 0x40
-	return hex.EncodeToString(uuid[:4]), nil
+	return hex.EncodeToString(uuid), nil
 }
 
 func NewETag(path string) (string, error) {
