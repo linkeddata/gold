@@ -404,23 +404,25 @@ func (h *Server) ServeHTTP(w http.ResponseWriter, req0 *http.Request) {
 		// LDP
 		// @@ what happens if we get a POST to an IndirectContainer (such as a file)?
 		if req.Method == "POST" && len(req.Header.Get("Link")) > 0 {
-			var uuid string
 			link := ParseLinkHeader(req.Header.Get("Link")).MatchRel("type")
 			if link == "http://www.w3.org/ns/ldp#Resource" || link == "http://www.w3.org/ns/ldp#BasicContainer" {
 				slug := req.Header.Get("Slug")
 				stat, err := os.Stat(path)
 
+				uuid, err := newUUID()
+				if err != nil {
+					w.WriteHeader(500)
+					fmt.Fprint(w, err)
+					return
+				}
+
 				if len(slug) > 0 && stat.IsDir() {
 					if strings.HasPrefix(slug, "/") {
 						slug = strings.TrimLeft(slug, "/")
 					}
+					//TODO: add an autoincrement
+					slug = slug + "-" + uuid
 				} else {
-					uuid, err = newUUID()
-					if err != nil {
-						w.WriteHeader(500)
-						fmt.Fprint(w, err)
-						return
-					}
 					slug = uuid
 				}
 				if strings.HasSuffix(path, "/") {

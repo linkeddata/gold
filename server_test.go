@@ -6,7 +6,6 @@ import (
 	rdf "github.com/kierdavis/argo"
 	"github.com/stretchr/testify/assert"
 	"io"
-	"log"
 	"mime/multipart"
 	"net/http"
 	"os"
@@ -143,7 +142,7 @@ func TestLDPPostLDPRNoSlug(t *testing.T) {
 		request.Header.Add("Accept", "text/turtle")
 		response = r.Do(request)
 		assert.Equal(t, 200, response.StatusCode)
-		assert.Equal(t, 32, len(filepath.Base(newLDPR)))
+		assert.Equal(t, 8, len(filepath.Base(newLDPR)))
 		assert.Equal(t, response.RawResponse.Header.Get("Triples"), "1")
 		assert.Equal(t, response.Body, "@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n\n<>\n    a <http://example.org/two> .\n\n")
 
@@ -172,7 +171,6 @@ func TestLDPGetLDPCWithMembers(t *testing.T) {
 		request.Header.Add("", "http://www.w3.org/ns/ldp#PreferEmptyContainer")
 		response := r.Do(request)
 		assert.Equal(t, 200, response.StatusCode)
-		log.Printf("%+v\n", response.Body)
 
 		g := NewGraph("/_test/")
 		g.Parse(strings.NewReader(response.Body), "text/turtle")
