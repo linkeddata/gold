@@ -44,10 +44,10 @@ func TestPreferHeaderParser(t *testing.T) {
 func TestNewUUID(t *testing.T) {
 	uuid, err := newUUID()
 	assert.Nil(t, err)
-	assert.Equal(t, 32, len(uuid))
+	assert.Equal(t, 8, len(uuid))
 }
 
-func TestMD5sum(t *testing.T) {
+func TestETagMD5(t *testing.T) {
 	fhash := "c260f684d3e6e9800d754ba966003306"
 	dir := "/tmp/dirmd5"
 	path := "/tmp/dirmd5/testmd5"
