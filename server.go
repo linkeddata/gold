@@ -342,9 +342,7 @@ func (h *Server) ServeHTTP(w http.ResponseWriter, req0 *http.Request) {
 				if err == nil {
 					defer func() {
 						if err := f.Close(); err != nil {
-							w.WriteHeader(500)
-							fmt.Fprint(w, err)
-							return
+							log.Println(f.Name, err)
 						}
 					}()
 					io.Copy(w, f)
@@ -480,9 +478,7 @@ func (h *Server) ServeHTTP(w http.ResponseWriter, req0 *http.Request) {
 			return
 		}
 
-		var (
-			f *os.File
-		)
+		f := new(os.File)
 
 		if dataMime != "multipart/form-data" {
 			f, err = os.OpenFile(path, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
