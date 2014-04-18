@@ -151,6 +151,8 @@ func (h *Server) ServeHTTP(w http.ResponseWriter, req0 *http.Request) {
 		log.Printf("user=%s req=%+v\n%+v\n\n", user, req, g)
 	}
 	path = h.GraphPath(g)
+	unlock := lock(path)
+	defer unlock()
 
 	// TODO: WAC
 	origin := ""
