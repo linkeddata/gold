@@ -13,7 +13,7 @@ var (
 	subjectAltName = []int{2, 5, 29, 17}
 
 	// cache
-	mu      = new(sync.Mutex)
+	webidL  = new(sync.Mutex)
 	pkeyURI = map[string]string{}
 )
 
@@ -58,9 +58,9 @@ func WebIDTLSAuth(state *tls.ConnectionState) (uri string, err error) {
 			}
 
 			pkeyk := fmt.Sprint([]string{t, n, e})
-			mu.Lock()
+			webidL.Lock()
 			uri = pkeyURI[pkeyk]
-			mu.Unlock()
+			webidL.Unlock()
 			if len(uri) > 0 {
 				return
 			}
@@ -72,9 +72,9 @@ func WebIDTLSAuth(state *tls.ConnectionState) (uri string, err error) {
 					for _ = range g.Filter(keyT.Object, ns["cert"].Get("modulus"), rdf.NewLiteral(n)) {
 						for _ = range g.Filter(keyT.Object, ns["cert"].Get("exponent"), rdf.NewLiteral(e)) {
 							uri = g.URI()
-							mu.Lock()
+							webidL.Lock()
 							pkeyURI[pkeyk] = uri
-							mu.Unlock()
+							webidL.Unlock()
 							return
 						}
 					}
