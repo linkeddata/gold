@@ -79,20 +79,22 @@ func TestMKCOL(t *testing.T) {
 
 func TestLDPPostLDPC(t *testing.T) {
 	testflight.WithServer(handler, func(r *testflight.Requester) {
-		request, _ := http.NewRequest("POST", "/_test/", strings.NewReader("@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n\n<> a <http://example.org/two>."))
+		request, _ := http.NewRequest("POST", "/_test/", strings.NewReader("@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n\n<> a <http://example.org/ldpc>."))
 		request.Header.Add("Content-Type", "text/turtle")
 		request.Header.Add("Slug", "ldpc")
 		request.Header.Add("Link", "<http://www.w3.org/ns/ldp#BasicContainer>; rel=\"type\"")
 		response := r.Do(request)
-		assert.Equal(t, 200, response.StatusCode)
+		assert.Equal(t, 201, response.StatusCode)
 		newLDPC := response.RawResponse.Header.Get("Location")
+		assert.True(t, strings.HasSuffix(newLDPC, "/"))
+
 		metaURI := ParseLinkHeader(response.RawResponse.Header.Get("Link")).MatchRel("meta")
+		assert.Equal(t, newLDPC+".meta", metaURI)
 
 		request, _ = http.NewRequest("GET", newLDPC, nil)
 		request.Header.Add("Accept", "text/turtle")
 		response = r.Do(request)
 		assert.Equal(t, 200, response.StatusCode)
-		assert.True(t, strings.HasSuffix(newLDPC, "/"))
 
 		request, _ = http.NewRequest("GET", metaURI, nil)
 		request.Header.Add("Accept", "text/turtle")
@@ -114,7 +116,7 @@ func TestLDPPostLDPRWithSlug(t *testing.T) {
 		request.Header.Add("Slug", "ldpr")
 		request.Header.Add("Link", "<http://www.w3.org/ns/ldp#Resource>; rel=\"type\"")
 		response := r.Do(request)
-		assert.Equal(t, 200, response.StatusCode)
+		assert.Equal(t, 201, response.StatusCode)
 		newLDPR := response.RawResponse.Header.Get("Location")
 
 		request, _ = http.NewRequest("GET", newLDPR, nil)
@@ -135,7 +137,7 @@ func TestLDPPostLDPRNoSlug(t *testing.T) {
 		request.Header.Add("Content-Type", "text/turtle")
 		request.Header.Add("Link", "<http://www.w3.org/ns/ldp#Resource>; rel=\"type\"")
 		response := r.Do(request)
-		assert.Equal(t, 200, response.StatusCode)
+		assert.Equal(t, 201, response.StatusCode)
 		newLDPR := response.RawResponse.Header.Get("Location")
 
 		request, _ = http.NewRequest("GET", newLDPR, nil)
@@ -143,9 +145,8 @@ func TestLDPPostLDPRNoSlug(t *testing.T) {
 		response = r.Do(request)
 		assert.Equal(t, 200, response.StatusCode)
 		assert.Equal(t, 6, len(filepath.Base(newLDPR)))
-		assert.Equal(t, response.RawResponse.Header.Get("Triples"), "1")
-		assert.Equal(t, response.Body, "@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n\n<>\n    a <http://example.org/two> .\n\n")
-
+		assert.Equal(t, "1", response.RawResponse.Header.Get("Triples"))
+		assert.Equal(t, "@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n\n<>\n    a <http://example.org/two> .\n\n", response.Body)
 		response = r.Delete(newLDPR, "", "")
 		assert.Equal(t, 200, response.StatusCode)
 	})
@@ -164,17 +165,55 @@ func TestLDPGetLDPC(t *testing.T) {
 	})
 }
 
-func TestLDPGetLDPCWithMembers(t *testing.T) {
+func TestLDPPreferContainmentHeader(t *testing.T) {
 	testflight.WithServer(handler, func(r *testflight.Requester) {
 		request, _ := http.NewRequest("GET", "/_test/", nil)
 		request.Header.Add("Accept", "text/turtle")
-		request.Header.Add("", "http://www.w3.org/ns/ldp#PreferEmptyContainer")
+		request.Header.Add("Prefer", "return=representation; omit=\"http://www.w3.org/ns/ldp#PreferEmptyContainer\"")
+		response := r.Do(request)
+
+		assert.Equal(t, 200, response.StatusCode)
+		assert.Equal(t, "return=representation", response.RawResponse.Header.Get("Preference-Applied"))
+		g := NewGraph("/_test/")
+		g.Parse(strings.NewReader(response.Body), "text/turtle")
+		assert.NotNil(t, g.One(rdf.NewResource("/_test/"), rdf.NewResource("http://www.w3.org/ns/ldp#contains"), nil))
+
+		request, _ = http.NewRequest("GET", "/_test/", nil)
+		request.Header.Add("Accept", "text/turtle")
+		request.Header.Add("Prefer", "return=representation; include=\"http://www.w3.org/ns/ldp#PreferEmptyContainer\", return=representation; omit=\"http://www.w3.org/ns/ldp#PreferContainment\"")
+		response = r.Do(request)
+
+		assert.Equal(t, 200, response.StatusCode)
+		assert.Equal(t, "return=representation", response.RawResponse.Header.Get("Preference-Applied"))
+		g = NewGraph("/_test/")
+		g.Parse(strings.NewReader(response.Body), "text/turtle")
+		assert.Nil(t, g.One(rdf.NewResource("/_test/"), rdf.NewResource("http://www.w3.org/ns/ldp#contains"), nil))
+	})
+}
+
+func TestLDPPreferEmptyHeader(t *testing.T) {
+	testflight.WithServer(handler, func(r *testflight.Requester) {
+		request, _ := http.NewRequest("GET", "/_test/", nil)
+		request.Header.Add("Accept", "text/turtle")
+		request.Header.Add("Prefer", "return=representation; omit=\"http://www.w3.org/ns/ldp#PreferEmptyContainer\"")
 		response := r.Do(request)
 		assert.Equal(t, 200, response.StatusCode)
+		assert.Equal(t, "return=representation", response.RawResponse.Header.Get("Preference-Applied"))
 
 		g := NewGraph("/_test/")
 		g.Parse(strings.NewReader(response.Body), "text/turtle")
-		assert.NotNil(t, g.One(rdf.NewResource("/_test/"), rdf.NewResource("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), rdf.NewResource("http://www.w3.org/ns/ldp#BasicContainer")))
+		assert.NotNil(t, g.One(rdf.NewResource("/_test/abc"), nil, nil))
+
+		request, _ = http.NewRequest("GET", "/_test/", nil)
+		request.Header.Add("Accept", "text/turtle")
+		request.Header.Add("Prefer", "return=representation; include=\"http://www.w3.org/ns/ldp#PreferEmptyContainer\"")
+		response = r.Do(request)
+		assert.Equal(t, 200, response.StatusCode)
+		assert.Equal(t, "return=representation", response.RawResponse.Header.Get("Preference-Applied"))
+
+		g = NewGraph("/_test/")
+		g.Parse(strings.NewReader(response.Body), "text/turtle")
+		assert.Nil(t, g.One(rdf.NewResource("/_test/abc"), nil, nil))
 	})
 }
 

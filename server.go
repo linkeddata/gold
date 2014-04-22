@@ -251,17 +251,58 @@ func (h *Server) ServeHTTP(w http.ResponseWriter, req0 *http.Request) {
 						root := rdf.NewResource(req.BaseURI())
 						g.AddTriple(root, rdf.NewResource("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), rdf.NewResource("http://www.w3.org/ns/posix/stat#Directory"))
 						g.AddTriple(root, rdf.NewResource("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), rdf.NewResource("http://www.w3.org/ns/ldp#BasicContainer"))
+						//Also read triples from the dir's .meta
+						if !strings.HasSuffix(path, "/") {
+							path = path + "/"
+						}
+						f := path + ".meta"
+						kb := NewGraph(f)
+						kb.ReadFile(f)
+						if kb.Len() > 0 {
+							for triple := range kb.IterTriples() {
+								var subject rdf.Term
+								if kb.One(rdf.NewResource(strings.TrimLeft(path, "./")+".meta"), nil, nil) != nil {
+									subject = rdf.NewResource(req.BaseURI())
+								} else {
+									subject = triple.Subject
+								}
+								g.AddTriple(subject, triple.Predicate, triple.Object)
+							}
+						}
+
+						showContain := true
+						showEmpty := false
+						pref := ParsePreferHeader(req.Header.Get("Prefer"))
+						for _, include := range pref.Includes() {
+							switch include {
+							case "http://www.w3.org/ns/ldp#PreferContainment":
+								showContain = true
+							case "http://www.w3.org/ns/ldp#PreferEmptyContainer":
+								showEmpty = true
+							}
+						}
+						for _, omit := range pref.Omits() {
+							switch omit {
+							case "http://www.w3.org/ns/ldp#PreferContainment":
+								showContain = false
+							case "http://www.w3.org/ns/ldp#PreferEmptyContainer":
+								showEmpty = false
+							}
+						}
+						w.Header().Set("Preference-Applied", "return=representation")
 
 						var s rdf.Term
 						for _, info := range infos {
 							if info != nil {
-								if req.Header.Get("http://www.w3.org/ns/ldp#PreferEmptyContainer") == "" {
-									if info.IsDir() {
-										s = rdf.NewResource(info.Name() + "/")
+								if info.IsDir() {
+									s = rdf.NewResource(info.Name() + "/")
+									if !showEmpty {
 										g.AddTriple(s, rdf.NewResource("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), rdf.NewResource("http://www.w3.org/ns/posix/stat#Directory"))
 										g.AddTriple(s, rdf.NewResource("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), rdf.NewResource("http://www.w3.org/ns/ldp#Container"))
-									} else {
-										s = rdf.NewResource(info.Name())
+									}
+								} else {
+									s = rdf.NewResource(info.Name())
+									if !showEmpty {
 										g.AddTriple(s, rdf.NewResource("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), rdf.NewResource("http://www.w3.org/ns/posix/stat#File"))
 										// add type if RDF resource
 										f := path + info.Name()
@@ -274,11 +315,15 @@ func (h *Server) ServeHTTP(w http.ResponseWriter, req0 *http.Request) {
 											}
 										}
 									}
+								}
+								if !showEmpty {
 									g.AddTriple(s, rdf.NewResource("http://www.w3.org/ns/posix/stat#mtime"), rdf.NewLiteral(fmt.Sprintf("%d", info.ModTime().Unix())))
 									g.AddTriple(s, rdf.NewResource("http://www.w3.org/ns/posix/stat#size"), rdf.NewLiteral(fmt.Sprintf("%d", info.Size())))
 								}
 								// add ldp member resource triple
-								g.AddTriple(root, rdf.NewResource("http://www.w3.org/ns/ldp#contains"), s)
+								if showContain {
+									g.AddTriple(root, rdf.NewResource("http://www.w3.org/ns/ldp#contains"), s)
+								}
 							}
 						}
 						// set status
@@ -400,7 +445,7 @@ func (h *Server) ServeHTTP(w http.ResponseWriter, req0 *http.Request) {
 		}
 
 		// LDP
-		// @@ what happens if we get a POST to an IndirectContainer (such as a file)?
+		gotLDP := false
 		if req.Method == "POST" && len(req.Header.Get("Link")) > 0 {
 			link := ParseLinkHeader(req.Header.Get("Link")).MatchRel("type")
 			if link == "http://www.w3.org/ns/ldp#Resource" || link == "http://www.w3.org/ns/ldp#BasicContainer" {
@@ -447,7 +492,33 @@ func (h *Server) ServeHTTP(w http.ResponseWriter, req0 *http.Request) {
 
 					path = path + ".meta"
 					w.Header().Set("Link", "<"+strings.TrimLeft(path, ".")+">; rel=meta")
+
+					//Replace the subject with the dir path instead of the .meta file path
+					if dataHasParser {
+						mg := NewGraph(path)
+						mg.Parse(req.Body, dataMime)
+						for triple := range mg.IterTriples() {
+							subject := rdf.NewResource(path)
+							g.AddTriple(subject, triple.Predicate, triple.Object)
+						}
+
+						f, err := os.OpenFile(path, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
+						if err != nil {
+							w.WriteHeader(500)
+							fmt.Fprint(w, err)
+							return
+						}
+						defer f.Close()
+
+						if g.WriteFile(f, "") != nil {
+							w.WriteHeader(500)
+							fmt.Fprint(w, err)
+						}
+					}
+					w.WriteHeader(201)
+					return
 				}
+				gotLDP = true
 			}
 		}
 
@@ -554,7 +625,7 @@ func (h *Server) ServeHTTP(w http.ResponseWriter, req0 *http.Request) {
 
 		if err != nil {
 			w.WriteHeader(500)
-		} else if req.Method == "PUT" {
+		} else if req.Method == "PUT" || gotLDP {
 			w.WriteHeader(201)
 		}
 

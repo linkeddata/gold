@@ -38,6 +38,7 @@ func ParsePreferHeader(header string) *preferheaders {
 
 	for _, v := range strings.Split(header, ",") {
 		item := new(preferheader)
+		v = strings.TrimSpace(v)
 		if strings.HasPrefix(v, "return=representation") {
 			for _, s := range strings.Split(v, ";") {
 				s = strings.TrimSpace(s)
