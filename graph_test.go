@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-func TestPatch(t *testing.T) {
+func TestGraphPatch(t *testing.T) {
 	var (
 		buf   string
 		err   error
@@ -30,7 +30,7 @@ func TestPatch(t *testing.T) {
 	assert.Equal(t, buf, "@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n\n<a>\n    <b> <c2> ;\n    <b2> <c2> .\n\n")
 }
 
-func TestOne(t *testing.T) {
+func TestGraphOne(t *testing.T) {
 	g := NewGraph("http://test/")
 	g.AddTriple(rdf.NewResource("a"), rdf.NewResource("b"), rdf.NewResource("c"))
 	g.AddTriple(rdf.NewResource("a"), rdf.NewResource("b"), rdf.NewResource("d"))
@@ -50,7 +50,7 @@ func TestOne(t *testing.T) {
 	assert.Nil(t, g.One(nil, nil, rdf.NewResource("x")))
 }
 
-func TestAll(t *testing.T) {
+func TestGraphAll(t *testing.T) {
 	g := NewGraph("http://test/")
 	g.AddTriple(rdf.NewResource("a"), rdf.NewResource("b"), rdf.NewResource("c"))
 	g.AddTriple(rdf.NewResource("a"), rdf.NewResource("b"), rdf.NewResource("d"))
