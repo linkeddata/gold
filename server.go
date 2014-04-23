@@ -64,7 +64,7 @@ func (req httpRequest) BaseURI() string {
 
 func (req httpRequest) Auth() string {
 	user := ""
-	if req.TLS != nil && req.TLS.HandshakeComplete {
+	if req.TLS != nil && req.TLS.HandshakeComplete && len(req.TLS.PeerCertificates) > 0 {
 		user, _ = WebIDTLSAuth(req.TLS)
 	}
 	if len(user) == 0 {
@@ -247,11 +247,10 @@ func (h *Server) ServeHTTP(w http.ResponseWriter, req0 *http.Request) {
 					if infos, err := ioutil.ReadDir(path); err == nil {
 						magicType = "text/turtle"
 
-						//TODO: add triples for the missing requested dir (/.) if they don't exist in the .meta file
 						root := rdf.NewResource(req.BaseURI())
 						g.AddTriple(root, rdf.NewResource("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), rdf.NewResource("http://www.w3.org/ns/posix/stat#Directory"))
 						g.AddTriple(root, rdf.NewResource("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), rdf.NewResource("http://www.w3.org/ns/ldp#BasicContainer"))
-						//Also read triples from the dir's .meta
+
 						if !strings.HasSuffix(path, "/") {
 							path = path + "/"
 						}
@@ -270,13 +269,16 @@ func (h *Server) ServeHTTP(w http.ResponseWriter, req0 *http.Request) {
 							}
 						}
 
-						showContain := true
+						showContainment := true
 						showEmpty := false
 						pref := ParsePreferHeader(req.Header.Get("Prefer"))
+						if len(pref.headers) > 0 {
+							w.Header().Set("Preference-Applied", "return=representation")
+						}
 						for _, include := range pref.Includes() {
 							switch include {
 							case "http://www.w3.org/ns/ldp#PreferContainment":
-								showContain = true
+								showContainment = true
 							case "http://www.w3.org/ns/ldp#PreferEmptyContainer":
 								showEmpty = true
 							}
@@ -284,12 +286,11 @@ func (h *Server) ServeHTTP(w http.ResponseWriter, req0 *http.Request) {
 						for _, omit := range pref.Omits() {
 							switch omit {
 							case "http://www.w3.org/ns/ldp#PreferContainment":
-								showContain = false
+								showContainment = false
 							case "http://www.w3.org/ns/ldp#PreferEmptyContainer":
 								showEmpty = false
 							}
 						}
-						w.Header().Set("Preference-Applied", "return=representation")
 
 						var s rdf.Term
 						for _, info := range infos {
@@ -302,6 +303,7 @@ func (h *Server) ServeHTTP(w http.ResponseWriter, req0 *http.Request) {
 									}
 								} else {
 									s = rdf.NewResource(info.Name())
+
 									if !showEmpty {
 										g.AddTriple(s, rdf.NewResource("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), rdf.NewResource("http://www.w3.org/ns/posix/stat#File"))
 										// add type if RDF resource
@@ -320,13 +322,11 @@ func (h *Server) ServeHTTP(w http.ResponseWriter, req0 *http.Request) {
 									g.AddTriple(s, rdf.NewResource("http://www.w3.org/ns/posix/stat#mtime"), rdf.NewLiteral(fmt.Sprintf("%d", info.ModTime().Unix())))
 									g.AddTriple(s, rdf.NewResource("http://www.w3.org/ns/posix/stat#size"), rdf.NewLiteral(fmt.Sprintf("%d", info.Size())))
 								}
-								// add ldp member resource triple
-								if showContain {
+								if showContainment {
 									g.AddTriple(root, rdf.NewResource("http://www.w3.org/ns/ldp#contains"), s)
 								}
 							}
 						}
-						// set status
 						status = 200
 						maybeRDF = true
 					}
