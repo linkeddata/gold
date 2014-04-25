@@ -63,10 +63,7 @@ func (req httpRequest) BaseURI() string {
 }
 
 func (req httpRequest) Auth() string {
-	user := ""
-	if req.TLS != nil && req.TLS.HandshakeComplete && len(req.TLS.PeerCertificates) > 0 {
-		user, _ = WebIDTLSAuth(req.TLS)
-	}
+	user, _ := WebIDTLSAuth(req.TLS)
 	if len(user) == 0 {
 		host, _, _ := net.SplitHostPort(req.RemoteAddr)
 		remoteAddr := net.ParseIP(host)

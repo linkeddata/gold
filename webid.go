@@ -33,48 +33,54 @@ func WebIDTLSAuth(state *tls.ConnectionState) (uri string, err error) {
 	uri = ""
 	err = nil
 
-	for _, x := range state.PeerCertificates[0].Extensions {
-		if !x.Id.Equal(subjectAltName) {
-			continue
-		}
-		if len(x.Value) < 5 {
-			continue
-		}
+	if state == nil || !state.HandshakeComplete {
+		return
+	}
 
-		v := asn1.RawValue{}
-		_, err = asn1.Unmarshal(x.Value, &v)
-		if err == nil {
-			claim = string(v.Bytes[2:])
-		}
-		if len(claim) == 0 {
-			continue
-		}
+	if len(state.PeerCertificates) > 0 {
+		for _, x := range state.PeerCertificates[0].Extensions {
+			if !x.Id.Equal(subjectAltName) {
+				continue
+			}
+			if len(x.Value) < 5 {
+				continue
+			}
 
-		pkey := state.PeerCertificates[0].PublicKey
-		t, n, e := pkeyTypeNE(pkey)
-		if len(t) == 0 {
-			continue
-		}
+			v := asn1.RawValue{}
+			_, err = asn1.Unmarshal(x.Value, &v)
+			if err == nil {
+				claim = string(v.Bytes[2:])
+			}
+			if len(claim) == 0 {
+				continue
+			}
 
-		pkeyk := fmt.Sprint([]string{t, n, e})
-		webidL.Lock()
-		uri = pkeyURI[pkeyk]
-		webidL.Unlock()
-		if len(uri) > 0 {
-			return
-		}
+			pkey := state.PeerCertificates[0].PublicKey
+			t, n, e := pkeyTypeNE(pkey)
+			if len(t) == 0 {
+				continue
+			}
 
-		g := NewGraph(claim)
-		g.LoadURI(claim)
-		for keyT := range g.Filter(rdf.NewResource(g.URI()), ns["cert"].Get("key"), nil) {
-			for _ = range g.Filter(keyT.Object, ns["rdf"].Get("type"), ns["cert"].Get(t)) {
-				for _ = range g.Filter(keyT.Object, ns["cert"].Get("modulus"), rdf.NewLiteral(n)) {
-					for _ = range g.Filter(keyT.Object, ns["cert"].Get("exponent"), rdf.NewLiteral(e)) {
-						uri = g.URI()
-						webidL.Lock()
-						pkeyURI[pkeyk] = uri
-						webidL.Unlock()
-						return
+			pkeyk := fmt.Sprint([]string{t, n, e})
+			webidL.Lock()
+			uri = pkeyURI[pkeyk]
+			webidL.Unlock()
+			if len(uri) > 0 {
+				return
+			}
+
+			g := NewGraph(claim)
+			g.LoadURI(claim)
+			for keyT := range g.Filter(rdf.NewResource(g.URI()), ns["cert"].Get("key"), nil) {
+				for _ = range g.Filter(keyT.Object, ns["rdf"].Get("type"), ns["cert"].Get(t)) {
+					for _ = range g.Filter(keyT.Object, ns["cert"].Get("modulus"), rdf.NewLiteral(n)) {
+						for _ = range g.Filter(keyT.Object, ns["cert"].Get("exponent"), rdf.NewLiteral(e)) {
+							uri = g.URI()
+							webidL.Lock()
+							pkeyURI[pkeyk] = uri
+							webidL.Unlock()
+							return
+						}
 					}
 				}
 			}
