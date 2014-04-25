@@ -39,7 +39,7 @@ func init() {
 	}
 }
 
-type httpRequest http.Request
+type httpRequest struct{ *http.Request }
 
 func (req httpRequest) BaseURI() string {
 	scheme := "http"
@@ -102,17 +102,43 @@ func (s *Server) GraphPath(g AnyGraph) (path string) {
 
 }
 
-func (h *Server) ServeHTTP(w http.ResponseWriter, req0 *http.Request) {
+type response struct {
+	status  int
+	headers http.Header
+
+	argv []interface{}
+}
+
+func (r *response) respond(status int, a ...interface{}) *response {
+	r.status = status
+	r.argv = a
+	return r
+}
+
+func (h *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	defer func() {
+		req.Body.Close()
+	}()
+	r := h.handle(w, &httpRequest{req})
+	for key, _ := range r.headers {
+		w.Header().Set(key, r.headers.Get(key))
+	}
+	if r.status > 0 {
+		w.WriteHeader(r.status)
+	}
+	if len(r.argv) > 0 {
+		fmt.Fprint(w, r.argv...)
+	}
+}
+
+func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
+	r = new(response)
 	var (
 		err error
 
 		data, path string
 	)
 
-	defer func() {
-		req0.Body.Close()
-	}()
-	req := (*httpRequest)(req0)
 	user := req.Auth()
 	w.Header().Set("User", user)
 	acl := NewWAC(req, h, user)
@@ -121,9 +147,7 @@ func (h *Server) ServeHTTP(w http.ResponseWriter, req0 *http.Request) {
 	dataMime = strings.Split(dataMime, ";")[0]
 	dataHasParser := len(mimeParser[dataMime]) > 0
 	if len(dataMime) > 0 && !dataHasParser && req.Method != "PUT" {
-		w.WriteHeader(415)
-		fmt.Fprintln(w, "Unsupported Media Type:", dataMime)
-		return
+		return r.respond(415, "Unsupported Media Type:", dataMime)
 	}
 
 	// Content Negotiation
@@ -132,9 +156,7 @@ func (h *Server) ServeHTTP(w http.ResponseWriter, req0 *http.Request) {
 	if len(acceptList) > 0 && acceptList[0].SubType != "*" {
 		contentType, err = acceptList.Negotiate(serializerMimes...)
 		if err != nil {
-			w.WriteHeader(406) // Not Acceptable
-			fmt.Fprintln(w, err)
-			return
+			return r.respond(406, err) // Not Acceptable
 		}
 	}
 
@@ -179,8 +201,7 @@ func (h *Server) ServeHTTP(w http.ResponseWriter, req0 *http.Request) {
 			w.Header().Set("Access-Control-Allow-Origin", "*")
 		}
 		w.Header().Set("Allow", strings.Join(methodsAll, ", "))
-		w.WriteHeader(200)
-		return
+		return r.respond(200)
 
 	case "GET", "HEAD":
 		// TODO: glob(*)
@@ -338,9 +359,7 @@ func (h *Server) ServeHTTP(w http.ResponseWriter, req0 *http.Request) {
 		if status != 404 {
 			etag, err = NewETag(path)
 			if err != nil {
-				w.WriteHeader(500)
-				fmt.Fprint(w, err)
-				return
+				return r.respond(500, err)
 			}
 			w.Header().Set("ETag", etag)
 		}
@@ -348,12 +367,9 @@ func (h *Server) ServeHTTP(w http.ResponseWriter, req0 *http.Request) {
 		if status != 200 {
 			if req.Method == "GET" && contentType == "text/html" {
 				w.Header().Set(HCType, contentType)
-				w.WriteHeader(200)
-				fmt.Fprint(w, Skins[Skin])
-				return
+				return r.respond(200, Skins[Skin])
 			}
-			w.WriteHeader(status)
-			return
+			return r.respond(status)
 		}
 
 		if maybeRDF {
@@ -394,8 +410,7 @@ func (h *Server) ServeHTTP(w http.ResponseWriter, req0 *http.Request) {
 		}
 
 		if req.Method == "HEAD" {
-			w.WriteHeader(status)
-			return
+			return r.respond(status)
 		}
 
 		if Streaming {
@@ -429,16 +444,14 @@ func (h *Server) ServeHTTP(w http.ResponseWriter, req0 *http.Request) {
 		}
 		if err != nil {
 			log.Println(err)
-			w.WriteHeader(500)
-			fmt.Fprint(w, err)
+			return r.respond(500, err)
 		} else if len(data) > 0 {
 			fmt.Fprint(w, data)
 		}
 
 	case "PATCH", "POST", "PUT":
 		if !acl.AllowWrite() && !acl.AllowAppend() {
-			w.WriteHeader(403)
-			return
+			return r.respond(403)
 		}
 
 		// LDP
@@ -482,9 +495,7 @@ func (h *Server) ServeHTTP(w http.ResponseWriter, req0 *http.Request) {
 
 					err = os.MkdirAll(path, 0755)
 					if err != nil {
-						w.WriteHeader(500)
-						fmt.Fprint(w, err)
-						return
+						return r.respond(500, err)
 					}
 
 					path = path + ".meta"
@@ -501,19 +512,15 @@ func (h *Server) ServeHTTP(w http.ResponseWriter, req0 *http.Request) {
 
 						f, err := os.OpenFile(path, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
 						if err != nil {
-							w.WriteHeader(500)
-							fmt.Fprint(w, err)
-							return
+							return r.respond(500, err)
 						}
 						defer f.Close()
 
-						if g.WriteFile(f, "") != nil {
-							w.WriteHeader(500)
-							fmt.Fprint(w, err)
+						if err = g.WriteFile(f, ""); err != nil {
+							return r.respond(500, err)
 						}
 					}
-					w.WriteHeader(201)
-					return
+					return r.respond(201)
 				}
 				gotLDP = true
 			}
@@ -542,9 +549,7 @@ func (h *Server) ServeHTTP(w http.ResponseWriter, req0 *http.Request) {
 
 		err := os.MkdirAll(_path.Dir(path), 0755)
 		if err != nil {
-			w.WriteHeader(500)
-			fmt.Fprint(w, err)
-			return
+			return r.respond(500, err)
 		}
 
 		f := new(os.File)
@@ -552,9 +557,7 @@ func (h *Server) ServeHTTP(w http.ResponseWriter, req0 *http.Request) {
 		if dataMime != "multipart/form-data" {
 			f, err = os.OpenFile(path, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
 			if err != nil {
-				w.WriteHeader(500)
-				fmt.Fprint(w, err)
-				return
+				return r.respond(500, err)
 			}
 			defer f.Close()
 		}
@@ -566,11 +569,11 @@ func (h *Server) ServeHTTP(w http.ResponseWriter, req0 *http.Request) {
 				if Debug {
 					log.Println("Got multipart")
 				}
-				err := req0.ParseMultipartForm(100000)
+				err := req.ParseMultipartForm(100000)
 				if err != nil {
 					log.Printf("Cannot parse multipart data: %+v\n", err)
 				} else {
-					m := req0.MultipartForm
+					m := req.MultipartForm
 					for elt := range m.File {
 						files := m.File[elt]
 						for i, _ := range files {
@@ -583,8 +586,7 @@ func (h *Server) ServeHTTP(w http.ResponseWriter, req0 *http.Request) {
 								if Debug {
 									log.Printf("Cannot get file handler: %+v\n", err)
 								}
-								w.WriteHeader(500)
-								return
+								return r.respond(500)
 							}
 							dst, err := os.Create(path + files[i].Filename)
 							defer dst.Close()
@@ -592,15 +594,13 @@ func (h *Server) ServeHTTP(w http.ResponseWriter, req0 *http.Request) {
 								if Debug {
 									log.Printf("Cannot create destination file: %+v\n", err)
 								}
-								w.WriteHeader(500)
-								return
+								return r.respond(500)
 							}
 							if _, err := io.Copy(dst, file); err != nil {
 								if Debug {
 									log.Printf("Cannot copy data to destination file: %+v\n", err)
 								}
-								w.WriteHeader(500)
-								return
+								return r.respond(500)
 							}
 							if Debug {
 								log.Printf("Wrote file: %+v\n", path+files[i].Filename)
@@ -609,7 +609,7 @@ func (h *Server) ServeHTTP(w http.ResponseWriter, req0 *http.Request) {
 					}
 				}
 			} else if dataMime == "application/x-www-form-urlencoded" {
-				err := req0.ParseForm()
+				err := req.ParseForm()
 				if err != nil {
 					log.Printf("Cannot parse form data: %+v\n", err)
 				} else {
@@ -621,57 +621,49 @@ func (h *Server) ServeHTTP(w http.ResponseWriter, req0 *http.Request) {
 		}
 
 		if err != nil {
-			w.WriteHeader(500)
+			return r.respond(500)
 		} else if req.Method == "PUT" || gotLDP {
-			w.WriteHeader(201)
+			return r.respond(201)
 		}
 
 	case "DELETE":
 		if !acl.AllowWrite() && !acl.AllowAppend() {
-			w.WriteHeader(403)
-			return
+			return r.respond(403)
 		}
 		err := os.Remove(path)
 		if err != nil {
 			if os.IsNotExist(err) {
-				w.WriteHeader(404)
-				return
+				return r.respond(404)
 			}
-			w.WriteHeader(500)
-			fmt.Fprint(w, err)
+			return r.respond(500, err)
 		} else {
 			_, err := os.Stat(path)
 			if err == nil {
-				w.WriteHeader(409)
+				return r.respond(409)
 			}
 		}
 	case "MKCOL":
 		if !acl.AllowWrite() && !acl.AllowAppend() {
-			w.WriteHeader(403)
-			return
+			return r.respond(403)
 		}
 		err := os.MkdirAll(path, 0755)
 		if err != nil {
 			switch err.(type) {
 			case *os.PathError:
-				w.WriteHeader(409)
+				return r.respond(409, err)
 			default:
-				w.WriteHeader(500)
+				return r.respond(500, err)
 			}
-			fmt.Fprint(w, err)
-			return
 		} else {
 			_, err := os.Stat(path)
 			if err != nil {
-				w.WriteHeader(409)
-				fmt.Fprint(w, err)
+				return r.respond(409, err)
 			}
 		}
-		w.WriteHeader(201)
+		return r.respond(201)
 
 	default:
-		w.WriteHeader(405)
-		fmt.Fprintln(w, "Method Not Allowed:", req.Method)
+		return r.respond(405, "Method Not Allowed:", req.Method)
 
 	}
 	return

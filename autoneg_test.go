@@ -15,7 +15,7 @@ func mockAccept(accept string) (al AcceptList, err error) {
 	req := &http.Request{}
 	req.Header = make(http.Header)
 	req.Header["Accept"] = []string{accept}
-	myreq := (*httpRequest)(req)
+	myreq := &httpRequest{req}
 	al, err = myreq.Accept()
 	return
 }
