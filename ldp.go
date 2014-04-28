@@ -86,11 +86,11 @@ func (p *preferheaders) Includes() []string {
 	return ret
 }
 
-// parse Link header and optionally filter by "rel" value
+// parse Link header
 func ParseLinkHeader(header string) *linkheaders {
 	ret := new(linkheaders)
 
-	for _, v := range strings.Split(header, ",") {
+	for _, v := range strings.Split(header, ", ") {
 		item := new(linkheader)
 		for _, s := range strings.Split(v, ";") {
 			s = strings.TrimSpace(s)
