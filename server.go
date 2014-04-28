@@ -180,6 +180,7 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 		origin = origins[0]
 		w.Header().Set("Access-Control-Allow-Origin", origin)
 	}
+	w.Header().Set("Link", "<"+strings.TrimLeft(acl.Uri(path), ".")+">; rel=acl")
 
 	switch req.Method {
 	case "OPTIONS":
@@ -204,7 +205,6 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 		return r.respond(200)
 
 	case "GET", "HEAD":
-		// TODO: glob(*)
 		var (
 			magicType string
 			maybeRDF  bool
@@ -224,9 +224,9 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 		}
 
 		status := 501
-		if !acl.AllowRead() {
-			status = 403
-			break
+		verdict := acl.AllowRead(path)
+		if !verdict.status {
+			return r.respond(403, verdict.err)
 		}
 
 		if glob {
@@ -464,9 +464,7 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 
 				uuid, err := newUUID()
 				if err != nil {
-					w.WriteHeader(500)
-					fmt.Fprint(w, err)
-					return
+					return r.respond(500, err)
 				}
 				uuid = uuid[:6]
 
