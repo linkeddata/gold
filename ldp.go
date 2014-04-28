@@ -100,8 +100,13 @@ func ParseLinkHeader(header string) *linkheaders {
 				item.uri = s
 			} else if strings.Index(s, "rel=") >= 0 {
 				s = strings.TrimLeft(s, "rel=")
-				s = strings.TrimLeft(s, "\"")
-				s = strings.TrimRight(s, "\"")
+
+				if strings.HasPrefix(s, "\"") {
+					s = strings.TrimLeft(s, "\"")
+				}
+				if strings.HasSuffix(s, "\"") {
+					s = strings.TrimRight(s, "\"")
+				}
 				item.rel = s
 			}
 		}
