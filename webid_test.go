@@ -47,8 +47,8 @@ func newRSA(uri string) (*Graph, *rsa.PrivateKey, error) {
 	}
 
 	userTerm := rdf.NewResource(uri)
-	keyTerm := rdf.NewResource(testServer.URL + "/webid#key")
-	g := NewGraph(testServer.URL + "/webid")
+	keyTerm := rdf.NewResource(testServer.URL + "/_test/webid#key")
+	g := NewGraph(testServer.URL + "/_test/webid")
 	g.AddTriple(userTerm, ns["cert"].Get("key"), keyTerm)
 	g.AddTriple(keyTerm, ns["rdf"].Get("type"), ns["cert"].Get("RSAPublicKey"))
 	g.AddTriple(keyTerm, ns["cert"].Get("modulus"), rdf.NewLiteral(fmt.Sprintf("%x", priv.N)))
@@ -106,7 +106,7 @@ func newRSAcert(uri string, priv *rsa.PrivateKey) (*tls.Certificate, error) {
 }
 
 func TestWebIDTLSAuth(t *testing.T) {
-	userUri := testServer.URL + "/webid#user"
+	userUri := testServer.URL + "/_test/webid#user"
 	g, priv, err := newRSA(userUri)
 	assert.NoError(t, err)
 

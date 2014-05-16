@@ -21,7 +21,7 @@ var (
 func TestACLInit(t *testing.T) {
 	var err error
 
-	user1 = testServer.URL + "/user1#id"
+	user1 = testServer.URL + "/_test/user1#id"
 	user1g, user1k, err = newRSA(user1)
 	user1cert, err := newRSAcert(user1, user1k)
 	assert.NoError(t, err)
@@ -42,7 +42,7 @@ func TestACLInit(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, resp1.StatusCode, 201)
 
-	user2 = testServer.URL + "/user2#id"
+	user2 = testServer.URL + "/_test/user2#id"
 	user2g, user2k, err = newRSA(user2)
 	user2cert, err := newRSAcert(user2, user2k)
 	assert.NoError(t, err)
@@ -169,9 +169,9 @@ func TestACLCleanUp(t *testing.T) {
 
 func TestACLCleanUsers(t *testing.T) {
 	testflight.WithServer(handler, func(r *testflight.Requester) {
-		response := r.Delete("/user1", "", "")
+		response := r.Delete("/_test/user1", "", "")
 		assert.Equal(t, 200, response.StatusCode)
-		response = r.Delete("/user2", "", "")
+		response = r.Delete("/_test/user2", "", "")
 		assert.Equal(t, 200, response.StatusCode)
 	})
 }
