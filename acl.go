@@ -1,14 +1,12 @@
 package gold
 
 import (
-	"os"
 	"path/filepath"
 	"strings"
 )
 
 var (
 	ACLSuffix = ",acl"
-	ACLPath   = "/.acl/"
 )
 
 type WAC struct {
@@ -22,7 +20,19 @@ func NewWAC(req *httpRequest, srv *Server, user string) *WAC {
 }
 
 func (acl *WAC) Allow(method string, path string) bool {
-	// log.Println(path)
+	aclPath := filepath.Join(acl.srv.root, path)
+	if strings.HasSuffix(aclPath, ".") {
+		aclPath = aclPath[:len(aclPath)-1] + ACLSuffix
+	} else if !strings.HasSuffix(aclPath, ACLSuffix) {
+		aclPath += ACLSuffix
+	}
+
+	// aclUri := filepath.Join(acl.req.BaseURI(), path)
+	// if !strings.HasSuffix(aclUri, ACLSuffix) {
+	// 	aclUri += ACLSuffix
+	// }
+	// log.Println(method, path)
+	// log.Println(aclPath, aclUri)
 	return true
 }
 
@@ -39,28 +49,8 @@ func (acl *WAC) AllowAppend(path string) bool {
 }
 
 func (acl *WAC) Uri(path string) string {
+	if strings.HasSuffix(path, ".") {
+		path = path[:len(path)-1]
+	}
 	return path + ACLSuffix
-}
-
-func (acl *WAC) Path(path string) string {
-	p := ""
-	isDir := false
-	stat, err := os.Stat(path)
-	if err != nil {
-		// attempt to guess from pathURI
-		if strings.HasSuffix(path, "/") {
-			isDir = true
-		}
-	} else {
-		if stat.IsDir() {
-			isDir = true
-		}
-	}
-	if isDir {
-		p = path + ACLPath + ".ttl"
-	} else {
-		p = filepath.Dir(path) + ACLPath + filepath.Base(path)
-	}
-
-	return p
 }

@@ -85,7 +85,7 @@ func TestACLBlank(t *testing.T) {
 	acl := ParseLinkHeader(response.Header.Get("Link")).MatchRel("acl")
 	assert.NotNil(t, acl)
 
-	request, err = http.NewRequest("PUT", testServer.URL+acl, strings.NewReader(""))
+	request, err = http.NewRequest("PUT", testServer.URL+"/"+acl, strings.NewReader(""))
 	response, err = user1h.Do(request)
 	assert.NoError(t, err)
 	assert.Equal(t, 201, response.StatusCode)
@@ -98,7 +98,7 @@ func TestACLBlank(t *testing.T) {
 	acl = ParseLinkHeader(response.Header.Get("Link")).MatchRel("acl")
 	assert.NotNil(t, acl)
 
-	request, err = http.NewRequest("PUT", testServer.URL+acl, strings.NewReader(""))
+	request, err = http.NewRequest("PUT", testServer.URL+"/"+acl, strings.NewReader(""))
 	response, err = user1h.Do(request)
 	assert.NoError(t, err)
 	assert.Equal(t, 201, response.StatusCode)
@@ -124,8 +124,8 @@ func TestACLCleanUp(t *testing.T) {
 	response, err := user1h.Do(request)
 	assert.Equal(t, 200, response.StatusCode)
 	acl := ParseLinkHeader(response.Header.Get("Link")).MatchRel("acl")
-	println(acl)
-	request, err = http.NewRequest("DELETE", testServer.URL+acl, nil)
+
+	request, err = http.NewRequest("DELETE", testServer.URL+"/"+acl, nil)
 	response, err = user1h.Do(request)
 	assert.NoError(t, err)
 	assert.Equal(t, 200, response.StatusCode)
@@ -137,7 +137,7 @@ func TestACLCleanUp(t *testing.T) {
 	assert.Equal(t, 200, response.StatusCode)
 	acl = ParseLinkHeader(response.Header.Get("Link")).MatchRel("acl")
 
-	request, err = http.NewRequest("DELETE", testServer.URL+acl, nil)
+	request, err = http.NewRequest("DELETE", testServer.URL+"/"+acl, nil)
 	response, err = user1h.Do(request)
 	assert.NoError(t, err)
 	assert.Equal(t, 200, response.StatusCode)

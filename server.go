@@ -98,8 +98,7 @@ func (s *Server) GraphPath(g AnyGraph) (path string) {
 	} else {
 		path = strings.SplitN(lst[1], "/", 2)[1]
 	}
-	return strings.Join([]string{s.root, path}, "/")
-
+	return filepath.Join(s.root, path)
 }
 
 type response struct {
@@ -181,7 +180,7 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 		w.Header().Set("Access-Control-Allow-Origin", origin)
 	}
 
-	relAcl := strings.TrimLeft(acl.Uri(path), ".")
+	relAcl := acl.Uri(path)
 	w.Header().Set("Link", brack(relAcl)+"; rel=acl")
 
 	switch req.Method {
@@ -485,12 +484,12 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 				}
 
 				if link == "http://www.w3.org/ns/ldp#Resource" {
-					w.Header().Set("Location", strings.TrimLeft(path, "."))
+					w.Header().Set("Location", path)
 				} else if link == "http://www.w3.org/ns/ldp#BasicContainer" {
 					if !strings.HasSuffix(path, "/") {
 						path = path + "/"
 					}
-					w.Header().Set("Location", strings.TrimLeft(path, "."))
+					w.Header().Set("Location", path)
 
 					err = os.MkdirAll(path, 0755)
 					if err != nil {
@@ -498,7 +497,7 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 					}
 
 					path = path + ".meta"
-					w.Header().Set("Link", "<"+strings.TrimLeft(path, ".")+">; rel=meta")
+					w.Header().Set("Link", "<"+path+">; rel=meta")
 
 					//Replace the subject with the dir path instead of the .meta file path
 					if dataHasParser {
