@@ -98,7 +98,11 @@ func (s *Server) GraphPath(g AnyGraph) (path string) {
 	} else {
 		path = strings.SplitN(lst[1], "/", 2)[1]
 	}
-	return filepath.Join(s.root, path)
+	r := strings.Join([]string{s.root, path}, "/")
+	if strings.HasPrefix(r, "./") {
+		r = r[2:]
+	}
+	return r
 }
 
 type response struct {
@@ -180,8 +184,7 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 		w.Header().Set("Access-Control-Allow-Origin", origin)
 	}
 
-	relAcl := acl.Uri(path)
-	w.Header().Set("Link", brack(relAcl)+"; rel=acl")
+	w.Header().Set("Link", brack(acl.Uri())+"; rel=acl")
 
 	switch req.Method {
 	case "OPTIONS":
@@ -225,8 +228,15 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 		}
 
 		status := 501
-		if !acl.AllowRead(path) {
+		if !acl.AllowRead() {
 			return r.respond(403)
+		}
+
+		if status != 200 {
+			if req.Method == "GET" && contentType == "text/html" {
+				w.Header().Set(HCType, contentType)
+				return r.respond(200, Skins[Skin])
+			}
 		}
 
 		if glob {
@@ -356,7 +366,7 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 			}
 		}
 
-		if status != 404 {
+		if status != 404 && len(path) > 0 {
 			etag, err = NewETag(path)
 			if err != nil {
 				return r.respond(500, err)
@@ -365,10 +375,6 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 		}
 
 		if status != 200 {
-			if req.Method == "GET" && contentType == "text/html" {
-				w.Header().Set(HCType, contentType)
-				return r.respond(200, Skins[Skin])
-			}
 			return r.respond(status)
 		}
 
@@ -450,7 +456,7 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 		}
 
 	case "PATCH", "POST", "PUT":
-		if !acl.AllowWrite(path) && !acl.AllowAppend(path) {
+		if !acl.AllowWrite() && !acl.AllowAppend() {
 			return r.respond(403)
 		}
 
@@ -625,8 +631,11 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 		}
 
 	case "DELETE":
-		if !acl.AllowWrite(path) && !acl.AllowAppend(path) {
+		if !acl.AllowWrite() && !acl.AllowAppend() {
 			return r.respond(403)
+		}
+		if len(path) == 0 {
+			return r.respond(500, "cannot DELETE /")
 		}
 		err := os.Remove(path)
 		if err != nil {
@@ -641,7 +650,7 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 			}
 		}
 	case "MKCOL":
-		if !acl.AllowWrite(path) && !acl.AllowAppend(path) {
+		if !acl.AllowWrite() && !acl.AllowAppend() {
 			return r.respond(403)
 		}
 		err := os.MkdirAll(path, 0755)

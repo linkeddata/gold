@@ -1,7 +1,7 @@
 package gold
 
 import (
-	"path/filepath"
+	// "log"
 	"strings"
 )
 
@@ -19,38 +19,35 @@ func NewWAC(req *httpRequest, srv *Server, user string) *WAC {
 	return &WAC{req: req, srv: srv, user: user}
 }
 
-func (acl *WAC) Allow(method string, path string) bool {
-	aclPath := filepath.Join(acl.srv.root, path)
+func (acl *WAC) Allow(method string) bool {
+	accessPath := acl.req.RequestURI
+	aclPath := accessPath
 	if strings.HasSuffix(aclPath, ".") {
 		aclPath = aclPath[:len(aclPath)-1] + ACLSuffix
 	} else if !strings.HasSuffix(aclPath, ACLSuffix) {
 		aclPath += ACLSuffix
 	}
 
-	// aclUri := filepath.Join(acl.req.BaseURI(), path)
-	// if !strings.HasSuffix(aclUri, ACLSuffix) {
-	// 	aclUri += ACLSuffix
-	// }
-	// log.Println(method, path)
-	// log.Println(aclPath, aclUri)
+	// log.Println(method, accessPath, aclPath, acl.Uri())
 	return true
 }
 
-func (acl *WAC) AllowRead(path string) bool {
-	return acl.Allow("Read", path)
+func (acl *WAC) AllowRead() bool {
+	return acl.Allow("Read")
 }
 
-func (acl *WAC) AllowWrite(path string) bool {
-	return acl.Allow("Write", path)
+func (acl *WAC) AllowWrite() bool {
+	return acl.Allow("Write")
 }
 
-func (acl *WAC) AllowAppend(path string) bool {
-	return acl.Allow("Append", path)
+func (acl *WAC) AllowAppend() bool {
+	return acl.Allow("Append")
 }
 
-func (acl *WAC) Uri(path string) string {
-	if strings.HasSuffix(path, ".") {
-		path = path[:len(path)-1]
+func (acl *WAC) Uri() string {
+	uri := acl.req.BaseURI()
+	if !strings.HasSuffix(uri, ACLSuffix) {
+		uri += ACLSuffix
 	}
-	return path + ACLSuffix
+	return uri
 }
