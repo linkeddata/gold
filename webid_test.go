@@ -40,19 +40,28 @@ func init() {
 	testServer.StartTLS()
 }
 
-func TestWebIDTLSAuth(t *testing.T) {
+func newRSA(uri string) (*Graph, *rsa.PrivateKey, error) {
 	priv, err := rsa.GenerateKey(rand.Reader, rsaBits)
-	assert.NoError(t, err, "failed to generate private key: %s", err)
+	if err != nil {
+		return nil, nil, err
+	}
 
-	userUri := testServer.URL + "/webid#user"
-	userTerm := rdf.NewResource(userUri)
+	userTerm := rdf.NewResource(uri)
 	keyTerm := rdf.NewResource(testServer.URL + "/webid#key")
 	g := NewGraph(testServer.URL + "/webid")
 	g.AddTriple(userTerm, ns["cert"].Get("key"), keyTerm)
 	g.AddTriple(keyTerm, ns["rdf"].Get("type"), ns["cert"].Get("RSAPublicKey"))
 	g.AddTriple(keyTerm, ns["cert"].Get("modulus"), rdf.NewLiteral(fmt.Sprintf("%x", priv.N)))
 	g.AddTriple(keyTerm, ns["cert"].Get("exponent"), rdf.NewLiteral(fmt.Sprintf("%d", priv.E)))
-	gN3, _ := g.Serialize("text/turtle")
+	return g, priv, nil
+}
+
+func TestWebIDTLSAuth(t *testing.T) {
+	userUri := testServer.URL + "/webid#user"
+	g, priv, err := newRSA(userUri)
+	assert.NoError(t, err)
+	gN3, err := g.Serialize("text/turtle")
+	assert.NoError(t, err)
 
 	req, err := http.NewRequest("PUT", g.URI(), strings.NewReader(gN3))
 	assert.NoError(t, err)

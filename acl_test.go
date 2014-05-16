@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-func TestACLWriteTrue(t *testing.T) {
+func TestACLWritable(t *testing.T) {
 	testflight.WithServer(handler, func(r *testflight.Requester) {
 		response := r.Post("/_test/aclres", "text/turtle", "<a> <b> <c> .")
 		assert.Equal(t, 200, response.StatusCode)
@@ -22,7 +22,7 @@ func TestACLWriteTrue(t *testing.T) {
 	})
 }
 
-func TestACLReadTrue(t *testing.T) {
+func TestACLReadable(t *testing.T) {
 	testflight.WithServer(handler, func(r *testflight.Requester) {
 		request, _ := http.NewRequest("GET", "/_test/aclres", nil)
 		request.Header.Add("Accept", "text/turtle")

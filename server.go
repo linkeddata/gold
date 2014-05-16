@@ -180,7 +180,9 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 		origin = origins[0]
 		w.Header().Set("Access-Control-Allow-Origin", origin)
 	}
-	w.Header().Set("Link", "<"+strings.TrimLeft(acl.Uri(path), ".")+">; rel=acl")
+
+	relAcl := strings.TrimLeft(acl.Uri(path), ".")
+	w.Header().Set("Link", "<"+relAcl+">; rel=acl")
 
 	switch req.Method {
 	case "OPTIONS":
