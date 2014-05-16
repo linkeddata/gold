@@ -56,19 +56,7 @@ func newRSA(uri string) (*Graph, *rsa.PrivateKey, error) {
 	return g, priv, nil
 }
 
-func TestWebIDTLSAuth(t *testing.T) {
-	userUri := testServer.URL + "/webid#user"
-	g, priv, err := newRSA(userUri)
-	assert.NoError(t, err)
-	gN3, err := g.Serialize("text/turtle")
-	assert.NoError(t, err)
-
-	req, err := http.NewRequest("PUT", g.URI(), strings.NewReader(gN3))
-	assert.NoError(t, err)
-	resp, err := httpClient.Do(req)
-	assert.NoError(t, err)
-	assert.Equal(t, resp.StatusCode, 201)
-
+func newRSAcert(uri string, priv *rsa.PrivateKey) (*tls.Certificate, error) {
 	template := x509.Certificate{
 		SerialNumber: new(big.Int).SetInt64(0),
 		Subject: pkix.Name{
@@ -85,29 +73,60 @@ func TestWebIDTLSAuth(t *testing.T) {
 		// ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
 	}
 	rawValues := []asn1.RawValue{
-		asn1.RawValue{Class: 0, Tag: 16, IsCompound: true, Bytes: []byte(userUri)},
+		asn1.RawValue{Class: 0, Tag: 16, IsCompound: true, Bytes: []byte(uri)},
 	}
 	values, err := asn1.Marshal(rawValues)
-	assert.NoError(t, err)
+	if err != nil {
+		return nil, err
+	}
 	template.ExtraExtensions = []pkix.Extension{pkix.Extension{Id: subjectAltName, Value: values}}
 
 	keyPEM := bytes.NewBuffer(nil)
 	err = pem.Encode(keyPEM, &pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(priv)})
-	assert.NoError(t, err)
+	if err != nil {
+		return nil, err
+	}
 
 	certPEM := bytes.NewBuffer(nil)
 	derBytes, err := x509.CreateCertificate(rand.Reader, &template, &template, &priv.PublicKey, priv)
-	assert.NoError(t, err)
+	if err != nil {
+		return nil, err
+	}
 	err = pem.Encode(certPEM, &pem.Block{Type: "CERTIFICATE", Bytes: derBytes})
-	assert.NoError(t, err)
+	if err != nil {
+		return nil, err
+	}
 
 	cert, err := tls.X509KeyPair(certPEM.Bytes(), keyPEM.Bytes())
+	if err != nil {
+		return nil, err
+	}
+
+	return &cert, nil
+}
+
+func TestWebIDTLSAuth(t *testing.T) {
+	userUri := testServer.URL + "/webid#user"
+	g, priv, err := newRSA(userUri)
+	assert.NoError(t, err)
+
+	userN3, err := g.Serialize("text/turtle")
+	assert.NoError(t, err)
+
+	req, err := http.NewRequest("PUT", g.URI(), strings.NewReader(userN3))
+	assert.NoError(t, err)
+
+	resp, err := httpClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, resp.StatusCode, 201)
+
+	cert, err := newRSAcert(userUri, priv)
 	assert.NoError(t, err)
 
 	client := &http.Client{
 		Transport: &http.Transport{
 			TLSClientConfig: &tls.Config{
-				Certificates:       []tls.Certificate{cert},
+				Certificates:       []tls.Certificate{*cert},
 				InsecureSkipVerify: true,
 				Rand:               rand.Reader,
 			},
