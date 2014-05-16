@@ -11,12 +11,8 @@ import (
 	"encoding/pem"
 	"fmt"
 	rdf "github.com/kierdavis/argo"
-	"github.com/stretchr/testify/assert"
 	"math/big"
-	"net/http"
 	"net/http/httptest"
-	"strings"
-	"testing"
 	"time"
 )
 
@@ -103,42 +99,4 @@ func newRSAcert(uri string, priv *rsa.PrivateKey) (*tls.Certificate, error) {
 	}
 
 	return &cert, nil
-}
-
-func TestWebIDTLSAuth(t *testing.T) {
-	userUri := testServer.URL + "/_test/webid#user"
-	g, priv, err := newRSA(userUri)
-	assert.NoError(t, err)
-
-	userN3, err := g.Serialize("text/turtle")
-	assert.NoError(t, err)
-
-	req, err := http.NewRequest("PUT", g.URI(), strings.NewReader(userN3))
-	assert.NoError(t, err)
-
-	resp, err := httpClient.Do(req)
-	assert.NoError(t, err)
-	assert.Equal(t, resp.StatusCode, 201)
-
-	cert, err := newRSAcert(userUri, priv)
-	assert.NoError(t, err)
-
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{
-				Certificates:       []tls.Certificate{*cert},
-				InsecureSkipVerify: true,
-				Rand:               rand.Reader,
-			},
-		},
-	}
-
-	req, err = http.NewRequest("DELETE", g.URI(), nil)
-	assert.NoError(t, err)
-	resp, err = client.Do(req)
-	assert.NoError(t, err)
-	if resp != nil {
-		assert.Equal(t, resp.StatusCode, 200)
-		assert.Equal(t, resp.Header.Get("User"), userUri)
-	}
 }

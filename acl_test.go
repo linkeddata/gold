@@ -6,9 +6,14 @@ import (
 	"crypto/tls"
 	"github.com/drewolson/testflight"
 	"github.com/stretchr/testify/assert"
+	"io/ioutil"
 	"net/http"
 	"strings"
 	"testing"
+)
+
+const (
+	aclDir = "/_test/acldir/"
 )
 
 var (
@@ -76,8 +81,8 @@ func TestACLInit(t *testing.T) {
 	assert.Equal(t, user2, resp2.Header.Get("User"))
 }
 
-func TestACLBlank(t *testing.T) {
-	request, err := http.NewRequest("MKCOL", testServer.URL+"/_test/acldir/", nil)
+func TestACLEmpty(t *testing.T) {
+	request, err := http.NewRequest("MKCOL", testServer.URL+aclDir, nil)
 	response, err := user1h.Do(request)
 	assert.NoError(t, err)
 	assert.Equal(t, 201, response.StatusCode)
@@ -86,11 +91,13 @@ func TestACLBlank(t *testing.T) {
 	assert.NotNil(t, acl)
 
 	request, err = http.NewRequest("PUT", acl, strings.NewReader(""))
+	request.Header.Add("Content-Type", "text/turtle")
 	response, err = user1h.Do(request)
 	assert.NoError(t, err)
 	assert.Equal(t, 201, response.StatusCode)
 
-	request, err = http.NewRequest("PUT", testServer.URL+"/_test/acldir/abc", strings.NewReader("<a> <b> <c> ."))
+	request, err = http.NewRequest("PUT", testServer.URL+aclDir+"abc", strings.NewReader("<a> <b> <c> ."))
+	request.Header.Add("Content-Type", "text/turtle")
 	response, err = user1h.Do(request)
 	assert.NoError(t, err)
 	assert.Equal(t, 201, response.StatusCode)
@@ -99,27 +106,72 @@ func TestACLBlank(t *testing.T) {
 	assert.NotNil(t, acl)
 
 	request, err = http.NewRequest("PUT", acl, strings.NewReader(""))
+	request.Header.Add("Content-Type", "text/turtle")
 	response, err = user1h.Do(request)
 	assert.NoError(t, err)
 	assert.Equal(t, 201, response.StatusCode)
 
-	request, err = http.NewRequest("GET", testServer.URL+"/_test/acldir/", nil)
+	request, err = http.NewRequest("GET", acl, nil)
 	request.Header.Add("Accept", "text/turtle")
 	response, err = user1h.Do(request)
 	assert.NoError(t, err)
 	assert.Equal(t, 200, response.StatusCode)
 }
 
-func TestACLReadable(t *testing.T) {
-	request, err := http.NewRequest("GET", testServer.URL+"/_test/acldir/", nil)
-	request.Header.Add("Accept", "text/turtle")
+func TestACLOwner(t *testing.T) {
+	request, err := http.NewRequest("HEAD", testServer.URL+aclDir, nil)
 	response, err := user1h.Do(request)
 	assert.NoError(t, err)
 	assert.Equal(t, 200, response.StatusCode)
+
+	acl := ParseLinkHeader(response.Header.Get("Link")).MatchRel("acl")
+
+	body := "<#Owner>" +
+		"	<http://www.w3.org/ns/auth/acl#accessTo> <" + aclDir + ">, <" + acl + ">;" +
+		"	<http://www.w3.org/ns/auth/acl#agent> <" + user1 + ">;" +
+		"	<http://www.w3.org/ns/auth/acl#mode> <http://www.w3.org/ns/auth/acl#Read>, <http://www.w3.org/ns/auth/acl#Write> ."
+	request, err = http.NewRequest("PUT", acl, strings.NewReader(body))
+	request.Header.Add("Content-Type", "text/turtle")
+	response, err = user1h.Do(request)
+	assert.NoError(t, err)
+	assert.Equal(t, 201, response.StatusCode)
+
+	acl = ParseLinkHeader(response.Header.Get("Link")).MatchRel("acl")
+
+	request, err = http.NewRequest("HEAD", acl, nil)
+	request.Header.Add("Accept", "text/turtle")
+	response, err = user1h.Do(request)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, response.StatusCode)
+	assert.Equal(t, "5", response.Header.Get("Triples"))
+
+	content, err := ioutil.ReadAll(response.Body)
+	println(string(content))
+
+	request, err = http.NewRequest("HEAD", testServer.URL+aclDir, nil)
+	request.Header.Add("Content-Type", "text/turtle")
+	response, err = user2h.Do(request)
+	assert.NoError(t, err)
+	// panic("panic")
+	// content, err = ioutil.ReadAll(response.Body)
+	// println(string(content))
+
+}
+
+func TestACLFriendsOnly(t *testing.T) {
+
+}
+
+func TestACLPublic(t *testing.T) {
+
+}
+
+func TestACLAppendOnly(t *testing.T) {
+
 }
 
 func TestACLCleanUp(t *testing.T) {
-	request, err := http.NewRequest("GET", testServer.URL+"/_test/acldir/abc", nil)
+	request, err := http.NewRequest("GET", testServer.URL+aclDir+"abc", nil)
 	request.Header.Add("Accept", "text/turtle")
 	response, err := user1h.Do(request)
 	assert.Equal(t, 200, response.StatusCode)
@@ -130,7 +182,7 @@ func TestACLCleanUp(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, 200, response.StatusCode)
 
-	request, err = http.NewRequest("GET", testServer.URL+"/_test/acldir/", nil)
+	request, err = http.NewRequest("GET", testServer.URL+aclDir, nil)
 	request.Header.Add("Accept", "text/turtle")
 	response, err = user1h.Do(request)
 	assert.NoError(t, err)
@@ -142,30 +194,16 @@ func TestACLCleanUp(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, 200, response.StatusCode)
 
-	request, err = http.NewRequest("DELETE", testServer.URL+"/_test/acldir/abc", nil)
+	request, err = http.NewRequest("DELETE", testServer.URL+aclDir+"abc", nil)
 	response, err = user1h.Do(request)
 	assert.NoError(t, err)
 	assert.Equal(t, 200, response.StatusCode)
 
-	request, err = http.NewRequest("DELETE", testServer.URL+"/_test/acldir/", nil)
+	request, err = http.NewRequest("DELETE", testServer.URL+aclDir, nil)
 	response, err = user1h.Do(request)
 	assert.NoError(t, err)
 	assert.Equal(t, 200, response.StatusCode)
 }
-
-// func TestACLSetPolicies(t *testing.T) {
-// 	testflight.WithServer(handler, func(r *testflight.Requester) {
-// 		agentRead := "<http://www.w3.org/ns/auth/acl#accessTo> " +
-// 			"   <http://presbrey.data.fm>, <>, </Public>, <https://presbrey.data.fm>;" +
-// 			"<http://www.w3.org/ns/auth/acl#agentClass>" +
-// 			"   <http://xmlns.com/foaf/0.1/Agent>;" +
-// 			"<http://www.w3.org/ns/auth/acl#mode>" +
-// 			"   <http://www.w3.org/ns/auth/acl#Read> ."
-
-// 		response := r.Post("/_test/aclres", "text/turtle")
-
-// 	})
-// }
 
 func TestACLCleanUsers(t *testing.T) {
 	testflight.WithServer(handler, func(r *testflight.Requester) {
