@@ -62,6 +62,18 @@ func TestACLInit(t *testing.T) {
 	resp2, err := httpClient.Do(req2)
 	assert.NoError(t, err)
 	assert.Equal(t, resp2.StatusCode, 201)
+
+	req1, err = http.NewRequest("GET", user1, nil)
+	assert.NoError(t, err)
+	resp1, err = user1h.Do(req1)
+	assert.NoError(t, err)
+	assert.Equal(t, user1, resp1.Header.Get("User"))
+
+	req2, err = http.NewRequest("GET", user2, nil)
+	assert.NoError(t, err)
+	resp2, err = user2h.Do(req2)
+	assert.NoError(t, err)
+	assert.Equal(t, user2, resp2.Header.Get("User"))
 }
 
 func TestACLBlank(t *testing.T) {

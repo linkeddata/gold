@@ -226,9 +226,8 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 		}
 
 		status := 501
-		verdict := acl.AllowRead(path)
-		if !verdict.status {
-			return r.respond(403, verdict.err)
+		if !acl.AllowRead(path) {
+			return r.respond(403)
 		}
 
 		if glob {
@@ -452,7 +451,7 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 		}
 
 	case "PATCH", "POST", "PUT":
-		if !acl.AllowWrite() && !acl.AllowAppend() {
+		if !acl.AllowWrite(path) && !acl.AllowAppend(path) {
 			return r.respond(403)
 		}
 
@@ -627,7 +626,7 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 		}
 
 	case "DELETE":
-		if !acl.AllowWrite() && !acl.AllowAppend() {
+		if !acl.AllowWrite(path) && !acl.AllowAppend(path) {
 			return r.respond(403)
 		}
 		err := os.Remove(path)
@@ -643,7 +642,7 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 			}
 		}
 	case "MKCOL":
-		if !acl.AllowWrite() && !acl.AllowAppend() {
+		if !acl.AllowWrite(path) && !acl.AllowAppend(path) {
 			return r.respond(403)
 		}
 		err := os.MkdirAll(path, 0755)
