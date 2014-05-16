@@ -100,3 +100,12 @@ func TestACLReadable(t *testing.T) {
 		assert.Equal(t, 200, response.StatusCode)
 	})
 }
+
+func TestACLCleanup(t *testing.T) {
+	testflight.WithServer(handler, func(r *testflight.Requester) {
+		response := r.Delete("/user1", "", "")
+		assert.Equal(t, 200, response.StatusCode)
+		response = r.Delete("/user2", "", "")
+		assert.Equal(t, 200, response.StatusCode)
+	})
+}
