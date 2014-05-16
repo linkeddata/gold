@@ -182,7 +182,7 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 	}
 
 	relAcl := strings.TrimLeft(acl.Uri(path), ".")
-	w.Header().Set("Link", "<"+relAcl+">; rel=acl")
+	w.Header().Set("Link", brack(relAcl)+"; rel=acl")
 
 	switch req.Method {
 	case "OPTIONS":

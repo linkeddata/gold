@@ -13,3 +13,30 @@ var (
 		"foaf": rdf.NewNamespace("http://xmlns.com/foaf/0.1/"),
 	}
 )
+
+func brack(s string) string {
+	if len(s) > 0 && s[0] == '<' {
+		return s
+	}
+	if len(s) > 0 && s[len(s)-1] == '>' {
+		return s
+	}
+	return "<" + s + ">"
+}
+
+func debrack(s string) string {
+	if len(s) < 2 {
+		return s
+	}
+	if s[0] != '<' {
+		return s
+	}
+	if s[len(s)-1] != '>' {
+		return s
+	}
+	return s[1 : len(s)-1]
+}
+
+// frag = lambda x: x[x.find('#')==-1 and len(x) or x.find('#'):len(x)-(x[-1]=='>')]
+// unfrag = lambda x: '#' in x and (x[:x.find('#')==-1 and len(x) or x.find('#')] + (x[0]=='<' and '>' or '')) or x
+// cpfrag = lambda x,y: unfrag(y)[-1] == '>' and unfrag(y)[:-1]+frag(x)+'>' or unfrag(y)+frag(x)
