@@ -4,11 +4,11 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/tls"
+	"github.com/drewolson/testflight"
+	"github.com/stretchr/testify/assert"
 	"net/http"
 	"strings"
 	"testing"
-
-	"github.com/stretchr/testify/assert"
 )
 
 var (
@@ -154,3 +154,12 @@ func TestACLCleanUp(t *testing.T) {
 
 // 	})
 // }
+
+func TestACLCleanUsers(t *testing.T) {
+	testflight.WithServer(handler, func(r *testflight.Requester) {
+		response := r.Delete("/user1", "", "")
+		assert.Equal(t, 200, response.StatusCode)
+		response = r.Delete("/user2", "", "")
+		assert.Equal(t, 200, response.StatusCode)
+	})
+}
