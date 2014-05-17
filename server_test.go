@@ -2,8 +2,6 @@ package gold
 
 import (
 	"fmt"
-	"github.com/drewolson/testflight"
-	"github.com/stretchr/testify/assert"
 	"io"
 	"io/ioutil"
 	"mime/multipart"
@@ -12,6 +10,9 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/drewolson/testflight"
+	"github.com/stretchr/testify/assert"
 )
 
 var (
@@ -421,24 +422,21 @@ func TestLISTDIR(t *testing.T) {
 
 	assert.Equal(t, 200, response.StatusCode)
 
-	rdfs := NewNamespace("http://www.w3.org/1999/02/22-rdf-syntax-ns#")
-	posix := NewNamespace("http://www.w3.org/ns/posix/stat#")
-
 	g := NewGraph(testServer.URL + "/_test/")
 	body, err := ioutil.ReadAll(response.Body)
 	g.Parse(strings.NewReader(string(body)), "text/turtle")
 
 	f := NewResource(testServer.URL + "/_test/abc")
-	assert.NotNil(t, g.One(f, posix.Get("size"), nil))
-	assert.NotNil(t, g.One(f, posix.Get("mtime"), nil))
-	assert.NotNil(t, g.One(f, rdfs.Get("type"), NewResource("http://example.org/abc")))
-	assert.Equal(t, g.One(f, rdfs.Get("type"), NewResource("http://example.org/abc")).Object, NewResource("http://example.org/abc"))
-	assert.Equal(t, g.One(f, rdfs.Get("type"), posix.Get("File")).Object, posix.Get("File"))
+	assert.NotNil(t, g.One(f, ns.stat.Get("size"), nil))
+	assert.NotNil(t, g.One(f, ns.stat.Get("mtime"), nil))
+	assert.NotNil(t, g.One(f, ns.rdf.Get("type"), NewResource("http://example.org/abc")))
+	assert.Equal(t, g.One(f, ns.rdf.Get("type"), NewResource("http://example.org/abc")).Object, NewResource("http://example.org/abc"))
+	assert.Equal(t, g.One(f, ns.rdf.Get("type"), ns.stat.Get("File")).Object, ns.stat.Get("File"))
 
 	d := NewResource(testServer.URL + "/_test/dir/")
-	assert.Equal(t, g.One(d, rdfs.Get("type"), posix.Get("Directory")).Object, posix.Get("Directory"))
-	assert.NotNil(t, g.One(d, posix.Get("size"), nil))
-	assert.NotNil(t, g.One(d, posix.Get("mtime"), nil))
+	assert.Equal(t, g.One(d, ns.rdf.Get("type"), ns.stat.Get("Directory")).Object, ns.stat.Get("Directory"))
+	assert.NotNil(t, g.One(d, ns.stat.Get("size"), nil))
+	assert.NotNil(t, g.One(d, ns.stat.Get("mtime"), nil))
 }
 
 func TestGlob(t *testing.T) {
@@ -455,14 +453,13 @@ func TestGlob(t *testing.T) {
 
 		assert.Equal(t, 200, response.StatusCode)
 
-		rdfs := NewNamespace("http://www.w3.org/1999/02/22-rdf-syntax-ns#")
 		g := NewGraph(testServer.URL + "/_test/")
 		g.Parse(strings.NewReader(response.Body), "text/turtle")
 
 		assert.NotEmpty(t, g)
-		assert.Equal(t, g.One(NewResource(testServer.URL+"/_test/1"), rdfs.Get("type"), NewResource("http://example.org/one")).Object, NewResource("http://example.org/one"))
-		assert.Equal(t, g.One(NewResource(testServer.URL+"/_test/1#c"), rdfs.Get("type"), NewResource("http://example.org/e")).Object, NewResource("http://example.org/e"))
-		assert.Equal(t, g.One(NewResource(testServer.URL+"/_test/2"), rdfs.Get("type"), NewResource("http://example.org/two")).Object, NewResource("http://example.org/two"))
+		assert.Equal(t, g.One(NewResource(testServer.URL+"/_test/1"), ns.rdf.Get("type"), NewResource("http://example.org/one")).Object, NewResource("http://example.org/one"))
+		assert.Equal(t, g.One(NewResource(testServer.URL+"/_test/1#c"), ns.rdf.Get("type"), NewResource("http://example.org/e")).Object, NewResource("http://example.org/e"))
+		assert.Equal(t, g.One(NewResource(testServer.URL+"/_test/2"), ns.rdf.Get("type"), NewResource("http://example.org/two")).Object, NewResource("http://example.org/two"))
 
 		request, _ = http.NewRequest("DELETE", "/_test/1", nil)
 		response = r.Do(request)

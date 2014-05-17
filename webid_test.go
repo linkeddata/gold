@@ -44,10 +44,10 @@ func newRSA(uri string) (*Graph, *rsa.PrivateKey, error) {
 	userTerm := NewResource(uri)
 	keyTerm := NewResource(testServer.URL + "/_test/webid#key")
 	g := NewGraph(testServer.URL + "/_test/webid")
-	g.AddTriple(userTerm, ns["cert"].Get("key"), keyTerm)
-	g.AddTriple(keyTerm, ns["rdf"].Get("type"), ns["cert"].Get("RSAPublicKey"))
-	g.AddTriple(keyTerm, ns["cert"].Get("modulus"), NewLiteral(fmt.Sprintf("%x", priv.N)))
-	g.AddTriple(keyTerm, ns["cert"].Get("exponent"), NewLiteral(fmt.Sprintf("%d", priv.E)))
+	g.AddTriple(userTerm, ns.cert.Get("key"), keyTerm)
+	g.AddTriple(keyTerm, ns.rdf.Get("type"), ns.cert.Get("RSAPublicKey"))
+	g.AddTriple(keyTerm, ns.cert.Get("modulus"), NewLiteral(fmt.Sprintf("%x", priv.N)))
+	g.AddTriple(keyTerm, ns.cert.Get("exponent"), NewLiteral(fmt.Sprintf("%d", priv.E)))
 	return g, priv, nil
 }
 
