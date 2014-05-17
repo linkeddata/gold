@@ -1,11 +1,9 @@
 package gold
 
-type _ns struct {
-	rdf, rdfs, acl, cert, foaf, stat NS
-}
-
 var (
-	ns = _ns{
+	ns = struct {
+		rdf, rdfs, acl, cert, foaf, stat NS
+	}{
 		rdf:  NewNS("http://www.w3.org/1999/02/22-rdf-syntax-ns#"),
 		rdfs: NewNS("http://www.w3.org/2000/01/rdf-schema#"),
 		acl:  NewNS("http://www.w3.org/ns/auth/acl#"),
