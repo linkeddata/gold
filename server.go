@@ -16,7 +16,10 @@ import (
 	"strings"
 )
 
-const HCType = "Content-Type"
+const (
+	HCType     = "Content-Type"
+	METASuffix = ",meta"
+)
 
 var (
 	Debug     = false
@@ -209,6 +212,8 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 
 	w.Header().Set("Link", brack(acl.Uri())+"; rel=acl")
 
+	base, _ := url.Parse(req.BaseURI())
+
 	switch req.Method {
 	case "OPTIONS":
 		w.Header().Set("Accept-Patch", "application/json")
@@ -295,7 +300,6 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 					}
 				} else {
 					// TODO: RDF
-					base, _ := url.Parse(req.BaseURI())
 					if infos, err := ioutil.ReadDir(path); err == nil {
 						magicType = "text/turtle"
 
@@ -306,13 +310,13 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 						if !strings.HasSuffix(path, "/") {
 							path = path + "/"
 						}
-						metaUrl, _ := url.Parse(".meta")
+						metaUrl, _ := url.Parse(METASuffix)
 						kb := NewGraph(base.ResolveReference(metaUrl).String())
-						kb.ReadFile(path + ".meta")
+						kb.ReadFile(path + METASuffix)
 						if kb.Len() > 0 {
 							for triple := range kb.IterTriples() {
 								var subject rdf.Term
-								if kb.One(rdf.NewResource(strings.TrimLeft(path, "./")+".meta"), nil, nil) != nil {
+								if kb.One(rdf.NewResource(strings.TrimLeft(path, "./")+METASuffix), nil, nil) != nil {
 									subject = rdf.NewResource(req.BaseURI())
 								} else {
 									subject = triple.Subject
@@ -351,7 +355,7 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 									s = rdf.NewResource(info.Name() + "/")
 									if !showEmpty {
 										g.AddTriple(s, rdf.NewResource("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), rdf.NewResource("http://www.w3.org/ns/posix/stat#Directory"))
-										g.AddTriple(s, rdf.NewResource("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), rdf.NewResource("http://www.w3.org/ns/ldp#Container"))
+										g.AddTriple(s, rdf.NewResource("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), rdf.NewResource("http://www.w3.org/ns/ldp#BasicContainer"))
 									}
 								} else {
 									s = rdf.NewResource(info.Name())
@@ -363,7 +367,7 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 										kb := NewGraph(base.ResolveReference(infoUrl).String())
 										kb.ReadFile(path + info.Name())
 										if kb.Len() > 0 {
-											st := kb.One(rdf.NewResource(""), rdf.NewResource("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), nil)
+											st := kb.One(rdf.NewResource(base.ResolveReference(infoUrl).String()), rdf.NewResource("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), nil)
 											if st != nil && st.Object != nil {
 												g.AddTriple(s, rdf.NewResource("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), st.Object)
 											}
@@ -529,24 +533,30 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 				}
 
 				if link == "http://www.w3.org/ns/ldp#Resource" {
-					w.Header().Set("Location", path)
+					newLoc, _ := url.Parse(slug)
+					w.Header().Set("Location", base.String()+newLoc.String())
 				} else if link == "http://www.w3.org/ns/ldp#BasicContainer" {
 					if !strings.HasSuffix(path, "/") {
 						path = path + "/"
+						slug = slug + "/"
 					}
-					w.Header().Set("Location", path)
+					newLoc, _ := url.Parse(slug)
+					location := base.String() + newLoc.String()
+					w.Header().Set("Location", location)
 
 					err = os.MkdirAll(path, 0755)
 					if err != nil {
 						return r.respond(500, err)
 					}
 
-					path = path + ".meta"
-					w.Header().Set("Link", "<"+path+">; rel=meta")
+					path = path + METASuffix
+					metaUrl, _ := url.Parse(slug + METASuffix)
 
-					//Replace the subject with the dir path instead of the .meta file path
+					w.Header().Set("Link", "<"+base.String()+metaUrl.String()+">; rel=meta")
+
+					//Replace the subject with the dir path instead of the meta file path
 					if dataHasParser {
-						mg := NewGraph(path)
+						mg := NewGraph(base.ResolveReference(metaUrl).String())
 						mg.Parse(req.Body, dataMime)
 						for triple := range mg.IterTriples() {
 							subject := rdf.NewResource(path)
