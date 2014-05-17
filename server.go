@@ -9,6 +9,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	_path "path"
 	"path/filepath"
@@ -272,6 +273,7 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 					}
 				} else {
 					// TODO: RDF
+					base, _ := url.Parse(req.BaseURI())
 					if infos, err := ioutil.ReadDir(path); err == nil {
 						magicType = "text/turtle"
 
@@ -282,9 +284,9 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 						if !strings.HasSuffix(path, "/") {
 							path = path + "/"
 						}
-						f := path + ".meta"
-						kb := NewGraph(f)
-						kb.ReadFile(f)
+						metaUrl, _ := url.Parse(".meta")
+						kb := NewGraph(base.ResolveReference(metaUrl).String())
+						kb.ReadFile(path + ".meta")
 						if kb.Len() > 0 {
 							for triple := range kb.IterTriples() {
 								var subject rdf.Term
@@ -335,11 +337,11 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 									if !showEmpty {
 										g.AddTriple(s, rdf.NewResource("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), rdf.NewResource("http://www.w3.org/ns/posix/stat#File"))
 										// add type if RDF resource
-										f := path + info.Name()
-										kb := NewGraph(f)
-										kb.ReadFile(f)
+										infoUrl, _ := url.Parse(info.Name())
+										kb := NewGraph(base.ResolveReference(infoUrl).String())
+										kb.ReadFile(path + info.Name())
 										if kb.Len() > 0 {
-											st := kb.One(rdf.NewResource(f), rdf.NewResource("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), nil)
+											st := kb.One(rdf.NewResource(""), rdf.NewResource("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), nil)
 											if st != nil && st.Object != nil {
 												g.AddTriple(s, rdf.NewResource("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), st.Object)
 											}

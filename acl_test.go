@@ -6,7 +6,6 @@ import (
 	"crypto/tls"
 	"github.com/drewolson/testflight"
 	"github.com/stretchr/testify/assert"
-	"io/ioutil"
 	"net/http"
 	"strings"
 	"testing"
@@ -44,6 +43,7 @@ func TestACLInit(t *testing.T) {
 	req1, err := http.NewRequest("PUT", user1, strings.NewReader(user1n3))
 	assert.NoError(t, err)
 	resp1, err := httpClient.Do(req1)
+	resp1.Body.Close()
 	assert.NoError(t, err)
 	assert.Equal(t, resp1.StatusCode, 201)
 
@@ -65,18 +65,21 @@ func TestACLInit(t *testing.T) {
 	req2, err := http.NewRequest("PUT", user2, strings.NewReader(user2n3))
 	assert.NoError(t, err)
 	resp2, err := httpClient.Do(req2)
+	resp2.Body.Close()
 	assert.NoError(t, err)
 	assert.Equal(t, resp2.StatusCode, 201)
 
 	req1, err = http.NewRequest("GET", user1, nil)
 	assert.NoError(t, err)
 	resp1, err = user1h.Do(req1)
+	resp1.Body.Close()
 	assert.NoError(t, err)
 	assert.Equal(t, user1, resp1.Header.Get("User"))
 
 	req2, err = http.NewRequest("GET", user2, nil)
 	assert.NoError(t, err)
 	resp2, err = user2h.Do(req2)
+	resp2.Body.Close()
 	assert.NoError(t, err)
 	assert.Equal(t, user2, resp2.Header.Get("User"))
 }
@@ -84,6 +87,7 @@ func TestACLInit(t *testing.T) {
 func TestACLEmpty(t *testing.T) {
 	request, err := http.NewRequest("MKCOL", testServer.URL+aclDir, nil)
 	response, err := user1h.Do(request)
+	response.Body.Close()
 	assert.NoError(t, err)
 	assert.Equal(t, 201, response.StatusCode)
 
@@ -93,12 +97,14 @@ func TestACLEmpty(t *testing.T) {
 	request, err = http.NewRequest("PUT", acl, strings.NewReader(""))
 	request.Header.Add("Content-Type", "text/turtle")
 	response, err = user1h.Do(request)
+	response.Body.Close()
 	assert.NoError(t, err)
 	assert.Equal(t, 201, response.StatusCode)
 
 	request, err = http.NewRequest("PUT", testServer.URL+aclDir+"abc", strings.NewReader("<a> <b> <c> ."))
 	request.Header.Add("Content-Type", "text/turtle")
 	response, err = user1h.Do(request)
+	response.Body.Close()
 	assert.NoError(t, err)
 	assert.Equal(t, 201, response.StatusCode)
 
@@ -108,12 +114,14 @@ func TestACLEmpty(t *testing.T) {
 	request, err = http.NewRequest("PUT", acl, strings.NewReader(""))
 	request.Header.Add("Content-Type", "text/turtle")
 	response, err = user1h.Do(request)
+	response.Body.Close()
 	assert.NoError(t, err)
 	assert.Equal(t, 201, response.StatusCode)
 
 	request, err = http.NewRequest("GET", acl, nil)
 	request.Header.Add("Accept", "text/turtle")
 	response, err = user1h.Do(request)
+	response.Body.Close()
 	assert.NoError(t, err)
 	assert.Equal(t, 200, response.StatusCode)
 }
@@ -121,6 +129,7 @@ func TestACLEmpty(t *testing.T) {
 func TestACLOwner(t *testing.T) {
 	request, err := http.NewRequest("HEAD", testServer.URL+aclDir, nil)
 	response, err := user1h.Do(request)
+	response.Body.Close()
 	assert.NoError(t, err)
 	assert.Equal(t, 200, response.StatusCode)
 
@@ -133,6 +142,7 @@ func TestACLOwner(t *testing.T) {
 	request, err = http.NewRequest("PUT", acl, strings.NewReader(body))
 	request.Header.Add("Content-Type", "text/turtle")
 	response, err = user1h.Do(request)
+	response.Body.Close()
 	assert.NoError(t, err)
 	assert.Equal(t, 201, response.StatusCode)
 
@@ -141,20 +151,18 @@ func TestACLOwner(t *testing.T) {
 	request, err = http.NewRequest("HEAD", acl, nil)
 	request.Header.Add("Accept", "text/turtle")
 	response, err = user1h.Do(request)
+	response.Body.Close()
 	assert.NoError(t, err)
 	assert.Equal(t, 200, response.StatusCode)
 	assert.Equal(t, "5", response.Header.Get("Triples"))
-
-	content, err := ioutil.ReadAll(response.Body)
-	println(string(content))
+	// content, err := ioutil.ReadAll(response.Body)
 
 	request, err = http.NewRequest("HEAD", testServer.URL+aclDir, nil)
 	request.Header.Add("Content-Type", "text/turtle")
 	response, err = user2h.Do(request)
+	response.Body.Close()
 	assert.NoError(t, err)
-	// panic("panic")
 	// content, err = ioutil.ReadAll(response.Body)
-	// println(string(content))
 
 }
 

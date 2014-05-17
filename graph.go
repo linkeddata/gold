@@ -70,6 +70,9 @@ type Graph struct {
 }
 
 func NewGraph(uri string) *Graph {
+	if uri[:5] != "http:" && uri[:6] != "https:" {
+		panic(uri)
+	}
 	return &Graph{
 		Graph: rdf.NewGraph(rdf.NewIndexStore()),
 
@@ -227,11 +230,11 @@ func (g *Graph) ReadFile(filename string) {
 		return
 	}
 	f, err := os.OpenFile(filename, os.O_RDONLY, 0)
+	defer f.Close()
 	if err != nil {
 		log.Println(err)
 		return
 	}
-	defer f.Close()
 	g.Parse(f, "text/turtle")
 }
 
@@ -244,11 +247,11 @@ func (g *Graph) AppendFile(filename string, baseUri string) {
 		return
 	}
 	f, err := os.OpenFile(filename, os.O_RDONLY, 0)
+	defer f.Close()
 	if err != nil {
 		log.Println(err)
 		return
 	}
-	defer f.Close()
 	g.ParseBase(f, "text/turtle", baseUri)
 }
 
