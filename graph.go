@@ -43,13 +43,15 @@ var (
 
 func init() {
 	for _, syntax := range crdf.ParserSyntax {
+		switch syntax.MimeType {
+		case "", "text/html":
+			continue
+		}
 		mimeParser[syntax.MimeType] = syntax.Name
 	}
 	mimeParser["text/n3"] = mimeParser["text/turtle"]
 	mimeParser["application/json"] = "internal"
 	mimeParser["application/sparql-update"] = "internal"
-	delete(mimeParser, "")
-	delete(mimeParser, "text/html")
 
 	for name, syntax := range crdf.SerializerSyntax {
 		switch name {
@@ -57,9 +59,12 @@ func init() {
 			continue
 		}
 		mimeSerializer[syntax.MimeType] = syntax.Name
-		serializerMimes = append(serializerMimes, syntax.MimeType)
 	}
-	serializerMimes = append(serializerMimes, "text/html")
+	mimeSerializer["application/ld+json"] = "internal"
+	mimeSerializer["text/html"] = "internal"
+	for mime, _ := range mimeSerializer {
+		serializerMimes = append(serializerMimes, mime)
+	}
 }
 
 type Graph struct {
@@ -295,7 +300,43 @@ func term2C(t rdf.Term) crdf.Term {
 	return nil
 }
 
+func (g *Graph) serializeJsonLd() ([]byte, error) {
+	r := []map[string]interface{}{}
+	for elt := range g.IterTriples() {
+		one := map[string]interface{}{
+			"@id": elt.Subject.(*rdf.Resource).URI,
+		}
+		switch t := elt.Object.(type) {
+		case *rdf.Resource:
+			one[elt.Predicate.(*rdf.Resource).URI] = []map[string]string{
+				map[string]string{
+					"@id": t.URI,
+				},
+			}
+			break
+		case *rdf.Literal:
+			v := map[string]string{
+				"@value": t.Value,
+			}
+			if len(t.Datatype.String()) > 0 {
+				v["@type"] = t.Datatype.String()
+			}
+			if len(t.Language) > 0 {
+				v["@language"] = t.Language
+			}
+			one[elt.Predicate.(*rdf.Resource).URI] = []map[string]string{v}
+		}
+		r = append(r, one)
+	}
+	return json.Marshal(r)
+}
+
 func (g *Graph) Serialize(mime string) (string, error) {
+	if mime == "application/ld+json" {
+		b, err := g.serializeJsonLd()
+		return string(b), err
+	}
+
 	serializerName := mimeSerializer[mime]
 	if len(serializerName) == 0 {
 		serializerName = "turtle"

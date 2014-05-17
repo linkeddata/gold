@@ -321,6 +321,20 @@ func TestPUTTurtle(t *testing.T) {
 	})
 }
 
+func TestGetJsonLd(t *testing.T) {
+	testflight.WithServer(handler, func(r *testflight.Requester) {
+		request, _ := http.NewRequest("GET", "/_test/abc", nil)
+		request.Header.Add("Accept", "application/ld+json")
+		response := r.Do(request)
+		assert.Equal(t, 200, response.StatusCode)
+		assert.Equal(t, "1", response.RawResponse.Header.Get("Triples"))
+		d := r.Url("/_test/d")
+		e := r.Url("/_test/e")
+		f := r.Url("/_test/f")
+		assert.Equal(t, response.Body, fmt.Sprintf(`[{"@id":"http://%s","http://%s":[{"@id":"http://%s"}]}]`, d, e, f))
+	})
+}
+
 func TestPUTMultiForm(t *testing.T) {
 	return //TODO
 	testflight.WithServer(handler, func(r *testflight.Requester) {
@@ -435,7 +449,7 @@ func TestHEAD(t *testing.T) {
 		response := r.Do(request)
 		assert.Empty(t, response.Body)
 		assert.Equal(t, 200, response.StatusCode)
-		//TODO assert.Equal(t, response.RawResponse.Header.Get("Triples"), "2")
+		assert.Equal(t, "1", response.RawResponse.Header.Get("Triples"))
 	})
 }
 
