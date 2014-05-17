@@ -83,7 +83,7 @@ func (g *Graph) SPARQLUpdate(sparql *SPARQL) {
 			}
 		case "DELETE", "DELETE DATA":
 			for pattern := range query.graph.IterTriples() {
-				for triple := range g.Filter(pattern.Subject, pattern.Predicate, nil) {
+				for _, triple := range g.All(pattern.Subject, pattern.Predicate, nil) {
 					if pattern.Object.Equal(triple.Object) {
 						g.Remove(triple)
 					}

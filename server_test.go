@@ -3,7 +3,6 @@ package gold
 import (
 	"fmt"
 	"github.com/drewolson/testflight"
-	rdf "github.com/kierdavis/argo"
 	"github.com/stretchr/testify/assert"
 	"io"
 	"io/ioutil"
@@ -174,7 +173,7 @@ func TestLDPGetLDPC(t *testing.T) {
 
 		g := NewGraph(testServer.URL + "/_test/")
 		g.Parse(strings.NewReader(response.Body), "text/turtle")
-		assert.NotNil(t, g.One(rdf.NewResource(testServer.URL+"/_test/"), rdf.NewResource("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), rdf.NewResource("http://www.w3.org/ns/ldp#BasicContainer")))
+		assert.NotNil(t, g.One(NewResource(testServer.URL+"/_test/"), NewResource("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), NewResource("http://www.w3.org/ns/ldp#BasicContainer")))
 	})
 }
 
@@ -192,7 +191,7 @@ func TestLDPPreferContainmentHeader(t *testing.T) {
 
 	body, err := ioutil.ReadAll(response.Body)
 	g.Parse(strings.NewReader(string(body)), "text/turtle")
-	assert.NotNil(t, g.One(rdf.NewResource(testServer.URL+"/_test/"), rdf.NewResource("http://www.w3.org/ns/ldp#contains"), nil))
+	assert.NotNil(t, g.One(NewResource(testServer.URL+"/_test/"), NewResource("http://www.w3.org/ns/ldp#contains"), nil))
 
 	request, err = http.NewRequest("GET", testServer.URL+"/_test/", nil)
 	assert.NoError(t, err)
@@ -206,7 +205,7 @@ func TestLDPPreferContainmentHeader(t *testing.T) {
 	body, err = ioutil.ReadAll(response.Body)
 	g = NewGraph(testServer.URL + "/_test/")
 	g.Parse(strings.NewReader(string(body)), "text/turtle")
-	assert.Nil(t, g.One(rdf.NewResource(testServer.URL+"/_test/"), rdf.NewResource("http://www.w3.org/ns/ldp#contains"), nil))
+	assert.Nil(t, g.One(NewResource(testServer.URL+"/_test/"), NewResource("http://www.w3.org/ns/ldp#contains"), nil))
 }
 
 func TestLDPPreferEmptyHeader(t *testing.T) {
@@ -222,7 +221,7 @@ func TestLDPPreferEmptyHeader(t *testing.T) {
 	g := NewGraph(testServer.URL + "/_test/")
 	body, err := ioutil.ReadAll(response.Body)
 	g.Parse(strings.NewReader(string(body)), "text/turtle")
-	assert.NotNil(t, g.One(rdf.NewResource(testServer.URL+"/_test/abc"), nil, nil))
+	assert.NotNil(t, g.One(NewResource(testServer.URL+"/_test/abc"), nil, nil))
 
 	request, err = http.NewRequest("GET", testServer.URL+"/_test/", nil)
 	assert.NoError(t, err)
@@ -236,7 +235,7 @@ func TestLDPPreferEmptyHeader(t *testing.T) {
 	g = NewGraph(testServer.URL + "/_test/")
 	body, err = ioutil.ReadAll(response.Body)
 	g.Parse(strings.NewReader(string(body)), "text/turtle")
-	assert.Nil(t, g.One(rdf.NewResource("/_test/abc"), nil, nil))
+	assert.Nil(t, g.One(NewResource("/_test/abc"), nil, nil))
 }
 
 func TestStreaming(t *testing.T) {
@@ -422,21 +421,21 @@ func TestLISTDIR(t *testing.T) {
 
 	assert.Equal(t, 200, response.StatusCode)
 
-	rdfs := rdf.NewNamespace("http://www.w3.org/1999/02/22-rdf-syntax-ns#")
-	posix := rdf.NewNamespace("http://www.w3.org/ns/posix/stat#")
+	rdfs := NewNamespace("http://www.w3.org/1999/02/22-rdf-syntax-ns#")
+	posix := NewNamespace("http://www.w3.org/ns/posix/stat#")
 
 	g := NewGraph(testServer.URL + "/_test/")
 	body, err := ioutil.ReadAll(response.Body)
 	g.Parse(strings.NewReader(string(body)), "text/turtle")
 
-	f := rdf.NewResource(testServer.URL + "/_test/abc")
+	f := NewResource(testServer.URL + "/_test/abc")
 	assert.NotNil(t, g.One(f, posix.Get("size"), nil))
 	assert.NotNil(t, g.One(f, posix.Get("mtime"), nil))
-	assert.NotNil(t, g.One(f, rdfs.Get("type"), rdf.NewResource("http://example.org/abc")))
-	assert.Equal(t, g.One(f, rdfs.Get("type"), rdf.NewResource("http://example.org/abc")).Object, rdf.NewResource("http://example.org/abc"))
+	assert.NotNil(t, g.One(f, rdfs.Get("type"), NewResource("http://example.org/abc")))
+	assert.Equal(t, g.One(f, rdfs.Get("type"), NewResource("http://example.org/abc")).Object, NewResource("http://example.org/abc"))
 	assert.Equal(t, g.One(f, rdfs.Get("type"), posix.Get("File")).Object, posix.Get("File"))
 
-	d := rdf.NewResource(testServer.URL + "/_test/dir/")
+	d := NewResource(testServer.URL + "/_test/dir/")
 	assert.Equal(t, g.One(d, rdfs.Get("type"), posix.Get("Directory")).Object, posix.Get("Directory"))
 	assert.NotNil(t, g.One(d, posix.Get("size"), nil))
 	assert.NotNil(t, g.One(d, posix.Get("mtime"), nil))
@@ -456,14 +455,14 @@ func TestGlob(t *testing.T) {
 
 		assert.Equal(t, 200, response.StatusCode)
 
-		rdfs := rdf.NewNamespace("http://www.w3.org/1999/02/22-rdf-syntax-ns#")
+		rdfs := NewNamespace("http://www.w3.org/1999/02/22-rdf-syntax-ns#")
 		g := NewGraph(testServer.URL + "/_test/")
 		g.Parse(strings.NewReader(response.Body), "text/turtle")
 
 		assert.NotEmpty(t, g)
-		assert.Equal(t, g.One(rdf.NewResource(testServer.URL+"/_test/1"), rdfs.Get("type"), rdf.NewResource("http://example.org/one")).Object, rdf.NewResource("http://example.org/one"))
-		assert.Equal(t, g.One(rdf.NewResource(testServer.URL+"/_test/1#c"), rdfs.Get("type"), rdf.NewResource("http://example.org/e")).Object, rdf.NewResource("http://example.org/e"))
-		assert.Equal(t, g.One(rdf.NewResource(testServer.URL+"/_test/2"), rdfs.Get("type"), rdf.NewResource("http://example.org/two")).Object, rdf.NewResource("http://example.org/two"))
+		assert.Equal(t, g.One(NewResource(testServer.URL+"/_test/1"), rdfs.Get("type"), NewResource("http://example.org/one")).Object, NewResource("http://example.org/one"))
+		assert.Equal(t, g.One(NewResource(testServer.URL+"/_test/1#c"), rdfs.Get("type"), NewResource("http://example.org/e")).Object, NewResource("http://example.org/e"))
+		assert.Equal(t, g.One(NewResource(testServer.URL+"/_test/2"), rdfs.Get("type"), NewResource("http://example.org/two")).Object, NewResource("http://example.org/two"))
 
 		request, _ = http.NewRequest("DELETE", "/_test/1", nil)
 		response = r.Do(request)

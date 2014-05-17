@@ -5,7 +5,6 @@ import (
 	"crypto/tls"
 	"encoding/asn1"
 	"fmt"
-	rdf "github.com/kierdavis/argo"
 	"sync"
 )
 
@@ -71,10 +70,10 @@ func WebIDTLSAuth(state *tls.ConnectionState) (uri string, err error) {
 
 			g := NewGraph(claim)
 			g.LoadURI(claim)
-			for keyT := range g.Filter(rdf.NewResource(g.URI()), ns["cert"].Get("key"), nil) {
-				for _ = range g.Filter(keyT.Object, ns["rdf"].Get("type"), ns["cert"].Get(t)) {
-					for _ = range g.Filter(keyT.Object, ns["cert"].Get("modulus"), rdf.NewLiteral(n)) {
-						for _ = range g.Filter(keyT.Object, ns["cert"].Get("exponent"), rdf.NewLiteral(e)) {
+			for _, keyT := range g.All(NewResource(g.URI()), ns["cert"].Get("key"), nil) {
+				for _ = range g.All(keyT.Object, ns["rdf"].Get("type"), ns["cert"].Get(t)) {
+					for _ = range g.All(keyT.Object, ns["cert"].Get("modulus"), NewLiteral(n)) {
+						for _ = range g.All(keyT.Object, ns["cert"].Get("exponent"), NewLiteral(e)) {
 							uri = g.URI()
 							webidL.Lock()
 							pkeyURI[pkeyk] = uri

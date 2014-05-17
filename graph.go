@@ -3,7 +3,6 @@ package gold
 import (
 	"crypto/tls"
 	"encoding/json"
-	rdf "github.com/kierdavis/argo"
 	crdf "github.com/presbrey/goraptor"
 	"io"
 	"io/ioutil"
@@ -21,7 +20,7 @@ type AnyGraph interface {
 
 	JSONPatch(io.Reader) error
 	SPARQLUpdate(*SPARQL)
-	IterTriples() chan *rdf.Triple
+	IterTriples() chan *Triple
 
 	ReadFile(string)
 	WriteFile(*os.File, string) error
@@ -68,10 +67,10 @@ func init() {
 }
 
 type Graph struct {
-	*rdf.Graph
+	triples map[*Triple]bool
 
 	uri  string
-	term rdf.Term
+	term Term
 }
 
 func NewGraph(uri string) *Graph {
@@ -79,18 +78,18 @@ func NewGraph(uri string) *Graph {
 		panic(uri)
 	}
 	return &Graph{
-		Graph: rdf.NewGraph(rdf.NewIndexStore()),
+		triples: make(map[*Triple]bool),
 
 		uri:  uri,
-		term: rdf.NewResource(uri),
+		term: NewResource(uri),
 	}
 }
 
 func (g *Graph) Len() int {
-	return g.Store.Num()
+	return len(g.triples)
 }
 
-func (g *Graph) Term() rdf.Term {
+func (g *Graph) Term() Term {
 	return g.term
 }
 
@@ -98,19 +97,23 @@ func (g *Graph) URI() string {
 	return g.uri
 }
 
-func term2term(term crdf.Term) rdf.Term {
+func term2term(term crdf.Term) Term {
 	switch term := term.(type) {
 	case *crdf.Blank:
-		return rdf.NewBlankNode(term.String())
+		return NewBlankNode(term.String())
 	case *crdf.Literal:
-		return rdf.NewLiteralWithLanguageAndDatatype(term.Value, term.Lang, rdf.NewResource(term.Datatype))
+		if len(term.Datatype) > 0 {
+			return NewLiteralWithLanguageAndDatatype(term.Value, term.Lang, NewResource(term.Datatype))
+		} else {
+			return NewLiteral(term.Value)
+		}
 	case *crdf.Uri:
-		return rdf.NewResource(term.String())
+		return NewResource(term.String())
 	}
 	return nil
 }
 
-func (g *Graph) One(s rdf.Term, p rdf.Term, o rdf.Term) *rdf.Triple {
+func (g *Graph) One(s Term, p Term, o Term) *Triple {
 	for triple := range g.IterTriples() {
 		if s != nil {
 			if p != nil {
@@ -149,8 +152,29 @@ func (g *Graph) One(s rdf.Term, p rdf.Term, o rdf.Term) *rdf.Triple {
 	return nil
 }
 
-func (g *Graph) All(s rdf.Term, p rdf.Term, o rdf.Term) []*rdf.Triple {
-	var triples []*rdf.Triple
+func (g *Graph) IterTriples() (ch chan *Triple) {
+	ch = make(chan *Triple)
+	go func() {
+		for triple := range g.triples {
+			ch <- triple
+		}
+		close(ch)
+	}()
+	return ch
+}
+
+func (g *Graph) Add(t *Triple) {
+	g.triples[t] = true
+}
+func (g *Graph) AddTriple(s Term, p Term, o Term) {
+	g.triples[NewTriple(s, p, o)] = true
+}
+func (g *Graph) Remove(t *Triple) {
+	delete(g.triples, t)
+}
+
+func (g *Graph) All(s Term, p Term, o Term) []*Triple {
+	var triples []*Triple
 	for triple := range g.IterTriples() {
 		if s != nil {
 			if p != nil {
@@ -189,10 +213,8 @@ func (g *Graph) All(s rdf.Term, p rdf.Term, o rdf.Term) []*rdf.Triple {
 
 func (g *Graph) AddStatement(st *crdf.Statement) {
 	s, p, o := term2term(st.Subject), term2term(st.Predicate), term2term(st.Object)
-	for triple := range g.Filter(s, p, nil) {
-		if triple.Object.Equal(o) {
-			return
-		}
+	for _ = range g.All(s, p, o) {
+		return
 	}
 	g.AddTriple(s, p, o)
 }
@@ -277,18 +299,18 @@ func (g *Graph) LoadURI(uri string) (err error) {
 	return
 }
 
-func term2C(t rdf.Term) crdf.Term {
+func term2C(t Term) crdf.Term {
 	switch t := t.(type) {
-	case *rdf.BlankNode:
+	case *BlankNode:
 		node := crdf.Blank(t.ID)
 		return &node
-	case *rdf.Resource:
+	case *Resource:
 		node := crdf.Uri(t.URI)
 		return &node
-	case *rdf.Literal:
+	case *Literal:
 		dt := ""
 		if t.Datatype != nil {
-			dt = t.Datatype.(*rdf.Resource).URI
+			dt = t.Datatype.(*Resource).URI
 		}
 		node := crdf.Literal{
 			Value:    t.Value,
@@ -304,17 +326,17 @@ func (g *Graph) serializeJsonLd() ([]byte, error) {
 	r := []map[string]interface{}{}
 	for elt := range g.IterTriples() {
 		one := map[string]interface{}{
-			"@id": elt.Subject.(*rdf.Resource).URI,
+			"@id": elt.Subject.(*Resource).URI,
 		}
 		switch t := elt.Object.(type) {
-		case *rdf.Resource:
-			one[elt.Predicate.(*rdf.Resource).URI] = []map[string]string{
+		case *Resource:
+			one[elt.Predicate.(*Resource).URI] = []map[string]string{
 				map[string]string{
 					"@id": t.URI,
 				},
 			}
 			break
-		case *rdf.Literal:
+		case *Literal:
 			v := map[string]string{
 				"@value": t.Value,
 			}
@@ -324,7 +346,7 @@ func (g *Graph) serializeJsonLd() ([]byte, error) {
 			if len(t.Language) > 0 {
 				v["@language"] = t.Language
 			}
-			one[elt.Predicate.(*rdf.Resource).URI] = []map[string]string{v}
+			one[elt.Predicate.(*Resource).URI] = []map[string]string{v}
 		}
 		r = append(r, one)
 	}
@@ -404,17 +426,17 @@ func (g *Graph) JSONPatch(r io.Reader) error {
 		su, _ := base.Parse(s)
 		for p, pv := range sv {
 			pu, _ := base.Parse(p)
-			subject := rdf.NewResource(su.String())
-			predicate := rdf.NewResource(pu.String())
-			for triple := range g.Filter(subject, predicate, nil) {
+			subject := NewResource(su.String())
+			predicate := NewResource(pu.String())
+			for _, triple := range g.All(subject, predicate, nil) {
 				g.Remove(triple)
 			}
 			for _, o := range pv {
 				switch o.Type {
 				case "uri":
-					g.AddTriple(subject, predicate, rdf.NewResource(o.Value))
+					g.AddTriple(subject, predicate, NewResource(o.Value))
 				case "literal":
-					g.AddTriple(subject, predicate, rdf.NewLiteral(o.Value))
+					g.AddTriple(subject, predicate, NewLiteral(o.Value))
 				}
 			}
 		}

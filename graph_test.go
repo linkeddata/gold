@@ -1,7 +1,6 @@
 package gold
 
 import (
-	rdf "github.com/kierdavis/argo"
 	"github.com/stretchr/testify/assert"
 	"strings"
 	"testing"
@@ -32,35 +31,35 @@ func TestGraphPatch(t *testing.T) {
 
 func TestGraphOne(t *testing.T) {
 	g := NewGraph("http://test/")
-	g.AddTriple(rdf.NewResource("a"), rdf.NewResource("b"), rdf.NewResource("c"))
-	g.AddTriple(rdf.NewResource("a"), rdf.NewResource("b"), rdf.NewResource("d"))
-	g.AddTriple(rdf.NewResource("a"), rdf.NewResource("f"), rdf.NewLiteral("h"))
-	g.AddTriple(rdf.NewResource("g"), rdf.NewResource("b2"), rdf.NewResource("e"))
+	g.AddTriple(NewResource("a"), NewResource("b"), NewResource("c"))
+	g.AddTriple(NewResource("a"), NewResource("b"), NewResource("d"))
+	g.AddTriple(NewResource("a"), NewResource("f"), NewLiteral("h"))
+	g.AddTriple(NewResource("g"), NewResource("b2"), NewResource("e"))
 
-	assert.Equal(t, g.One(rdf.NewResource("a"), nil, nil).String(), "<a> <b> <c> .")
-	assert.Equal(t, g.One(rdf.NewResource("a"), rdf.NewResource("b"), nil).String(), "<a> <b> <c> .")
-	assert.Equal(t, g.One(rdf.NewResource("a"), rdf.NewResource("b"), rdf.NewResource("d")).String(), "<a> <b> <d> .")
+	assert.Equal(t, g.One(NewResource("a"), nil, nil).String(), "<a> <b> <c> .")
+	assert.Equal(t, g.One(NewResource("a"), NewResource("b"), nil).String(), "<a> <b> <c> .")
+	assert.Equal(t, g.One(NewResource("a"), NewResource("b"), NewResource("d")).String(), "<a> <b> <d> .")
 
-	assert.Equal(t, g.One(nil, rdf.NewResource("b"), rdf.NewResource("d")).String(), "<a> <b> <d> .")
-	assert.Equal(t, g.One(nil, rdf.NewResource("b2"), nil).String(), "<g> <b2> <e> .")
-	assert.Equal(t, g.One(nil, nil, rdf.NewResource("e")).String(), "<g> <b2> <e> .")
+	assert.Equal(t, g.One(nil, NewResource("b"), NewResource("d")).String(), "<a> <b> <d> .")
+	assert.Equal(t, g.One(nil, NewResource("b2"), nil).String(), "<g> <b2> <e> .")
+	assert.Equal(t, g.One(nil, nil, NewResource("e")).String(), "<g> <b2> <e> .")
 
-	assert.Nil(t, g.One(rdf.NewResource("x"), nil, nil))
-	assert.Nil(t, g.One(nil, rdf.NewResource("x"), nil))
-	assert.Nil(t, g.One(nil, nil, rdf.NewResource("x")))
+	assert.Nil(t, g.One(NewResource("x"), nil, nil))
+	assert.Nil(t, g.One(nil, NewResource("x"), nil))
+	assert.Nil(t, g.One(nil, nil, NewResource("x")))
 }
 
 func TestGraphAll(t *testing.T) {
 	g := NewGraph("http://test/")
-	g.AddTriple(rdf.NewResource("a"), rdf.NewResource("b"), rdf.NewResource("c"))
-	g.AddTriple(rdf.NewResource("a"), rdf.NewResource("b"), rdf.NewResource("d"))
-	g.AddTriple(rdf.NewResource("a"), rdf.NewResource("f"), rdf.NewLiteral("h"))
-	g.AddTriple(rdf.NewResource("g"), rdf.NewResource("b2"), rdf.NewResource("e"))
-	g.AddTriple(rdf.NewResource("g"), rdf.NewResource("b2"), rdf.NewResource("c"))
+	g.AddTriple(NewResource("a"), NewResource("b"), NewResource("c"))
+	g.AddTriple(NewResource("a"), NewResource("b"), NewResource("d"))
+	g.AddTriple(NewResource("a"), NewResource("f"), NewLiteral("h"))
+	g.AddTriple(NewResource("g"), NewResource("b2"), NewResource("e"))
+	g.AddTriple(NewResource("g"), NewResource("b2"), NewResource("c"))
 
 	assert.Equal(t, len(g.All(nil, nil, nil)), 0)
-	assert.Equal(t, len(g.All(rdf.NewResource("a"), nil, nil)), 3)
-	assert.Equal(t, len(g.All(nil, rdf.NewResource("b"), nil)), 2)
-	assert.Equal(t, len(g.All(nil, nil, rdf.NewResource("d"))), 1)
-	assert.Equal(t, len(g.All(nil, nil, rdf.NewResource("c"))), 2)
+	assert.Equal(t, len(g.All(NewResource("a"), nil, nil)), 3)
+	assert.Equal(t, len(g.All(nil, NewResource("b"), nil)), 2)
+	assert.Equal(t, len(g.All(nil, nil, NewResource("d"))), 1)
+	assert.Equal(t, len(g.All(nil, nil, NewResource("c"))), 2)
 }

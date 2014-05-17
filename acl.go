@@ -2,8 +2,6 @@ package gold
 
 import (
 	"strings"
-
-	rdf "github.com/kierdavis/argo"
 )
 
 var (
@@ -38,8 +36,8 @@ func (acl *WAC) Allow(mode string) bool {
 	}
 
 	for _, i := range aclGraph.All(nil, ns["acl"].Get("mode"), ns["acl"].Get(mode)) {
-		for _ = range aclGraph.All(i.Subject, ns["acl"].Get("accessTo"), rdf.NewResource(accessUri)) {
-			for _ = range aclGraph.All(i.Subject, ns["acl"].Get("agent"), rdf.NewResource(acl.user)) {
+		for _ = range aclGraph.All(i.Subject, ns["acl"].Get("accessTo"), NewResource(accessUri)) {
+			for _ = range aclGraph.All(i.Subject, ns["acl"].Get("agent"), NewResource(acl.user)) {
 				return true
 			}
 			for _ = range aclGraph.All(i.Subject, ns["acl"].Get("agentClass"), ns["foaf"].Get("Agent")) {

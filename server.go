@@ -2,7 +2,6 @@ package gold
 
 import (
 	"fmt"
-	rdf "github.com/kierdavis/argo"
 	"github.com/presbrey/magicmime"
 	"io"
 	"io/ioutil"
@@ -303,9 +302,9 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 					if infos, err := ioutil.ReadDir(path); err == nil {
 						magicType = "text/turtle"
 
-						root := rdf.NewResource(req.BaseURI())
-						g.AddTriple(root, rdf.NewResource("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), rdf.NewResource("http://www.w3.org/ns/posix/stat#Directory"))
-						g.AddTriple(root, rdf.NewResource("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), rdf.NewResource("http://www.w3.org/ns/ldp#BasicContainer"))
+						root := NewResource(req.BaseURI())
+						g.AddTriple(root, NewResource("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), NewResource("http://www.w3.org/ns/posix/stat#Directory"))
+						g.AddTriple(root, NewResource("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), NewResource("http://www.w3.org/ns/ldp#BasicContainer"))
 
 						if !strings.HasSuffix(path, "/") {
 							path = path + "/"
@@ -315,9 +314,9 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 						kb.ReadFile(path + METASuffix)
 						if kb.Len() > 0 {
 							for triple := range kb.IterTriples() {
-								var subject rdf.Term
-								if kb.One(rdf.NewResource(strings.TrimLeft(path, "./")+METASuffix), nil, nil) != nil {
-									subject = rdf.NewResource(req.BaseURI())
+								var subject Term
+								if kb.One(NewResource(strings.TrimLeft(path, "./")+METASuffix), nil, nil) != nil {
+									subject = NewResource(req.BaseURI())
 								} else {
 									subject = triple.Subject
 								}
@@ -348,38 +347,38 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 							}
 						}
 
-						var s rdf.Term
+						var s Term
 						for _, info := range infos {
 							if info != nil {
 								if info.IsDir() {
-									s = rdf.NewResource(info.Name() + "/")
+									s = NewResource(info.Name() + "/")
 									if !showEmpty {
-										g.AddTriple(s, rdf.NewResource("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), rdf.NewResource("http://www.w3.org/ns/posix/stat#Directory"))
-										g.AddTriple(s, rdf.NewResource("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), rdf.NewResource("http://www.w3.org/ns/ldp#BasicContainer"))
+										g.AddTriple(s, NewResource("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), NewResource("http://www.w3.org/ns/posix/stat#Directory"))
+										g.AddTriple(s, NewResource("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), NewResource("http://www.w3.org/ns/ldp#BasicContainer"))
 									}
 								} else {
-									s = rdf.NewResource(info.Name())
+									s = NewResource(info.Name())
 
 									if !showEmpty {
-										g.AddTriple(s, rdf.NewResource("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), rdf.NewResource("http://www.w3.org/ns/posix/stat#File"))
+										g.AddTriple(s, NewResource("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), NewResource("http://www.w3.org/ns/posix/stat#File"))
 										// add type if RDF resource
 										infoUrl, _ := url.Parse(info.Name())
 										kb := NewGraph(base.ResolveReference(infoUrl).String())
 										kb.ReadFile(path + info.Name())
 										if kb.Len() > 0 {
-											st := kb.One(rdf.NewResource(base.ResolveReference(infoUrl).String()), rdf.NewResource("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), nil)
+											st := kb.One(NewResource(base.ResolveReference(infoUrl).String()), NewResource("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), nil)
 											if st != nil && st.Object != nil {
-												g.AddTriple(s, rdf.NewResource("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), st.Object)
+												g.AddTriple(s, NewResource("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), st.Object)
 											}
 										}
 									}
 								}
 								if !showEmpty {
-									g.AddTriple(s, rdf.NewResource("http://www.w3.org/ns/posix/stat#mtime"), rdf.NewLiteral(fmt.Sprintf("%d", info.ModTime().Unix())))
-									g.AddTriple(s, rdf.NewResource("http://www.w3.org/ns/posix/stat#size"), rdf.NewLiteral(fmt.Sprintf("%d", info.Size())))
+									g.AddTriple(s, NewResource("http://www.w3.org/ns/posix/stat#mtime"), NewLiteral(fmt.Sprintf("%d", info.ModTime().Unix())))
+									g.AddTriple(s, NewResource("http://www.w3.org/ns/posix/stat#size"), NewLiteral(fmt.Sprintf("%d", info.Size())))
 								}
 								if showContainment {
-									g.AddTriple(root, rdf.NewResource("http://www.w3.org/ns/ldp#contains"), s)
+									g.AddTriple(root, NewResource("http://www.w3.org/ns/ldp#contains"), s)
 								}
 							}
 						}
@@ -559,7 +558,7 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 						mg := NewGraph(base.ResolveReference(metaUrl).String())
 						mg.Parse(req.Body, dataMime)
 						for triple := range mg.IterTriples() {
-							subject := rdf.NewResource(path)
+							subject := NewResource(path)
 							g.AddTriple(subject, triple.Predicate, triple.Object)
 						}
 
