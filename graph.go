@@ -3,13 +3,14 @@ package gold
 import (
 	"crypto/tls"
 	"encoding/json"
-	crdf "github.com/presbrey/goraptor"
 	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"net/url"
 	"os"
+
+	crdf "github.com/presbrey/goraptor"
 )
 
 type AnyGraph interface {

@@ -2,7 +2,6 @@ package gold
 
 import (
 	"fmt"
-	"github.com/presbrey/magicmime"
 	"io"
 	"io/ioutil"
 	"log"
@@ -13,6 +12,8 @@ import (
 	_path "path"
 	"path/filepath"
 	"strings"
+
+	"github.com/presbrey/magicmime"
 )
 
 const (

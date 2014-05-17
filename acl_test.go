@@ -4,11 +4,12 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/tls"
-	"github.com/drewolson/testflight"
-	"github.com/stretchr/testify/assert"
 	"net/http"
 	"strings"
 	"testing"
+
+	"github.com/drewolson/testflight"
+	"github.com/stretchr/testify/assert"
 )
 
 const (
