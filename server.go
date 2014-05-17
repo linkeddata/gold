@@ -73,6 +73,28 @@ func (req httpRequest) Auth() string {
 	return user
 }
 
+func (req httpRequest) ifMatch(etag string) bool {
+	if len(etag) == 0 {
+		return true
+	}
+	v := req.Header.Get("If-Match")
+	if len(v) == 0 {
+		return true
+	}
+	return v == "*" || v == etag
+}
+
+func (req httpRequest) ifNoneMatch(etag string) bool {
+	if len(etag) == 0 {
+		return true
+	}
+	v := req.Header.Get("If-None-Match")
+	if len(v) == 0 {
+		return true
+	}
+	return v != "*" && v != etag
+}
+
 type Server struct {
 	http.Handler
 
@@ -376,6 +398,13 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 			w.Header().Set("ETag", etag)
 		}
 
+		if !req.ifMatch(etag) {
+			return r.respond(412, "Precondition Failed")
+		}
+		if !req.ifNoneMatch(etag) {
+			return r.respond(412, "Precondition Failed")
+		}
+
 		if status != 200 {
 			return r.respond(status)
 		}
@@ -460,6 +489,14 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 	case "PATCH", "POST", "PUT":
 		if !acl.AllowWrite() && !acl.AllowAppend() {
 			return r.respond(403)
+		}
+
+		etag, _ := NewETag(path)
+		if !req.ifMatch(etag) {
+			return r.respond(412, "Precondition Failed")
+		}
+		if !req.ifNoneMatch(etag) {
+			return r.respond(412, "Precondition Failed")
 		}
 
 		// LDP

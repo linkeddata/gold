@@ -321,6 +321,16 @@ func TestPUTTurtle(t *testing.T) {
 	})
 }
 
+func TestIfNoneMatch(t *testing.T) {
+	testflight.WithServer(handler, func(r *testflight.Requester) {
+		request, _ := http.NewRequest("PUT", "/_test/abc", nil)
+		request.Header.Add("Accept", "text/turtle")
+		request.Header.Add("If-None-Match", "*")
+		response := r.Do(request)
+		assert.Equal(t, 412, response.StatusCode)
+	})
+}
+
 func TestGetJsonLd(t *testing.T) {
 	testflight.WithServer(handler, func(r *testflight.Requester) {
 		request, _ := http.NewRequest("GET", "/_test/abc", nil)
