@@ -133,6 +133,13 @@ func TestACLOwner(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, 200, response.StatusCode)
 
+	request, err = http.NewRequest("HEAD", testServer.URL+aclDir, nil)
+	request.Header.Add("Content-Type", "text/turtle")
+	response, err = user2h.Do(request)
+	response.Body.Close()
+	assert.NoError(t, err)
+	assert.Equal(t, 200, response.StatusCode)
+
 	acl := ParseLinkHeader(response.Header.Get("Link")).MatchRel("acl")
 
 	body := "<#Owner>" +
@@ -155,15 +162,20 @@ func TestACLOwner(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, 200, response.StatusCode)
 	assert.Equal(t, "5", response.Header.Get("Triples"))
-	// content, err := ioutil.ReadAll(response.Body)
 
 	request, err = http.NewRequest("HEAD", testServer.URL+aclDir, nil)
 	request.Header.Add("Content-Type", "text/turtle")
 	response, err = user2h.Do(request)
 	response.Body.Close()
 	assert.NoError(t, err)
-	// content, err = ioutil.ReadAll(response.Body)
+	assert.Equal(t, 403, response.StatusCode)
 
+	request, err = http.NewRequest("HEAD", testServer.URL+aclDir, nil)
+	request.Header.Add("Content-Type", "text/turtle")
+	response, err = httpClient.Do(request)
+	response.Body.Close()
+	assert.NoError(t, err)
+	assert.Equal(t, 403, response.StatusCode)
 }
 
 func TestACLFriendsOnly(t *testing.T) {
