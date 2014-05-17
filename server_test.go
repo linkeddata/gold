@@ -84,6 +84,7 @@ func TestLDPPostLDPC(t *testing.T) {
 	request.Header.Add("Slug", "ldpc")
 	request.Header.Add("Link", "<http://www.w3.org/ns/ldp#BasicContainer>; rel=\"type\"")
 	response, err := httpClient.Do(request)
+	response.Body.Close()
 	assert.NoError(t, err)
 	assert.Equal(t, 201, response.StatusCode)
 	newLDPC := response.Header.Get("Location")
@@ -95,21 +96,25 @@ func TestLDPPostLDPC(t *testing.T) {
 	request, err = http.NewRequest("GET", newLDPC, nil)
 	request.Header.Add("Accept", "text/turtle")
 	response, err = httpClient.Do(request)
+	response.Body.Close()
 	assert.NoError(t, err)
 	assert.Equal(t, 200, response.StatusCode)
 
 	request, _ = http.NewRequest("GET", metaURI, nil)
 	request.Header.Add("Accept", "text/turtle")
 	response, err = httpClient.Do(request)
+	response.Body.Close()
 	assert.Equal(t, response.Header.Get("Triples"), "1")
 
 	request, err = http.NewRequest("DELETE", metaURI, nil)
 	response, err = httpClient.Do(request)
+	response.Body.Close()
 	assert.NoError(t, err)
 	assert.Equal(t, 200, response.StatusCode)
 
 	request, _ = http.NewRequest("DELETE", newLDPC, nil)
 	response, err = httpClient.Do(request)
+	response.Body.Close()
 	assert.NoError(t, err)
 	assert.Equal(t, 200, response.StatusCode)
 }
@@ -120,6 +125,7 @@ func TestLDPPostLDPRWithSlug(t *testing.T) {
 	request.Header.Add("Slug", "ldpr")
 	request.Header.Add("Link", "<http://www.w3.org/ns/ldp#Resource>; rel=\"type\"")
 	response, err := httpClient.Do(request)
+	response.Body.Close()
 	assert.NoError(t, err)
 	assert.Equal(t, 201, response.StatusCode)
 	newLDPR := response.Header.Get("Location")
@@ -132,10 +138,12 @@ func TestLDPPostLDPRWithSlug(t *testing.T) {
 	assert.Equal(t, response.Header.Get("Triples"), "1")
 	body, err := ioutil.ReadAll(response.Body)
 	assert.NoError(t, err)
+	response.Body.Close()
 	assert.Equal(t, string(body), "@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n\n<>\n    a <http://example.org/two> .\n\n")
 
 	request, err = http.NewRequest("DELETE", newLDPR, nil)
 	response, err = httpClient.Do(request)
+	response.Body.Close()
 	assert.NoError(t, err)
 	assert.Equal(t, 200, response.StatusCode)
 }
@@ -145,6 +153,7 @@ func TestLDPPostLDPRNoSlug(t *testing.T) {
 	request.Header.Add("Content-Type", "text/turtle")
 	request.Header.Add("Link", "<http://www.w3.org/ns/ldp#Resource>; rel=\"type\"")
 	response, err := httpClient.Do(request)
+	response.Body.Close()
 	assert.NoError(t, err)
 	assert.Equal(t, 201, response.StatusCode)
 	newLDPR := response.Header.Get("Location")
@@ -157,9 +166,11 @@ func TestLDPPostLDPRNoSlug(t *testing.T) {
 	assert.Equal(t, 6, len(filepath.Base(newLDPR)))
 	assert.Equal(t, "1", response.Header.Get("Triples"))
 	body, err := ioutil.ReadAll(response.Body)
+	response.Body.Close()
 	assert.Equal(t, "@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n\n<>\n    a <http://example.org/two> .\n\n", string(body))
 	request, err = http.NewRequest("DELETE", newLDPR, nil)
 	response, err = httpClient.Do(request)
+	response.Body.Close()
 	assert.NoError(t, err)
 	assert.Equal(t, 200, response.StatusCode)
 }
@@ -191,6 +202,7 @@ func TestLDPPreferContainmentHeader(t *testing.T) {
 	g := NewGraph(testServer.URL + "/_test/")
 
 	body, err := ioutil.ReadAll(response.Body)
+	response.Body.Close()
 	g.Parse(strings.NewReader(string(body)), "text/turtle")
 	assert.NotNil(t, g.One(NewResource(testServer.URL+"/_test/"), NewResource("http://www.w3.org/ns/ldp#contains"), nil))
 
@@ -204,6 +216,7 @@ func TestLDPPreferContainmentHeader(t *testing.T) {
 	assert.Equal(t, 200, response.StatusCode)
 	assert.Equal(t, "return=representation", response.Header.Get("Preference-Applied"))
 	body, err = ioutil.ReadAll(response.Body)
+	response.Body.Close()
 	g = NewGraph(testServer.URL + "/_test/")
 	g.Parse(strings.NewReader(string(body)), "text/turtle")
 	assert.Nil(t, g.One(NewResource(testServer.URL+"/_test/"), NewResource("http://www.w3.org/ns/ldp#contains"), nil))
@@ -221,6 +234,7 @@ func TestLDPPreferEmptyHeader(t *testing.T) {
 
 	g := NewGraph(testServer.URL + "/_test/")
 	body, err := ioutil.ReadAll(response.Body)
+	response.Body.Close()
 	g.Parse(strings.NewReader(string(body)), "text/turtle")
 	assert.NotNil(t, g.One(NewResource(testServer.URL+"/_test/abc"), nil, nil))
 
@@ -235,6 +249,7 @@ func TestLDPPreferEmptyHeader(t *testing.T) {
 
 	g = NewGraph(testServer.URL + "/_test/")
 	body, err = ioutil.ReadAll(response.Body)
+	response.Body.Close()
 	g.Parse(strings.NewReader(string(body)), "text/turtle")
 	assert.Nil(t, g.One(NewResource("/_test/abc"), nil, nil))
 }
@@ -404,6 +419,7 @@ func TestLISTDIR(t *testing.T) {
 	request, err := http.NewRequest("MKCOL", testServer.URL+"/_test/dir", nil)
 	assert.NoError(t, err)
 	response, err := httpClient.Do(request)
+	response.Body.Close()
 	assert.NoError(t, err)
 	assert.Equal(t, 201, response.StatusCode)
 
@@ -411,6 +427,7 @@ func TestLISTDIR(t *testing.T) {
 	assert.NoError(t, err)
 	request.Header.Add("Content-Type", "text/turtle")
 	response, err = httpClient.Do(request)
+	response.Body.Close()
 	assert.NoError(t, err)
 	assert.Equal(t, 200, response.StatusCode)
 
@@ -424,6 +441,7 @@ func TestLISTDIR(t *testing.T) {
 
 	g := NewGraph(testServer.URL + "/_test/")
 	body, err := ioutil.ReadAll(response.Body)
+	response.Body.Close()
 	g.Parse(strings.NewReader(string(body)), "text/turtle")
 
 	f := NewResource(testServer.URL + "/_test/abc")

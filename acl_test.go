@@ -155,7 +155,7 @@ func TestACLOwner(t *testing.T) {
 	assert.Equal(t, 201, response.StatusCode)
 
 	acl = ParseLinkHeader(response.Header.Get("Link")).MatchRel("acl")
-
+	// user1
 	request, err = http.NewRequest("HEAD", acl, nil)
 	request.Header.Add("Accept", "text/turtle")
 	response, err = user1h.Do(request)
@@ -166,17 +166,47 @@ func TestACLOwner(t *testing.T) {
 
 	request, err = http.NewRequest("HEAD", testServer.URL+aclDir, nil)
 	request.Header.Add("Content-Type", "text/turtle")
+	response, err = user1h.Do(request)
+	response.Body.Close()
+	assert.NoError(t, err)
+	assert.Equal(t, 200, response.StatusCode)
+
+	request, err = http.NewRequest("PUT", acl, strings.NewReader(body))
+	request.Header.Add("Content-Type", "text/turtle")
+	response, err = user1h.Do(request)
+	response.Body.Close()
+	assert.NoError(t, err)
+	assert.Equal(t, 201, response.StatusCode)
+	// user2
+	request, err = http.NewRequest("HEAD", testServer.URL+aclDir, nil)
+	request.Header.Add("Content-Type", "text/turtle")
 	response, err = user2h.Do(request)
 	response.Body.Close()
 	assert.NoError(t, err)
 	assert.Equal(t, 403, response.StatusCode)
 
-	request, err = http.NewRequest("HEAD", testServer.URL+aclDir, nil)
+	request, err = http.NewRequest("HEAD", acl, nil)
+	request.Header.Add("Content-Type", "text/turtle")
+	response, err = user2h.Do(request)
+	response.Body.Close()
+	assert.NoError(t, err)
+	assert.Equal(t, 403, response.StatusCode)
+
+	request, err = http.NewRequest("PUT", acl, strings.NewReader("<d> <e> <f> ."))
+	request.Header.Add("Content-Type", "text/turtle")
+	response, err = user2h.Do(request)
+	response.Body.Close()
+	assert.NoError(t, err)
+	assert.Equal(t, 403, response.StatusCode)
+	// agent
+	request, err = http.NewRequest("PUT", acl, strings.NewReader("<d> <e> <f> ."))
 	request.Header.Add("Content-Type", "text/turtle")
 	response, err = httpClient.Do(request)
 	response.Body.Close()
 	assert.NoError(t, err)
 	assert.Equal(t, 403, response.StatusCode)
+
+	//TODO: add test for defaultForNew
 }
 
 func TestACLFriendsOnly(t *testing.T) {
