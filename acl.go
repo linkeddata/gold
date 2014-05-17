@@ -1,8 +1,9 @@
 package gold
 
 import (
-	// "log"
 	"strings"
+
+	rdf "github.com/kierdavis/argo"
 )
 
 var (
@@ -19,8 +20,10 @@ func NewWAC(req *httpRequest, srv *Server, user string) *WAC {
 	return &WAC{req: req, srv: srv, user: user}
 }
 
-func (acl *WAC) Allow(method string) bool {
+func (acl *WAC) Allow(mode string) bool {
 	accessPath := acl.req.RequestURI
+	accessUri := acl.req.BaseURI()
+
 	aclPath := accessPath
 	if strings.HasSuffix(aclPath, ".") {
 		aclPath = aclPath[:len(aclPath)-1] + ACLSuffix
@@ -28,8 +31,24 @@ func (acl *WAC) Allow(method string) bool {
 		aclPath += ACLSuffix
 	}
 
-	// log.Println(method, accessPath, aclPath, acl.Uri())
-	return true
+	aclGraph := NewGraph(acl.Uri())
+	aclGraph.ReadFile(acl.srv.root + aclPath)
+	if aclGraph.Len() < 1 {
+		return true
+	}
+
+	for _, i := range aclGraph.All(nil, ns["acl"].Get("mode"), ns["acl"].Get(mode)) {
+		for _ = range aclGraph.All(i.Subject, ns["acl"].Get("accessTo"), rdf.NewResource(accessUri)) {
+			for _ = range aclGraph.All(i.Subject, ns["acl"].Get("agent"), rdf.NewResource(acl.user)) {
+				return true
+			}
+			for _ = range aclGraph.All(i.Subject, ns["acl"].Get("agentClass"), ns["foaf"].Get("Agent")) {
+				return true
+			}
+		}
+	}
+
+	return false
 }
 
 func (acl *WAC) AllowRead() bool {
