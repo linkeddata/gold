@@ -491,7 +491,8 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 		}
 
 	case "PATCH", "POST", "PUT":
-		if !acl.AllowWrite() && !acl.AllowAppend() {
+		// check append first
+		if !acl.AllowAppend() && !acl.AllowWrite() {
 			return r.respond(403)
 		}
 
