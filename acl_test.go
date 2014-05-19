@@ -1,3 +1,4 @@
+// TODO: test acl with glob
 package gold
 
 import (

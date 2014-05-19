@@ -1,6 +1,7 @@
 package gold
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -19,6 +20,7 @@ import (
 const (
 	HCType     = "Content-Type"
 	METASuffix = ",meta"
+	ACLSuffix  = ",acl"
 )
 
 var (
@@ -41,6 +43,55 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
+}
+
+type ldpath struct {
+	base     string
+	uri      string
+	file     string
+	aclUri   string
+	aclFile  string
+	metaUri  string
+	metaFile string
+}
+
+func getPathInfo(path string) (ldpath, error) {
+	var res ldpath
+	if len(path) == 0 {
+		return res, errors.New("missing resource path")
+	}
+
+	p, err := url.Parse(path)
+	if err != nil {
+		return res, err
+	}
+
+	if strings.HasPrefix(p.Path, "/") {
+		p.Path = strings.TrimLeft(p.Path, "/")
+	}
+
+	res.base = p.Scheme + "://" + p.Host
+	res.uri = path
+	res.file = p.Path
+
+	if strings.HasSuffix(p.Path, ",acl") {
+		res.aclUri = path
+		res.aclFile = p.Path
+		res.metaUri = path
+		res.metaFile = p.Path
+	} else if strings.HasSuffix(p.Path, ",meta") {
+		res.aclUri = path + ACLSuffix
+		res.aclFile = p.Path + ACLSuffix
+		res.metaUri = path
+		res.metaFile = p.Path
+	} else {
+		res.aclUri = path + ACLSuffix
+		res.aclFile = p.Path + ACLSuffix
+		res.metaUri = path + METASuffix
+		res.metaFile = p.Path + METASuffix
+	}
+
+	return res, nil
 }
 
 type httpRequest struct{ *http.Request }
@@ -210,9 +261,15 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 		w.Header().Set("Access-Control-Allow-Origin", origin)
 	}
 
-	w.Header().Set("Link", brack(acl.Uri())+"; rel=acl")
+	// base, _ := url.Parse(req.BaseURI())
+	resource, err := getPathInfo(req.BaseURI())
+	if err != nil {
+		return r.respond(500, err)
+	}
+	base := resource.base
 
-	base, _ := url.Parse(req.BaseURI())
+	// set ACL Link header
+	w.Header().Set("Link", brack(resource.aclUri)+"; rel=acl")
 
 	switch req.Method {
 	case "OPTIONS":
@@ -256,7 +313,7 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 		}
 
 		status := 501
-		if !acl.AllowRead() {
+		if !acl.AllowRead(req.BaseURI()) {
 			return r.respond(403)
 		}
 
@@ -273,6 +330,7 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 				for _, file := range matches {
 					stat, serr := os.Stat(file)
 					if !stat.IsDir() && serr == nil {
+						// TODO: check acls
 						g.AppendFile(file, filepath.Base(file))
 					}
 				}
@@ -284,6 +342,9 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 			}
 		} else {
 			stat, serr := os.Stat(path)
+			if serr != nil {
+				r.respond(500, serr)
+			}
 			switch {
 			case os.IsNotExist(serr):
 				status = 404
@@ -310,9 +371,8 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 						if !strings.HasSuffix(path, "/") {
 							path = path + "/"
 						}
-						metaUrl, _ := url.Parse(METASuffix)
-						kb := NewGraph(base.ResolveReference(metaUrl).String())
-						kb.ReadFile(path + METASuffix)
+						kb := NewGraph(resource.metaUri)
+						kb.ReadFile(resource.metaFile)
 						if kb.Len() > 0 {
 							for triple := range kb.IterTriples() {
 								var subject Term
@@ -351,23 +411,28 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 						var s Term
 						for _, info := range infos {
 							if info != nil {
+								f, err := getPathInfo(resource.uri + info.Name())
+								if err != nil {
+									r.respond(500, err)
+								}
 								if info.IsDir() {
-									s = NewResource(info.Name() + "/")
+									s = NewResource(f.uri + "/")
 									if !showEmpty {
 										g.AddTriple(s, NewResource("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), NewResource("http://www.w3.org/ns/posix/stat#Directory"))
 										g.AddTriple(s, NewResource("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), NewResource("http://www.w3.org/ns/ldp#BasicContainer"))
 									}
 								} else {
-									s = NewResource(info.Name())
+									s = NewResource(f.uri)
 
 									if !showEmpty {
 										g.AddTriple(s, NewResource("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), NewResource("http://www.w3.org/ns/posix/stat#File"))
 										// add type if RDF resource
-										infoUrl, _ := url.Parse(info.Name())
-										kb := NewGraph(base.ResolveReference(infoUrl).String())
-										kb.ReadFile(path + info.Name())
+										//infoUrl, _ := url.Parse(info.Name())
+
+										kb := NewGraph(f.uri)
+										kb.ReadFile(f.file)
 										if kb.Len() > 0 {
-											st := kb.One(NewResource(base.ResolveReference(infoUrl).String()), NewResource("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), nil)
+											st := kb.One(NewResource(f.uri), NewResource("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), nil)
 											if st != nil && st.Object != nil {
 												g.AddTriple(s, NewResource("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), st.Object)
 											}
@@ -436,6 +501,7 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 				w.WriteHeader(status)
 				return
 			}
+
 			if status == 200 {
 				f, err := os.Open(path)
 				if err == nil {
@@ -484,7 +550,6 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 			data, err = g.Serialize(contentType)
 		}
 		if err != nil {
-			log.Println(err)
 			return r.respond(500, err)
 		} else if len(data) > 0 {
 			fmt.Fprint(w, data)
@@ -492,7 +557,7 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 
 	case "PATCH", "POST", "PUT":
 		// check append first
-		if !acl.AllowAppend() && !acl.AllowWrite() {
+		if !acl.AllowAppend(req.BaseURI()) && !acl.AllowWrite(req.BaseURI()) {
 			return r.respond(403)
 		}
 
@@ -533,38 +598,41 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 					path = path + "/" + slug
 				}
 
+				newRes, err := getPathInfo(base + "/" + path)
+				if err != nil {
+					return r.respond(500, err)
+				}
+
 				if link == "http://www.w3.org/ns/ldp#Resource" {
-					newLoc, _ := url.Parse(slug)
-					w.Header().Set("Location", base.String()+newLoc.String())
+					w.Header().Set("Location", newRes.uri)
+					w.Header().Set("Link", "<"+newRes.uri+">; rel=meta")
 				} else if link == "http://www.w3.org/ns/ldp#BasicContainer" {
 					if !strings.HasSuffix(path, "/") {
 						path = path + "/"
-						slug = slug + "/"
 					}
-					newLoc, _ := url.Parse(slug)
-					location := base.String() + newLoc.String()
-					w.Header().Set("Location", location)
+					newRes, err = getPathInfo(base + "/" + path)
+					if err != nil {
+						return r.respond(500, err)
+					}
+
+					w.Header().Set("Location", newRes.uri)
 
 					err = os.MkdirAll(path, 0755)
 					if err != nil {
 						return r.respond(500, err)
 					}
 
-					path = path + METASuffix
-					metaUrl, _ := url.Parse(slug + METASuffix)
-
-					w.Header().Set("Link", "<"+base.String()+metaUrl.String()+">; rel=meta")
+					w.Header().Set("Link", "<"+newRes.metaUri+">; rel=meta")
 
 					//Replace the subject with the dir path instead of the meta file path
 					if dataHasParser {
-						mg := NewGraph(base.ResolveReference(metaUrl).String())
+						mg := NewGraph(newRes.uri)
 						mg.Parse(req.Body, dataMime)
 						for triple := range mg.IterTriples() {
-							subject := NewResource(path)
+							subject := NewResource(newRes.uri)
 							g.AddTriple(subject, triple.Predicate, triple.Object)
 						}
-
-						f, err := os.OpenFile(path, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
+						f, err := os.OpenFile(newRes.metaFile, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
 						if err != nil {
 							return r.respond(500, err)
 						}
@@ -681,7 +749,7 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 		}
 
 	case "DELETE":
-		if !acl.AllowWrite() && !acl.AllowAppend() {
+		if !acl.AllowWrite(req.BaseURI()) {
 			return r.respond(403)
 		}
 		if len(path) == 0 {
@@ -700,7 +768,7 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 			}
 		}
 	case "MKCOL":
-		if !acl.AllowWrite() && !acl.AllowAppend() {
+		if !acl.AllowWrite(req.BaseURI()) {
 			return r.respond(403)
 		}
 		err := os.MkdirAll(path, 0755)

@@ -31,6 +31,22 @@ func TestSkin(t *testing.T) {
 	})
 }
 
+func TestGetPathInfo(t *testing.T) {
+	return
+	// TODO write real tests
+	p, _ := getPathInfo(testServer.URL)
+	println(p.uri, p.file, p.aclUri, p.aclFile, p.metaUri, p.metaFile)
+	p, _ = getPathInfo(testServer.URL + "/_test/")
+	println(p.uri, p.file, p.aclUri, p.aclFile, p.metaUri, p.metaFile)
+	p, _ = getPathInfo(testServer.URL + "/_test/abc")
+	println(p.uri, p.file, p.aclUri, p.aclFile, p.metaUri, p.metaFile)
+	p, _ = getPathInfo(testServer.URL + "/_test/,acl")
+	println(p.uri, p.file, p.aclUri, p.aclFile, p.metaUri, p.metaFile)
+	p, _ = getPathInfo(testServer.URL + "/_test/,meta")
+	println(p.uri, p.file, p.aclUri, p.aclFile, p.metaUri, p.metaFile)
+
+}
+
 func TestOPTIONS(t *testing.T) {
 	testflight.WithServer(handler, func(r *testflight.Requester) {
 		request, _ := http.NewRequest("OPTIONS", "/", nil)
@@ -84,9 +100,10 @@ func TestLDPPostLDPC(t *testing.T) {
 	request.Header.Add("Slug", "ldpc")
 	request.Header.Add("Link", "<http://www.w3.org/ns/ldp#BasicContainer>; rel=\"type\"")
 	response, err := httpClient.Do(request)
-	response.Body.Close()
 	assert.NoError(t, err)
-	assert.Equal(t, 201, response.StatusCode)
+	body, err := ioutil.ReadAll(response.Body)
+	assert.Equal(t, 201, response.StatusCode, string(body))
+	response.Body.Close()
 	newLDPC := response.Header.Get("Location")
 	assert.NotEmpty(t, newLDPC)
 
@@ -131,6 +148,7 @@ func TestLDPPostLDPRWithSlug(t *testing.T) {
 	newLDPR := response.Header.Get("Location")
 
 	request, err = http.NewRequest("GET", newLDPR, nil)
+	assert.NoError(t, err)
 	request.Header.Add("Accept", "text/turtle")
 	response, err = httpClient.Do(request)
 	assert.NoError(t, err)
