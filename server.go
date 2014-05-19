@@ -66,6 +66,10 @@ func getPathInfo(path string) (ldpath, error) {
 		return res, err
 	}
 
+	if len(p.Path) == 0 {
+		path += "/"
+	}
+
 	if strings.HasPrefix(p.Path, "/") {
 		p.Path = strings.TrimLeft(p.Path, "/")
 	}
