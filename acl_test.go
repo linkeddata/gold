@@ -47,7 +47,7 @@ func TestACLInit(t *testing.T) {
 	resp1, err := httpClient.Do(req1)
 	resp1.Body.Close()
 	assert.NoError(t, err)
-	assert.Equal(t, resp1.StatusCode, 201)
+	assert.Equal(t, 201, resp1.StatusCode)
 
 	user2 = testServer.URL + "/_test/user2#id"
 	user2g, user2k, err = newRSA(user2)
@@ -69,7 +69,7 @@ func TestACLInit(t *testing.T) {
 	resp2, err := httpClient.Do(req2)
 	resp2.Body.Close()
 	assert.NoError(t, err)
-	assert.Equal(t, resp2.StatusCode, 201)
+	assert.Equal(t, 201, resp2.StatusCode)
 
 	req1, err = http.NewRequest("GET", user1, nil)
 	assert.NoError(t, err)
@@ -177,6 +177,7 @@ func TestACLOwnerOnly(t *testing.T) {
 	response.Body.Close()
 	assert.NoError(t, err)
 	assert.Equal(t, 201, response.StatusCode)
+	return
 	// user2
 	request, err = http.NewRequest("HEAD", testServer.URL+aclDir, nil)
 	request.Header.Add("Content-Type", "text/turtle")
@@ -206,8 +207,6 @@ func TestACLOwnerOnly(t *testing.T) {
 	response.Body.Close()
 	assert.NoError(t, err)
 	assert.Equal(t, 403, response.StatusCode)
-
-	//TODO: add test for defaultForNew
 }
 
 func TestACLReadOnly(t *testing.T) {
@@ -293,6 +292,13 @@ func TestACLReadOnly(t *testing.T) {
 	response.Body.Close()
 	assert.NoError(t, err)
 	assert.Equal(t, 403, response.StatusCode)
+
+	request, err = http.NewRequest("DELETE", acl, nil)
+	assert.NoError(t, err)
+	response, err = user1h.Do(request)
+	assert.NoError(t, err)
+	response.Body.Close()
+	assert.Equal(t, 200, response.StatusCode)
 }
 
 func TestACLAppendOnly(t *testing.T) {
@@ -381,6 +387,13 @@ func TestACLAppendOnly(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, 200, response.StatusCode)
 	assert.Equal(t, "3", response.Header.Get("Triples"))
+
+	request, err = http.NewRequest("DELETE", acl, nil)
+	assert.NoError(t, err)
+	response, err = user1h.Do(request)
+	assert.NoError(t, err)
+	response.Body.Close()
+	assert.Equal(t, 200, response.StatusCode)
 }
 
 func TestACLRestricted(t *testing.T) {
@@ -396,7 +409,7 @@ func TestACLRestricted(t *testing.T) {
 		"	<http://www.w3.org/ns/auth/acl#accessTo> <" + aclDir + "abc>, <" + acl + ">;" +
 		"	<http://www.w3.org/ns/auth/acl#agent> <" + user1 + ">;" +
 		"	<http://www.w3.org/ns/auth/acl#mode> <http://www.w3.org/ns/auth/acl#Read>, <http://www.w3.org/ns/auth/acl#Write> ." +
-		"<#AppendOnly>" +
+		"<#Restricted>" +
 		"	<http://www.w3.org/ns/auth/acl#accessTo> <" + aclDir + "abc>;" +
 		"	<http://www.w3.org/ns/auth/acl#agent> <" + user2 + ">;" +
 		"	<http://www.w3.org/ns/auth/acl#mode> <http://www.w3.org/ns/auth/acl#Read>, <http://www.w3.org/ns/auth/acl#Write>."
@@ -468,40 +481,144 @@ func TestACLRestricted(t *testing.T) {
 	response.Body.Close()
 	assert.NoError(t, err)
 	assert.Equal(t, 403, response.StatusCode)
+
+	request, err = http.NewRequest("DELETE", acl, nil)
+	assert.NoError(t, err)
+	response, err = user1h.Do(request)
+	assert.NoError(t, err)
+	response.Body.Close()
+	assert.Equal(t, 200, response.StatusCode)
+}
+
+func TestACLDefaultForNew(t *testing.T) {
+	request, err := http.NewRequest("HEAD", testServer.URL+aclDir, nil)
+	response, err := user1h.Do(request)
+	response.Body.Close()
+	assert.NoError(t, err)
+	assert.Equal(t, 200, response.StatusCode)
+
+	acl := ParseLinkHeader(response.Header.Get("Link")).MatchRel("acl")
+
+	body := "<#Owner>" +
+		"	<http://www.w3.org/ns/auth/acl#accessTo> <" + aclDir + ">, <" + acl + ">;" +
+		"	<http://www.w3.org/ns/auth/acl#agent> <" + user1 + ">;" +
+		"	<http://www.w3.org/ns/auth/acl#defaultForNew> <" + aclDir + ">;" +
+		"	<http://www.w3.org/ns/auth/acl#mode> <http://www.w3.org/ns/auth/acl#Read>, <http://www.w3.org/ns/auth/acl#Write> ." +
+		"<#Default>" +
+		"	<http://www.w3.org/ns/auth/acl#accessTo> <" + aclDir + ">;" +
+		"	<http://www.w3.org/ns/auth/acl#defaultForNew> <" + aclDir + ">;" +
+		"	<http://www.w3.org/ns/auth/acl#agentClass> <http://xmlns.com/foaf/0.1/Agent>;" +
+		"	<http://www.w3.org/ns/auth/acl#mode> <http://www.w3.org/ns/auth/acl#Read> ."
+	request, err = http.NewRequest("PUT", acl, strings.NewReader(body))
+	request.Header.Add("Content-Type", "text/turtle")
+	response, err = user1h.Do(request)
+	response.Body.Close()
+	assert.NoError(t, err)
+	assert.Equal(t, 201, response.StatusCode)
+
+	// user1
+	request, err = http.NewRequest("HEAD", acl, nil)
+	request.Header.Add("Accept", "text/turtle")
+	response, err = user1h.Do(request)
+	response.Body.Close()
+	assert.NoError(t, err)
+	assert.Equal(t, 200, response.StatusCode)
+	assert.Equal(t, "10", response.Header.Get("Triples"))
+
+	request, err = http.NewRequest("PUT", testServer.URL+aclDir+"abcd", strings.NewReader("<a> <b> <c> ."))
+	request.Header.Add("Content-Type", "text/turtle")
+	response, err = user1h.Do(request)
+	response.Body.Close()
+	assert.NoError(t, err)
+	assert.Equal(t, 201, response.StatusCode)
+	assert.Equal(t, "1", response.Header.Get("Triples"))
+
+	request, err = http.NewRequest("HEAD", testServer.URL+aclDir+"abcd", nil)
+	request.Header.Add("Content-Type", "text/turtle")
+	response, err = user1h.Do(request)
+	response.Body.Close()
+	assert.NoError(t, err)
+	assert.Equal(t, 200, response.StatusCode)
+
+	// user2
+	request, err = http.NewRequest("HEAD", acl, nil)
+	request.Header.Add("Content-Type", "text/turtle")
+	response, err = user2h.Do(request)
+	response.Body.Close()
+	assert.NoError(t, err)
+	assert.Equal(t, 403, response.StatusCode)
+
+	request, err = http.NewRequest("HEAD", testServer.URL+aclDir+"abcd", nil)
+	request.Header.Add("Content-Type", "text/turtle")
+	response, err = user2h.Do(request)
+	response.Body.Close()
+	assert.NoError(t, err)
+	assert.Equal(t, 200, response.StatusCode)
+
+	request, err = http.NewRequest("POST", testServer.URL+aclDir+"abcd", strings.NewReader("<d> <e> <f> ."))
+	request.Header.Add("Content-Type", "text/turtle")
+	response, err = user2h.Do(request)
+	response.Body.Close()
+	assert.NoError(t, err)
+	assert.Equal(t, 403, response.StatusCode)
+
+	// agent
+	request, err = http.NewRequest("HEAD", testServer.URL+aclDir+"abcd", nil)
+	request.Header.Add("Content-Type", "text/turtle")
+	response, err = httpClient.Do(request)
+	response.Body.Close()
+	assert.NoError(t, err)
+	assert.Equal(t, 200, response.StatusCode)
+
+	request, err = http.NewRequest("POST", testServer.URL+aclDir+"abcd", strings.NewReader("<d> <e> <f> ."))
+	request.Header.Add("Content-Type", "text/turtle")
+	response, err = httpClient.Do(request)
+	response.Body.Close()
+	assert.NoError(t, err)
+	assert.Equal(t, 403, response.StatusCode)
+
+	request, err = http.NewRequest("DELETE", testServer.URL+aclDir+"abcd", nil)
+	assert.NoError(t, err)
+	response, err = user1h.Do(request)
+	assert.NoError(t, err)
+	response.Body.Close()
+	assert.Equal(t, 200, response.StatusCode)
+
+	request, err = http.NewRequest("DELETE", acl, nil)
+	assert.NoError(t, err)
+	response, err = user1h.Do(request)
+	assert.NoError(t, err)
+	response.Body.Close()
+	assert.Equal(t, 200, response.StatusCode)
 }
 
 func TestACLCleanUp(t *testing.T) {
-	request, err := http.NewRequest("GET", testServer.URL+aclDir+"abc", nil)
-	request.Header.Add("Accept", "text/turtle")
+	request, err := http.NewRequest("HEAD", testServer.URL+aclDir+"abc", nil)
+	assert.NoError(t, err)
 	response, err := user1h.Do(request)
-	assert.Equal(t, 200, response.StatusCode)
-	acl := ParseLinkHeader(response.Header.Get("Link")).MatchRel("acl")
-
-	request, err = http.NewRequest("DELETE", acl, nil)
-	response, err = user1h.Do(request)
 	assert.NoError(t, err)
+	response.Body.Close()
 	assert.Equal(t, 200, response.StatusCode)
 
-	request, err = http.NewRequest("GET", testServer.URL+aclDir, nil)
-	request.Header.Add("Accept", "text/turtle")
+	request, err = http.NewRequest("HEAD", testServer.URL+aclDir, nil)
+	assert.NoError(t, err)
 	response, err = user1h.Do(request)
 	assert.NoError(t, err)
-	assert.Equal(t, 200, response.StatusCode)
-	acl = ParseLinkHeader(response.Header.Get("Link")).MatchRel("acl")
-
-	request, err = http.NewRequest("DELETE", acl, nil)
-	response, err = user1h.Do(request)
-	assert.NoError(t, err)
+	response.Body.Close()
 	assert.Equal(t, 200, response.StatusCode)
 
 	request, err = http.NewRequest("DELETE", testServer.URL+aclDir+"abc", nil)
+	assert.NoError(t, err)
 	response, err = user1h.Do(request)
 	assert.NoError(t, err)
+	response.Body.Close()
 	assert.Equal(t, 200, response.StatusCode)
 
 	request, err = http.NewRequest("DELETE", testServer.URL+aclDir, nil)
+	assert.NoError(t, err)
 	response, err = user1h.Do(request)
 	assert.NoError(t, err)
+	response.Body.Close()
 	assert.Equal(t, 200, response.StatusCode)
 }
 

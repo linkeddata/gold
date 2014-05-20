@@ -1,5 +1,10 @@
 package gold
 
+import (
+	"path/filepath"
+	"strings"
+)
+
 type WAC struct {
 	req  *httpRequest
 	srv  *Server
@@ -11,29 +16,48 @@ func NewWAC(req *httpRequest, srv *Server, user string) *WAC {
 }
 
 func (acl *WAC) Allow(mode string, path string) bool {
+	accessType := "accessTo"
 	p, err := PathInfo(path)
 	if err != nil {
 		return false
 	}
+	lvls := strings.Split(p.file, "/")
 
-	aclGraph := NewGraph(p.aclUri)
-	aclGraph.ReadFile(acl.srv.root + "/" + p.aclFile)
-	if aclGraph.Len() < 1 {
-		return true
-	}
+	for i := 0; i <= len(lvls); i++ {
+		p, err := PathInfo(path)
+		if err != nil {
+			return false
+		}
 
-	for _, i := range aclGraph.All(nil, ns.acl.Get("mode"), ns.acl.Get(mode)) {
-		for _ = range aclGraph.All(i.Subject, ns.acl.Get("accessTo"), NewResource(p.uri)) {
-			for _ = range aclGraph.All(i.Subject, ns.acl.Get("agent"), NewResource(acl.user)) {
-				return true
+		aclGraph := NewGraph(p.aclUri)
+		aclGraph.ReadFile(acl.srv.root + "/" + p.aclFile)
+		if aclGraph.Len() > 0 {
+			for _, i := range aclGraph.All(nil, ns.acl.Get("mode"), ns.acl.Get(mode)) {
+				for _ = range aclGraph.All(i.Subject, ns.acl.Get(accessType), NewResource(p.uri)) {
+					for _ = range aclGraph.All(i.Subject, ns.acl.Get("agent"), NewResource(acl.user)) {
+						return true
+					}
+					for _ = range aclGraph.All(i.Subject, ns.acl.Get("agentClass"), ns.foaf.Get("Agent")) {
+						return true
+					}
+				}
 			}
-			for _ = range aclGraph.All(i.Subject, ns.acl.Get("agentClass"), ns.foaf.Get("Agent")) {
-				return true
+			return false
+		}
+
+		accessType = "defaultForNew"
+
+		if i == 0 {
+			path = p.base + "/" + filepath.Dir(p.file) + "/"
+		} else {
+			if filepath.Dir(filepath.Dir(p.file)) == "." {
+				path = p.base + "/"
+			} else {
+				path = p.base + "/" + filepath.Dir(filepath.Dir(p.file)) + "/"
 			}
 		}
 	}
-
-	return false
+	return true
 }
 
 func (acl *WAC) AllowRead(path string) bool {
