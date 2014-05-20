@@ -31,11 +31,11 @@ func TestSkin(t *testing.T) {
 	})
 }
 
-func TestGetPathInfo(t *testing.T) {
+func TestPathInfo(t *testing.T) {
 	path := testServer.URL + "/_test/"
-	p, err := getPathInfo("")
+	p, err := PathInfo("")
 	assert.NotNil(t, err)
-	p, err = getPathInfo(testServer.URL)
+	p, err = PathInfo(testServer.URL)
 	assert.Nil(t, err)
 	assert.Equal(t, testServer.URL, p.base)
 	assert.Equal(t, testServer.URL+"/", p.uri)
@@ -45,7 +45,7 @@ func TestGetPathInfo(t *testing.T) {
 	assert.Equal(t, testServer.URL+"/"+METASuffix, p.metaUri)
 	assert.Equal(t, METASuffix, p.metaFile)
 
-	p, err = getPathInfo(path)
+	p, err = PathInfo(path)
 	assert.Nil(t, err)
 	assert.Equal(t, testServer.URL, p.base)
 	assert.Equal(t, path, p.uri)
@@ -55,7 +55,7 @@ func TestGetPathInfo(t *testing.T) {
 	assert.Equal(t, path+METASuffix, p.metaUri)
 	assert.Equal(t, "_test/"+METASuffix, p.metaFile)
 
-	p, err = getPathInfo(path + "abc")
+	p, err = PathInfo(path + "abc")
 	assert.Nil(t, err)
 	assert.Equal(t, testServer.URL, p.base)
 	assert.Equal(t, path+"abc", p.uri)
@@ -65,7 +65,7 @@ func TestGetPathInfo(t *testing.T) {
 	assert.Equal(t, path+"abc"+METASuffix, p.metaUri)
 	assert.Equal(t, "_test/abc"+METASuffix, p.metaFile)
 
-	p, err = getPathInfo(path + ACLSuffix)
+	p, err = PathInfo(path + ACLSuffix)
 	assert.Nil(t, err)
 	assert.Equal(t, testServer.URL, p.base)
 	assert.Equal(t, path+ACLSuffix, p.uri)
@@ -75,7 +75,7 @@ func TestGetPathInfo(t *testing.T) {
 	assert.Equal(t, path+ACLSuffix, p.metaUri)
 	assert.Equal(t, "_test/"+ACLSuffix, p.metaFile)
 
-	p, err = getPathInfo(path + METASuffix)
+	p, err = PathInfo(path + METASuffix)
 	assert.Nil(t, err)
 	assert.Equal(t, testServer.URL, p.base)
 	assert.Equal(t, path+METASuffix, p.uri)

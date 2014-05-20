@@ -55,7 +55,7 @@ type ldpath struct {
 	metaFile string
 }
 
-func getPathInfo(path string) (ldpath, error) {
+func PathInfo(path string) (ldpath, error) {
 	var res ldpath
 	if len(path) == 0 {
 		return res, errors.New("missing resource path")
@@ -266,7 +266,7 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 	}
 
 	// base, _ := url.Parse(req.BaseURI())
-	resource, err := getPathInfo(req.BaseURI())
+	resource, err := PathInfo(req.BaseURI())
 	if err != nil {
 		return r.respond(500, err)
 	}
@@ -415,7 +415,7 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 						var s Term
 						for _, info := range infos {
 							if info != nil {
-								f, err := getPathInfo(resource.uri + info.Name())
+								f, err := PathInfo(resource.uri + info.Name())
 								if err != nil {
 									r.respond(500, err)
 								}
@@ -602,7 +602,7 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 					path = path + "/" + slug
 				}
 
-				newRes, err := getPathInfo(base + "/" + path)
+				newRes, err := PathInfo(base + "/" + path)
 				if err != nil {
 					return r.respond(500, err)
 				}
@@ -614,7 +614,7 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 					if !strings.HasSuffix(path, "/") {
 						path = path + "/"
 					}
-					newRes, err = getPathInfo(base + "/" + path)
+					newRes, err = PathInfo(base + "/" + path)
 					if err != nil {
 						return r.respond(500, err)
 					}

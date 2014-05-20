@@ -11,7 +11,7 @@ func NewWAC(req *httpRequest, srv *Server, user string) *WAC {
 }
 
 func (acl *WAC) Allow(mode string, path string) bool {
-	p, err := getPathInfo(path)
+	p, err := PathInfo(path)
 	if err != nil {
 		return false
 	}
