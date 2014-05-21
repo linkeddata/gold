@@ -21,7 +21,7 @@ func (acl *WAC) Allow(mode string, path string) bool {
 	if err != nil {
 		return false
 	}
-	lvls := strings.Split(p.file, "/")
+	lvls := strings.Split(p.Path, "/")
 
 	for i := 0; i <= len(lvls); i++ {
 		p, err := PathInfo(path)
@@ -29,11 +29,11 @@ func (acl *WAC) Allow(mode string, path string) bool {
 			return false
 		}
 
-		aclGraph := NewGraph(p.aclUri)
-		aclGraph.ReadFile(acl.srv.root + "/" + p.aclFile)
+		aclGraph := NewGraph(p.AclUri)
+		aclGraph.ReadFile(acl.srv.root + "/" + p.AclFile)
 		if aclGraph.Len() > 0 {
 			for _, i := range aclGraph.All(nil, ns.acl.Get("mode"), ns.acl.Get(mode)) {
-				for _ = range aclGraph.All(i.Subject, ns.acl.Get(accessType), NewResource(p.uri)) {
+				for _ = range aclGraph.All(i.Subject, ns.acl.Get(accessType), NewResource(p.Uri)) {
 					for _ = range aclGraph.All(i.Subject, ns.acl.Get("agent"), NewResource(acl.user)) {
 						return true
 					}
@@ -48,12 +48,12 @@ func (acl *WAC) Allow(mode string, path string) bool {
 		accessType = "defaultForNew"
 
 		if i == 0 {
-			path = p.base + "/" + filepath.Dir(p.file) + "/"
+			path = p.Base + "/" + filepath.Dir(p.Path) + "/"
 		} else {
-			if filepath.Dir(filepath.Dir(p.file)) == "." {
-				path = p.base + "/"
+			if filepath.Dir(filepath.Dir(p.Path)) == "." {
+				path = p.Base + "/"
 			} else {
-				path = p.base + "/" + filepath.Dir(filepath.Dir(p.file)) + "/"
+				path = p.Base + "/" + filepath.Dir(filepath.Dir(p.Path)) + "/"
 			}
 		}
 	}

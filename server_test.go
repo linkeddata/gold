@@ -21,69 +21,131 @@ var (
 	testDelete = true
 )
 
+func TestMKCOL(t *testing.T) {
+	testflight.WithServer(handler, func(r *testflight.Requester) {
+		request, _ := http.NewRequest("MKCOL", "/_test", nil)
+		response := r.Do(request)
+		assert.Equal(t, 201, response.StatusCode)
+
+		response = r.Post("/_test/abc", "text/turtle", "<a> <b> <c>.")
+		assert.Equal(t, 200, response.StatusCode)
+
+		request, _ = http.NewRequest("MKCOL", "/_test/abc", nil)
+		response = r.Do(request)
+		assert.Equal(t, 409, response.StatusCode)
+
+		response = r.Post("/_test", "text/turtle", "<a> <b> <c>.")
+		assert.Equal(t, 500, response.StatusCode)
+
+		request, _ = http.NewRequest("GET", "/_test", nil)
+		response = r.Do(request)
+		assert.Equal(t, 200, response.StatusCode)
+	})
+}
+
 func TestSkin(t *testing.T) {
 	testflight.WithServer(handler, func(r *testflight.Requester) {
-		request, _ := http.NewRequest("GET", "/", nil)
+		request, _ := http.NewRequest("GET", "/_test/", nil)
 		request.Header.Add("Accept", "text/html")
 		response := r.Do(request)
+		assert.Equal(t, 200, response.StatusCode)
+		assert.Contains(t, response.RawResponse.Header.Get("Content-Type"), "text/html")
 		assert.Contains(t, response.Body, "<html")
+
+		request, _ = http.NewRequest("PUT", "/_test/index.html", strings.NewReader("<html>Hello world!</html>"))
+		request.Header.Add("Content-Type", "text/html")
+		response = r.Do(request)
+		assert.Equal(t, 201, response.StatusCode)
+
+		request, _ = http.NewRequest("GET", "/_test/index.html", nil)
+		request.Header.Add("Accept", "text/html")
+		response = r.Do(request)
+		assert.Equal(t, 200, response.StatusCode)
+		assert.Contains(t, response.RawResponse.Header.Get("Content-Type"), "text/html")
+		assert.Contains(t, response.Body, "<html")
+	})
+}
+
+func TestHTMLIndex(t *testing.T) {
+	testflight.WithServer(handler, func(r *testflight.Requester) {
+		request, _ := http.NewRequest("HEAD", "/_test/index.html", nil)
+		request.Header.Add("Accept", "text/html")
+		response := r.Do(request)
+		assert.Equal(t, 200, response.StatusCode)
+
+		request, _ = http.NewRequest("GET", "/_test/", nil)
+		request.Header.Add("Accept", "text/html")
+		response = r.Do(request)
+		assert.Equal(t, 200, response.StatusCode)
+		assert.Contains(t, response.RawResponse.Header.Get("Content-Type"), "text/html")
+		assert.Equal(t, response.Body, "<html>Hello world!</html>")
+
+		request, _ = http.NewRequest("DELETE", "/_test/index.html", nil)
+		response = r.Do(request)
 		assert.Equal(t, 200, response.StatusCode)
 	})
 }
 
 func TestPathInfo(t *testing.T) {
 	path := testServer.URL + "/_test/"
+
 	p, err := PathInfo("")
 	assert.NotNil(t, err)
+
 	p, err = PathInfo(testServer.URL)
 	assert.Nil(t, err)
-	assert.Equal(t, testServer.URL, p.base)
-	assert.Equal(t, testServer.URL+"/", p.uri)
-	assert.Equal(t, "", p.file)
-	assert.Equal(t, testServer.URL+"/"+ACLSuffix, p.aclUri)
-	assert.Equal(t, ACLSuffix, p.aclFile)
-	assert.Equal(t, testServer.URL+"/"+METASuffix, p.metaUri)
-	assert.Equal(t, METASuffix, p.metaFile)
+	assert.Equal(t, testServer.URL+"/", p.Uri)
+	assert.Equal(t, testServer.URL, p.Base)
+	assert.Equal(t, "", p.Path)
+	assert.Equal(t, "", p.File)
+	assert.Equal(t, testServer.URL+"/"+ACLSuffix, p.AclUri)
+	assert.Equal(t, ACLSuffix, p.AclFile)
+	assert.Equal(t, testServer.URL+"/"+METASuffix, p.MetaUri)
+	assert.Equal(t, METASuffix, p.MetaFile)
 
 	p, err = PathInfo(path)
 	assert.Nil(t, err)
-	assert.Equal(t, testServer.URL, p.base)
-	assert.Equal(t, path, p.uri)
-	assert.Equal(t, "_test/", p.file)
-	assert.Equal(t, path+ACLSuffix, p.aclUri)
-	assert.Equal(t, "_test/"+ACLSuffix, p.aclFile)
-	assert.Equal(t, path+METASuffix, p.metaUri)
-	assert.Equal(t, "_test/"+METASuffix, p.metaFile)
+	assert.Equal(t, path, p.Uri)
+	assert.Equal(t, testServer.URL, p.Base)
+	assert.Equal(t, "_test/", p.Path)
+	assert.Equal(t, "_test/", p.File)
+	assert.Equal(t, path+ACLSuffix, p.AclUri)
+	assert.Equal(t, "_test/"+ACLSuffix, p.AclFile)
+	assert.Equal(t, path+METASuffix, p.MetaUri)
+	assert.Equal(t, "_test/"+METASuffix, p.MetaFile)
 
 	p, err = PathInfo(path + "abc")
 	assert.Nil(t, err)
-	assert.Equal(t, testServer.URL, p.base)
-	assert.Equal(t, path+"abc", p.uri)
-	assert.Equal(t, "_test/abc", p.file)
-	assert.Equal(t, path+"abc"+ACLSuffix, p.aclUri)
-	assert.Equal(t, "_test/abc"+ACLSuffix, p.aclFile)
-	assert.Equal(t, path+"abc"+METASuffix, p.metaUri)
-	assert.Equal(t, "_test/abc"+METASuffix, p.metaFile)
+	assert.Equal(t, path+"abc", p.Uri)
+	assert.Equal(t, testServer.URL, p.Base)
+	assert.Equal(t, "_test/abc", p.Path)
+	assert.Equal(t, "_test/abc", p.File)
+	assert.Equal(t, path+"abc"+ACLSuffix, p.AclUri)
+	assert.Equal(t, "_test/abc"+ACLSuffix, p.AclFile)
+	assert.Equal(t, path+"abc"+METASuffix, p.MetaUri)
+	assert.Equal(t, "_test/abc"+METASuffix, p.MetaFile)
 
 	p, err = PathInfo(path + ACLSuffix)
 	assert.Nil(t, err)
-	assert.Equal(t, testServer.URL, p.base)
-	assert.Equal(t, path+ACLSuffix, p.uri)
-	assert.Equal(t, "_test/"+ACLSuffix, p.file)
-	assert.Equal(t, path+ACLSuffix, p.aclUri)
-	assert.Equal(t, "_test/"+ACLSuffix, p.aclFile)
-	assert.Equal(t, path+ACLSuffix, p.metaUri)
-	assert.Equal(t, "_test/"+ACLSuffix, p.metaFile)
+	assert.Equal(t, path+ACLSuffix, p.Uri)
+	assert.Equal(t, testServer.URL, p.Base)
+	assert.Equal(t, "_test/"+ACLSuffix, p.Path)
+	assert.Equal(t, "_test/"+ACLSuffix, p.File)
+	assert.Equal(t, path+ACLSuffix, p.AclUri)
+	assert.Equal(t, "_test/"+ACLSuffix, p.AclFile)
+	assert.Equal(t, path+ACLSuffix, p.MetaUri)
+	assert.Equal(t, "_test/"+ACLSuffix, p.MetaFile)
 
 	p, err = PathInfo(path + METASuffix)
 	assert.Nil(t, err)
-	assert.Equal(t, testServer.URL, p.base)
-	assert.Equal(t, path+METASuffix, p.uri)
-	assert.Equal(t, "_test/"+METASuffix, p.file)
-	assert.Equal(t, path+METASuffix+ACLSuffix, p.aclUri)
-	assert.Equal(t, "_test/"+METASuffix+ACLSuffix, p.aclFile)
-	assert.Equal(t, path+METASuffix, p.metaUri)
-	assert.Equal(t, "_test/"+METASuffix, p.metaFile)
+	assert.Equal(t, path+METASuffix, p.Uri)
+	assert.Equal(t, testServer.URL, p.Base)
+	assert.Equal(t, "_test/"+METASuffix, p.Path)
+	assert.Equal(t, "_test/"+METASuffix, p.File)
+	assert.Equal(t, path+METASuffix+ACLSuffix, p.AclUri)
+	assert.Equal(t, "_test/"+METASuffix+ACLSuffix, p.AclFile)
+	assert.Equal(t, path+METASuffix, p.MetaUri)
+	assert.Equal(t, "_test/"+METASuffix, p.MetaFile)
 }
 
 func TestOPTIONS(t *testing.T) {
@@ -108,28 +170,6 @@ func TestOPTIONSOrigin(t *testing.T) {
 		assert.Empty(t, response.Body)
 		assert.Equal(t, 200, response.StatusCode)
 		assert.Equal(t, response.RawResponse.Header.Get("Access-Control-Allow-Origin"), origin)
-	})
-}
-
-func TestMKCOL(t *testing.T) {
-	testflight.WithServer(handler, func(r *testflight.Requester) {
-		request, _ := http.NewRequest("MKCOL", "/_test", nil)
-		response := r.Do(request)
-		assert.Equal(t, 201, response.StatusCode)
-
-		response = r.Post("/_test/abc", "text/turtle", "<a> <b> <c>.")
-		assert.Equal(t, 200, response.StatusCode)
-
-		request, _ = http.NewRequest("MKCOL", "/_test/abc", nil)
-		response = r.Do(request)
-		assert.Equal(t, 409, response.StatusCode)
-
-		response = r.Post("/_test", "text/turtle", "<a> <b> <c>.")
-		assert.Equal(t, 500, response.StatusCode)
-
-		request, _ = http.NewRequest("GET", "/_test", nil)
-		response = r.Do(request)
-		assert.Equal(t, 200, response.StatusCode)
 	})
 }
 
@@ -225,6 +265,7 @@ func TestLDPPostLDPRNoSlug(t *testing.T) {
 	body, err := ioutil.ReadAll(response.Body)
 	response.Body.Close()
 	assert.Equal(t, "@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n\n<>\n    a <http://example.org/two> .\n\n", string(body))
+
 	request, err = http.NewRequest("DELETE", newLDPR, nil)
 	response, err = httpClient.Do(request)
 	response.Body.Close()
@@ -250,12 +291,12 @@ func TestLDPPreferContainmentHeader(t *testing.T) {
 	request, err := http.NewRequest("GET", testServer.URL+"/_test/", nil)
 	assert.NoError(t, err)
 	request.Header.Add("Accept", "text/turtle")
-	request.Header.Add("Prefer", "return=representation; omit=\"http://www.w3.org/ns/ldp#PreferEmptyContainer\"")
+	request.Header.Add("Prefer", "return=representation; omit=\"http://www.w3.org/ns/ldp#PreferEmptyContainer\", return=representation; include=\"http://www.w3.org/ns/ldp#PreferContainment\"")
 	response, err := httpClient.Do(request)
 	assert.NoError(t, err)
-
 	assert.Equal(t, 200, response.StatusCode)
 	assert.Equal(t, "return=representation", response.Header.Get("Preference-Applied"))
+
 	g := NewGraph(testServer.URL + "/_test/")
 
 	body, err := ioutil.ReadAll(response.Body)
@@ -411,13 +452,57 @@ func TestPUTTurtle(t *testing.T) {
 	})
 }
 
+func TestIfMatch(t *testing.T) {
+	testflight.WithServer(handler, func(r *testflight.Requester) {
+		request, _ := http.NewRequest("HEAD", "/_test/abc", nil)
+		response := r.Do(request)
+		ETag := response.RawResponse.Header.Get("ETag")
+
+		request, _ = http.NewRequest("HEAD", "/_test/abc", nil)
+		request.Header.Add("If-Match", ETag)
+		response = r.Do(request)
+		assert.Equal(t, 200, response.StatusCode)
+
+		request, _ = http.NewRequest("HEAD", "/_test/abc", nil)
+		request.Header.Add("If-Match", ETag+"1")
+		response = r.Do(request)
+		assert.Equal(t, 412, response.StatusCode)
+
+		response = r.Put("/_test/abc", "text/turtle", "<d> <e> <f> .")
+		assert.Empty(t, response.Body)
+		assert.Equal(t, 201, response.StatusCode)
+	})
+}
+
 func TestIfNoneMatch(t *testing.T) {
 	testflight.WithServer(handler, func(r *testflight.Requester) {
-		request, _ := http.NewRequest("PUT", "/_test/abc", nil)
-		request.Header.Add("Accept", "text/turtle")
-		request.Header.Add("If-None-Match", "*")
+		request, _ := http.NewRequest("HEAD", "/_test/abc", nil)
 		response := r.Do(request)
+		assert.Equal(t, 200, response.StatusCode)
+		ETag := response.RawResponse.Header.Get("ETag")
+
+		request, _ = http.NewRequest("HEAD", "/_test/abc", nil)
+		request.Header.Add("If-None-Match", ETag)
+		response = r.Do(request)
 		assert.Equal(t, 412, response.StatusCode)
+
+		request, _ = http.NewRequest("HEAD", "/_test/abc", nil)
+		request.Header.Add("If-None-Match", ETag+"1")
+		response = r.Do(request)
+		assert.Equal(t, 200, response.StatusCode)
+
+		request, _ = http.NewRequest("PUT", "/_test/abc", strings.NewReader("<d> <e> <f> ."))
+		request.Header.Add("Accept", "text/turtle")
+		request.Header.Add("If-None-Match", ETag)
+		response = r.Do(request)
+		assert.Equal(t, 412, response.StatusCode)
+
+		request, _ = http.NewRequest("PUT", "/_test/abc", strings.NewReader("<d> <e> <f> ."))
+		request.Header.Add("Accept", "text/turtle")
+		request.Header.Add("If-None-Match", ETag+"1")
+		response = r.Do(request)
+		assert.Equal(t, 201, response.StatusCode)
+
 	})
 }
 
@@ -556,25 +641,18 @@ func TestHEAD(t *testing.T) {
 	})
 }
 
-func TestDELETE(t *testing.T) {
-	if !testDelete {
-		return
-	}
+func TestDELETEFiles(t *testing.T) {
 	testflight.WithServer(handler, func(r *testflight.Requester) {
 		response := r.Delete("/_test/abc", "", "")
-		assert.Empty(t, response.Body)
 		assert.Equal(t, 200, response.StatusCode)
-
-		response = r.Get("/_test/abc")
-		assert.Equal(t, 404, response.StatusCode)
 	})
 }
 
-func TestDELETEFolder(t *testing.T) {
+func TestDELETEFolders(t *testing.T) {
 	testflight.WithServer(handler, func(r *testflight.Requester) {
 		response := r.Delete("/_test/dir", "", "")
 		assert.Empty(t, response.Body)
-		//TODO assert.Equal(t, 200, response.StatusCode)
+		assert.Equal(t, 200, response.StatusCode)
 
 		response = r.Delete("/_test", "", "")
 		assert.Empty(t, response.Body)
