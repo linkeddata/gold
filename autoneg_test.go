@@ -110,6 +110,16 @@ func TestNegotiateEmptyAccept(t *testing.T) {
 	}
 }
 
+func TestNegotiateStarAccept(t *testing.T) {
+	al, err := mockAccept("*")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if al[0].Type+"/"+al[0].SubType != "*/*" {
+		t.Error("expected subtype * for single * accept header")
+	}
+}
+
 func TestNegotiateNoAlternative(t *testing.T) {
 	al, err := mockAccept(chrome)
 	if err != nil {
