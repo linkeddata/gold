@@ -176,10 +176,10 @@ func NewETag(path string) (string, error) {
 		hash = h.Sum([]byte(""))
 	default:
 		f, err := os.Open(path)
-		defer f.Close()
 		if err != nil {
 			return "", err
 		}
+		defer f.Close()
 		h := md5.New()
 		io.Copy(h, f)
 		hash = h.Sum([]byte(""))
