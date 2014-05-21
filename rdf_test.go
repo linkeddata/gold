@@ -13,6 +13,7 @@ func TestRDFBrack(t *testing.T) {
 }
 
 func TestRDFDebrack(t *testing.T) {
+	assert.Equal(t, "a", debrack("a"))
 	assert.Equal(t, "test", debrack("<test>"))
 	assert.Equal(t, "<test", debrack("<test"))
 	assert.Equal(t, "test>", debrack("test>"))
