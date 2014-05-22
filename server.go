@@ -169,8 +169,12 @@ func NewServer(root string, vhosts bool) (s *Server) {
 	return
 }
 
-func (s *Server) GraphPath(g AnyGraph) (path string) {
-	lst := strings.SplitN(g.URI(), "://", 2)
+func (s *Server) reqPath(r *httpRequest) (path string) {
+	return s.uriPath(r.BaseURI())
+}
+
+func (s *Server) uriPath(uri string) (path string) {
+	lst := strings.SplitN(uri, "://", 2)
 	if s.vhosts {
 		paths := strings.SplitN(lst[1], "/", 2)
 		host, _, _ := net.SplitHostPort(paths[0])
@@ -219,11 +223,7 @@ func (h *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 	r = new(response)
-	var (
-		err error
-
-		data, path string
-	)
+	var err error
 
 	user := req.Auth()
 	w.Header().Set("User", user)
@@ -250,11 +250,6 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 	w.Header().Set("Access-Control-Allow-Credentials", "true")
 	w.Header().Set("Access-Control-Max-Age", "60")
 	w.Header().Set("MS-Author-Via", "DAV, SPARQL")
-
-	g := NewGraph(req.BaseURI())
-	path = h.GraphPath(g)
-	unlock := lock(path)
-	defer unlock()
 
 	// TODO: WAC
 	origin := ""
@@ -293,6 +288,8 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 		return r.respond(200)
 
 	case "GET", "HEAD":
+		path := h.reqPath(req)
+
 		var (
 			magicType string
 			maybeRDF  bool
@@ -314,6 +311,10 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 		if !acl.AllowRead(req.BaseURI()) {
 			return r.respond(403)
 		}
+
+		unlock := lock(path)
+		defer unlock()
+		g := NewGraph(req.BaseURI())
 
 		if glob {
 			matches, err := filepath.Glob(globPath)
@@ -514,6 +515,7 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 			return r.respond(status)
 		}
 
+		data := ""
 		if Streaming {
 			errCh := make(chan error, 8)
 			go func() {
@@ -548,8 +550,13 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 		} else if len(data) > 0 {
 			fmt.Fprint(w, data)
 		}
+		return
 
 	case "PATCH", "POST", "PUT":
+		path := h.reqPath(req)
+		unlock := lock(path)
+		defer unlock()
+
 		// check append first
 		if !acl.AllowAppend(req.BaseURI()) && !acl.AllowWrite(req.BaseURI()) {
 			return r.respond(403)
@@ -562,6 +569,8 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 		if !req.ifNoneMatch(etag) {
 			return r.respond(412, "Precondition Failed")
 		}
+
+		g := NewGraph(req.BaseURI())
 
 		// LDP
 		gotLDP := false
@@ -743,6 +752,10 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 		}
 
 	case "DELETE":
+		path := h.reqPath(req)
+		unlock := lock(path)
+		defer unlock()
+
 		if !acl.AllowWrite(req.BaseURI()) {
 			return r.respond(403)
 		}
@@ -761,7 +774,13 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 				return r.respond(409)
 			}
 		}
+		return
+
 	case "MKCOL":
+		path := h.reqPath(req)
+		unlock := lock(path)
+		defer unlock()
+
 		if !acl.AllowWrite(req.BaseURI()) {
 			return r.respond(403)
 		}

@@ -1,8 +1,8 @@
 package gold
 
 import (
-	"testing"
 	"github.com/stretchr/testify/assert"
+	"testing"
 )
 
 func TestTripleEquals(t *testing.T) {
