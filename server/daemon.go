@@ -14,6 +14,7 @@ import (
 var (
 	bind    = flag.String("bind", "", "bind address (empty: fcgi)")
 	debug   = flag.Bool("debug", false, "output extra logging")
+	insec   = flag.String("insecure", "", "insecure HTTP listener (for bechmarking, empty: off)")
 	root    = flag.String("root", ".", "path to file storage root")
 	skin    = flag.String("skin", "tabulator", "default view for HTML clients")
 	tlsCert = flag.String("tlsCertFile", "", "TLS certificate eg. cert.pem")
@@ -63,8 +64,16 @@ func init() {
 
 func main() {
 	var err error
-
 	handler := gold.NewServer(*root, *vhosts)
+
+	if len(*insec) > 0 {
+		err = http.ListenAndServe(*insec, handler)
+		if err != nil {
+			log.Fatalln(err)
+		}
+		return
+	}
+
 	if bind == nil || len(*bind) == 0 {
 		err = fcgi.Serve(nil, handler)
 	} else {
