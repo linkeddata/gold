@@ -312,6 +312,10 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 			return r.respond(403)
 		}
 
+		if len(path) == 0 {
+			path = h.root
+		}
+
 		unlock := lock(path)
 		defer unlock()
 		g := NewGraph(req.BaseURI())
