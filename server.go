@@ -71,6 +71,15 @@ func PathInfo(path string) (ldpath, error) {
 		path += "/"
 	}
 
+	// Add missing trailing slashes for dirs
+	magicType, err := magic.TypeByFile(p.Path)
+	if err == nil {
+		if magicType == "inode/directory" && !strings.HasSuffix(p.Path, "/") {
+			path += "/"
+			p.Path += "/"
+		}
+	}
+
 	if strings.HasPrefix(p.Path, "/") {
 		p.Path = strings.TrimLeft(p.Path, "/")
 	}
@@ -82,19 +91,19 @@ func PathInfo(path string) (ldpath, error) {
 
 	if strings.HasSuffix(p.Path, ",acl") {
 		res.AclUri = path
-		res.AclFile = p.Path
+		res.AclFile = res.Path
 		res.MetaUri = path
-		res.MetaFile = p.Path
-	} else if strings.HasSuffix(p.Path, ",meta") {
+		res.MetaFile = res.Path
+	} else if strings.HasSuffix(res.Path, ",meta") {
 		res.AclUri = path + ACLSuffix
-		res.AclFile = p.Path + ACLSuffix
+		res.AclFile = res.Path + ACLSuffix
 		res.MetaUri = path
-		res.MetaFile = p.Path
+		res.MetaFile = res.Path
 	} else {
 		res.AclUri = path + ACLSuffix
-		res.AclFile = p.Path + ACLSuffix
+		res.AclFile = res.Path + ACLSuffix
 		res.MetaUri = path + METASuffix
-		res.MetaFile = p.Path + METASuffix
+		res.MetaFile = res.Path + METASuffix
 	}
 
 	return res, nil
