@@ -50,7 +50,6 @@ func TestSkin(t *testing.T) {
 		response := r.Do(request)
 		assert.Equal(t, 200, response.StatusCode)
 		assert.Contains(t, response.RawResponse.Header.Get("Content-Type"), "text/html")
-		assert.Contains(t, response.Body, "<html")
 
 		request, _ = http.NewRequest("PUT", "/_test/index.html", strings.NewReader("<html>Hello world!</html>"))
 		request.Header.Add("Content-Type", "text/html")
@@ -79,6 +78,13 @@ func TestHTMLIndex(t *testing.T) {
 		assert.Equal(t, 200, response.StatusCode)
 		assert.Contains(t, response.RawResponse.Header.Get("Content-Type"), "text/html")
 		assert.Equal(t, response.Body, "<html>Hello world!</html>")
+
+		request, _ = http.NewRequest("HEAD", "/_test/", nil)
+		request.Header.Add("Accept", "text/html")
+		response = r.Do(request)
+		assert.Equal(t, 200, response.StatusCode)
+		assert.Equal(t, request.URL.String()+"index.html,meta", ParseLinkHeader(response.RawResponse.Header.Get("Link")).MatchRel("meta"))
+		assert.Equal(t, request.URL.String()+"index.html,acl", ParseLinkHeader(response.RawResponse.Header.Get("Link")).MatchRel("acl"))
 
 		request, _ = http.NewRequest("DELETE", "/_test/index.html", nil)
 		response = r.Do(request)
@@ -358,11 +364,16 @@ func TestStreaming(t *testing.T) {
 		Streaming = false
 	}()
 	testflight.WithServer(handler, func(r *testflight.Requester) {
-		response := r.Get("/_test/abc")
+		request, _ := http.NewRequest("PUT", "/_test/abc", strings.NewReader("<a> <b> <c> ."))
+		request.Header.Add("Content-Type", "text/turtle")
+		response := r.Do(request)
+		assert.Equal(t, 201, response.StatusCode)
+
+		response = r.Get("/_test/abc")
 		assert.Equal(t, 200, response.StatusCode)
 		assert.Equal(t, "@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n\n<a>\n    <b> <c> .\n\n", response.Body)
 
-		request, _ := http.NewRequest("PUT", "/_test/abc", nil)
+		request, _ = http.NewRequest("PUT", "/_test/abc", nil)
 		response = r.Do(request)
 		assert.Equal(t, 201, response.StatusCode)
 	})
@@ -558,11 +569,18 @@ func TestPUTMultiForm(t *testing.T) {
 }
 
 func TestLISTDIR(t *testing.T) {
+	// request, err := http.NewRequest("GET", testServer.URL+"/", nil)
+	// assert.NoError(t, err)
+	// request.Header.Add("Accept", "text/turtle")
+	// response, err := httpClient.Do(request)
+	// assert.NoError(t, err)
+	// assert.Equal(t, 200, response.StatusCode)
+
 	request, err := http.NewRequest("MKCOL", testServer.URL+"/_test/dir", nil)
 	assert.NoError(t, err)
 	response, err := httpClient.Do(request)
-	response.Body.Close()
 	assert.NoError(t, err)
+	response.Body.Close()
 	assert.Equal(t, 201, response.StatusCode)
 
 	request, err = http.NewRequest("POST", testServer.URL+"/_test/abc", strings.NewReader("@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n\n<> a <http://example.org/abc> ."))
@@ -578,7 +596,6 @@ func TestLISTDIR(t *testing.T) {
 	request.Header.Add("Accept", "text/turtle")
 	response, err = httpClient.Do(request)
 	assert.NoError(t, err)
-
 	assert.Equal(t, 200, response.StatusCode)
 
 	g := NewGraph(testServer.URL + "/_test/")
@@ -610,7 +627,6 @@ func TestGlob(t *testing.T) {
 
 		request, _ := http.NewRequest("GET", "/_test/*", nil)
 		response = r.Do(request)
-
 		assert.Equal(t, 200, response.StatusCode)
 
 		g := NewGraph(testServer.URL + "/_test/")
