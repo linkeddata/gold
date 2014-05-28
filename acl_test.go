@@ -171,6 +171,13 @@ func TestACLOwnerOnly(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, 200, response.StatusCode)
 
+	request, err = http.NewRequest("HEAD", testServer.URL+"/_test/acldir", nil)
+	request.Header.Add("Content-Type", "text/turtle")
+	response, err = user1h.Do(request)
+	response.Body.Close()
+	assert.NoError(t, err)
+	assert.Equal(t, 200, response.StatusCode)
+
 	request, err = http.NewRequest("PUT", acl, strings.NewReader(body))
 	request.Header.Add("Content-Type", "text/turtle")
 	response, err = user1h.Do(request)
