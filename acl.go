@@ -48,9 +48,15 @@ func (acl *WAC) Allow(mode string, path string) bool {
 		accessType = "defaultForNew"
 
 		if i == 0 {
-			path = p.Base + "/" + filepath.Dir(p.Path) + "/"
+			if strings.HasSuffix(p.Path, "/") {
+				path = p.Base + "/" + filepath.Dir(filepath.Dir(p.Path)) + "/"
+			} else {
+				path = p.Base + "/" + filepath.Dir(p.Path) + "/"
+			}
 		} else {
-			if filepath.Dir(filepath.Dir(p.Path)) == "." {
+			if len(p.Path) == 0 {
+				break
+			} else if filepath.Dir(filepath.Dir(p.Path)) == "." {
 				path = p.Base + "/"
 			} else {
 				path = p.Base + "/" + filepath.Dir(filepath.Dir(p.Path)) + "/"
