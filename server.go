@@ -50,6 +50,7 @@ type ldpath struct {
 	Base     string
 	Path     string
 	File     string
+	FileType string
 	AclUri   string
 	AclFile  string
 	MetaUri  string
@@ -72,9 +73,9 @@ func PathInfo(path string) (ldpath, error) {
 	}
 
 	// Add missing trailing slashes for dirs
-	magicType, err := magic.TypeByFile(p.Path)
+	res.FileType, err = magic.TypeByFile(p.Path)
 	if err == nil {
-		if magicType == "inode/directory" && !strings.HasSuffix(p.Path, "/") {
+		if res.FileType == "inode/directory" && !strings.HasSuffix(p.Path, "/") {
 			path += "/"
 			p.Path += "/"
 		}
