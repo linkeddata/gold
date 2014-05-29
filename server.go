@@ -385,9 +385,6 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 					}
 				}
 
-				if Debug {
-					log.Printf("Are we doing globbing? %+v\n", glob)
-				}
 				if glob {
 					matches, err := filepath.Glob(globPath)
 					if err == nil {
@@ -397,19 +394,11 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 								// TODO: check acls
 								guessType, _ := magic.TypeByFile(file)
 								if guessType == "text/plain" {
-									if Debug {
-										log.Printf("Globbing file: %+v\n", file)
-									}
 									if acl.AllowRead(resource.Base + "/" + file) {
 										g.AppendFile(file, resource.Base+"/"+file)
 										g.AddTriple(root, NewResource("http://www.w3.org/ns/ldp#contains"), NewResource(resource.Base+"/"+file))
 									}
 								}
-							}
-						}
-						if Debug {
-							for t := range g.IterTriples() {
-								log.Printf("%+v\n", t)
 							}
 						}
 					}
@@ -459,9 +448,7 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 										// add type if RDF resource
 										//infoUrl, _ := url.Parse(info.Name())
 										guessType, _ := magic.TypeByFile(f.File)
-										if Debug {
-											log.Printf("\nType: %+v | File: %+v\n", guessType, f)
-										}
+
 										if guessType == "text/plain" {
 											kb := NewGraph(f.Uri)
 											kb.ReadFile(f.File)
@@ -732,9 +719,6 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 			err = g.WriteFile(f, "text/turtle")
 		} else {
 			if dataMime == "multipart/form-data" {
-				if Debug {
-					log.Println("Got multipart")
-				}
 				err := req.ParseMultipartForm(100000)
 				if err != nil {
 					log.Printf("Cannot parse multipart data: %+v\n", err)
@@ -743,33 +727,18 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 					for elt := range m.File {
 						files := m.File[elt]
 						for i, _ := range files {
-							if Debug {
-								log.Printf("Preparing to write file: %+v\n", resource.Path+files[i].Filename)
-							}
 							file, err := files[i].Open()
 							defer file.Close()
 							if err != nil {
-								if Debug {
-									log.Printf("Cannot get file handler: %+v\n", err)
-								}
 								return r.respond(500)
 							}
 							dst, err := os.Create(resource.Path + files[i].Filename)
 							defer dst.Close()
 							if err != nil {
-								if Debug {
-									log.Printf("Cannot create destination file: %+v\n", err)
-								}
 								return r.respond(500)
 							}
 							if _, err := io.Copy(dst, file); err != nil {
-								if Debug {
-									log.Printf("Cannot copy data to destination file: %+v\n", err)
-								}
 								return r.respond(500)
-							}
-							if Debug {
-								log.Printf("Wrote file: %+v\n", resource.Path+files[i].Filename)
 							}
 						}
 					}
