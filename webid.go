@@ -36,59 +36,60 @@ func WebIDTLSAuth(tls *tls.ConnectionState) (uri string, err error) {
 		return
 	}
 
-	if len(tls.PeerCertificates) > 0 {
-		for _, x := range tls.PeerCertificates[0].Extensions {
-			if !x.Id.Equal(subjectAltName) {
-				continue
-			}
-			if len(x.Value) < 5 {
-				continue
-			}
+	if len(tls.PeerCertificates) < 1 {
+		return
+	}
 
-			v := asn1.RawValue{}
-			_, err = asn1.Unmarshal(x.Value, &v)
-			if err == nil {
-				claim = string(v.Bytes[2:])
-			}
-			if len(claim) == 0 {
-				continue
-			}
+	for _, x := range tls.PeerCertificates[0].Extensions {
+		if !x.Id.Equal(subjectAltName) {
+			continue
+		}
+		if len(x.Value) < 5 {
+			continue
+		}
 
-			pkey := tls.PeerCertificates[0].PublicKey
-			t, n, e := pkeyTypeNE(pkey)
-			if len(t) == 0 {
-				continue
-			}
+		v := asn1.RawValue{}
+		_, err = asn1.Unmarshal(x.Value, &v)
+		if err == nil {
+			claim = string(v.Bytes[2:])
+		}
+		if len(claim) == 0 {
+			continue
+		}
 
-			pkeyk := fmt.Sprint([]string{t, n, e})
-			webidL.Lock()
-			uri = pkeyURI[pkeyk]
-			webidL.Unlock()
-			if len(uri) > 0 {
-				return
-			}
+		pkey := tls.PeerCertificates[0].PublicKey
+		t, n, e := pkeyTypeNE(pkey)
+		if len(t) == 0 {
+			continue
+		}
 
-			g := NewGraph(claim)
-			err = g.LoadURI(claim)
-			if err != nil {
-				return
-			}
+		pkeyk := fmt.Sprint([]string{t, n, e})
+		webidL.Lock()
+		uri = pkeyURI[pkeyk]
+		webidL.Unlock()
+		if len(uri) > 0 {
+			return
+		}
 
-			for _, keyT := range g.All(NewResource(claim), ns.cert.Get("key"), nil) {
-				for _ = range g.All(keyT.Object, ns.rdf.Get("type"), ns.cert.Get(t)) {
-					for _ = range g.All(keyT.Object, ns.cert.Get("modulus"), NewLiteral(n)) {
-						for _ = range g.All(keyT.Object, ns.cert.Get("exponent"), NewLiteral(e)) {
-							uri = claim
-							webidL.Lock()
-							pkeyURI[pkeyk] = uri
-							webidL.Unlock()
-							return
-						}
+		g := NewGraph(claim)
+		err = g.LoadURI(claim)
+		if err != nil {
+			return
+		}
+
+		for _, keyT := range g.All(NewResource(claim), ns.cert.Get("key"), nil) {
+			for _ = range g.All(keyT.Object, ns.rdf.Get("type"), ns.cert.Get(t)) {
+				for _ = range g.All(keyT.Object, ns.cert.Get("modulus"), NewLiteral(n)) {
+					for _ = range g.All(keyT.Object, ns.cert.Get("exponent"), NewLiteral(e)) {
+						uri = claim
+						webidL.Lock()
+						pkeyURI[pkeyk] = uri
+						webidL.Unlock()
+						return
 					}
 				}
 			}
 		}
 	}
-
 	return
 }
