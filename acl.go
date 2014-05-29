@@ -21,9 +21,9 @@ func (acl *WAC) allow(mode string, path string) bool {
 	if err != nil {
 		return false
 	}
-	lvls := strings.Split(p.Path, "/")
+	depth := strings.Split(p.Path, "/")
 
-	for i := 0; i <= len(lvls); i++ {
+	for i := 0; i <= len(depth); i++ {
 		p, err := PathInfo(path)
 		if err != nil {
 			return false
