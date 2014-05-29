@@ -1,5 +1,9 @@
 package gold
 
+import (
+	"strings"
+)
+
 var (
 	ns = struct {
 		rdf, rdfs, acl, cert, foaf, stat NS
@@ -44,6 +48,14 @@ func debrack(s string) string {
 		return s
 	}
 	return s[1 : len(s)-1]
+}
+
+func defrag(s string) string {
+	lst := strings.Split(s, "#")
+	if len(lst) != 2 {
+		return s
+	}
+	return lst[0]
 }
 
 // frag = lambda x: x[x.find('#')==-1 and len(x) or x.find('#'):len(x)-(x[-1]=='>')]

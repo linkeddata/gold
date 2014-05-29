@@ -284,7 +284,8 @@ func (g *Graph) AppendFile(filename string, baseUri string) {
 }
 
 func (g *Graph) LoadURI(uri string) (err error) {
-	q, err := http.NewRequest("GET", uri, nil)
+	doc := defrag(uri)
+	q, err := http.NewRequest("GET", doc, nil)
 	if err != nil {
 		return
 	}
@@ -295,7 +296,7 @@ func (g *Graph) LoadURI(uri string) (err error) {
 	}
 	if r != nil {
 		defer r.Body.Close()
-		g.Parse(r.Body, r.Header.Get("Content-Type"))
+		g.ParseBase(r.Body, r.Header.Get("Content-Type"), doc)
 	}
 	return
 }
