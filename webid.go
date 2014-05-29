@@ -27,17 +27,17 @@ func pkeyTypeNE(pkey interface{}) (t, n, e string) {
 	return
 }
 
-func WebIDTLSAuth(state *tls.ConnectionState) (uri string, err error) {
+func WebIDTLSAuth(tls *tls.ConnectionState) (uri string, err error) {
 	claim := ""
 	uri = ""
 	err = nil
 
-	if state == nil || !state.HandshakeComplete {
+	if tls == nil || !tls.HandshakeComplete {
 		return
 	}
 
-	if len(state.PeerCertificates) > 0 {
-		for _, x := range state.PeerCertificates[0].Extensions {
+	if len(tls.PeerCertificates) > 0 {
+		for _, x := range tls.PeerCertificates[0].Extensions {
 			if !x.Id.Equal(subjectAltName) {
 				continue
 			}
@@ -54,7 +54,7 @@ func WebIDTLSAuth(state *tls.ConnectionState) (uri string, err error) {
 				continue
 			}
 
-			pkey := state.PeerCertificates[0].PublicKey
+			pkey := tls.PeerCertificates[0].PublicKey
 			t, n, e := pkeyTypeNE(pkey)
 			if len(t) == 0 {
 				continue
@@ -69,12 +69,16 @@ func WebIDTLSAuth(state *tls.ConnectionState) (uri string, err error) {
 			}
 
 			g := NewGraph(claim)
-			g.LoadURI(claim)
-			for _, keyT := range g.All(NewResource(g.URI()), ns.cert.Get("key"), nil) {
+			err = g.LoadURI(claim)
+			if err != nil {
+				return
+			}
+
+			for _, keyT := range g.All(NewResource(claim), ns.cert.Get("key"), nil) {
 				for _ = range g.All(keyT.Object, ns.rdf.Get("type"), ns.cert.Get(t)) {
 					for _ = range g.All(keyT.Object, ns.cert.Get("modulus"), NewLiteral(n)) {
 						for _ = range g.All(keyT.Object, ns.cert.Get("exponent"), NewLiteral(e)) {
-							uri = g.URI()
+							uri = claim
 							webidL.Lock()
 							pkeyURI[pkeyk] = uri
 							webidL.Unlock()

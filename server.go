@@ -132,7 +132,7 @@ func (req httpRequest) BaseURI() string {
 	return scheme + "://" + host + port + req.URL.Path
 }
 
-func (req httpRequest) Auth() string {
+func (req *httpRequest) Auth() string {
 	user, _ := WebIDTLSAuth(req.TLS)
 	if len(user) == 0 {
 		host, _, _ := net.SplitHostPort(req.RemoteAddr)
@@ -713,10 +713,6 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 			}
 		}
 
-		if dataHasParser {
-			w.Header().Set("Triples", fmt.Sprintf("%d", g.Len()))
-		}
-
 		err := os.MkdirAll(_path.Dir(resource.File), 0755)
 		if err != nil {
 			return r.respond(500, err)
@@ -733,7 +729,7 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 		}
 
 		if dataHasParser {
-			err = g.WriteFile(f, "")
+			err = g.WriteFile(f, "text/turtle")
 		} else {
 			if dataMime == "multipart/form-data" {
 				if Debug {
@@ -788,6 +784,10 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 			} else {
 				_, err = io.Copy(f, req.Body)
 			}
+		}
+
+		if dataHasParser {
+			w.Header().Set("Triples", fmt.Sprintf("%d", g.Len()))
 		}
 
 		if err != nil {
