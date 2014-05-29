@@ -36,7 +36,6 @@ func TestACLInit(t *testing.T) {
 			TLSClientConfig: &tls.Config{
 				Certificates:       []tls.Certificate{*user1cert},
 				InsecureSkipVerify: true,
-				Rand:               rand.Reader,
 			},
 		},
 	}
@@ -154,6 +153,7 @@ func TestACLOwnerOnly(t *testing.T) {
 	response.Body.Close()
 	assert.NoError(t, err)
 	assert.Equal(t, 201, response.StatusCode)
+	assert.Equal(t, "5", response.Header.Get("Triples"))
 
 	// user1
 	request, err = http.NewRequest("HEAD", acl, nil)

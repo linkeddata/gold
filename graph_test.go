@@ -32,18 +32,18 @@ func TestGraphPatch(t *testing.T) {
 
 func TestGraphOne(t *testing.T) {
 	g := NewGraph("http://test/")
-	g.AddTriple(NewResource("a"), NewResource("b"), NewResource("c"))
-	g.AddTriple(NewResource("a"), NewResource("b"), NewResource("d"))
-	g.AddTriple(NewResource("a"), NewResource("f"), NewLiteral("h"))
-	g.AddTriple(NewResource("g"), NewResource("b2"), NewResource("e"))
 
+	g.AddTriple(NewResource("a"), NewResource("b"), NewResource("c"))
 	assert.Equal(t, g.One(NewResource("a"), nil, nil).String(), "<a> <b> <c> .")
 	assert.Equal(t, g.One(NewResource("a"), NewResource("b"), nil).String(), "<a> <b> <c> .")
-	assert.Equal(t, g.One(NewResource("a"), NewResource("b"), NewResource("d")).String(), "<a> <b> <d> .")
 
+	g.AddTriple(NewResource("a"), NewResource("b"), NewResource("d"))
+	assert.Equal(t, g.One(NewResource("a"), NewResource("b"), NewResource("d")).String(), "<a> <b> <d> .")
 	assert.Equal(t, g.One(nil, NewResource("b"), NewResource("d")).String(), "<a> <b> <d> .")
-	assert.Equal(t, g.One(nil, NewResource("b2"), nil).String(), "<g> <b2> <e> .")
-	assert.Equal(t, g.One(nil, nil, NewResource("e")).String(), "<g> <b2> <e> .")
+
+	g.AddTriple(NewResource("g"), NewResource("b2"), NewLiteral("e"))
+	assert.Equal(t, g.One(nil, NewResource("b2"), nil).String(), "<g> <b2> \"e\" .")
+	assert.Equal(t, g.One(nil, nil, NewLiteral("e")).String(), "<g> <b2> \"e\" .")
 
 	assert.Nil(t, g.One(NewResource("x"), nil, nil))
 	assert.Nil(t, g.One(nil, NewResource("x"), nil))

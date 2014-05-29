@@ -27,11 +27,9 @@ var (
 )
 
 func init() {
-	testServer.TLS = &tls.Config{
-		ClientAuth: tls.RequestClientCert,
-		NextProtos: []string{"http/1.1"},
-		Rand:       rand.Reader,
-	}
+	testServer.TLS = new(tls.Config)
+	testServer.TLS.ClientAuth = tls.RequestClientCert
+	testServer.TLS.NextProtos = []string{"http/1.1"}
 	testServer.StartTLS()
 }
 
