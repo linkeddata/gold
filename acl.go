@@ -15,7 +15,7 @@ func NewWAC(req *httpRequest, srv *Server, user string) *WAC {
 	return &WAC{req: req, srv: srv, user: user}
 }
 
-func (acl *WAC) Allow(mode string, path string) bool {
+func (acl *WAC) allow(mode string, path string) bool {
 	accessType := "accessTo"
 	p, err := PathInfo(path)
 	if err != nil {
@@ -67,13 +67,13 @@ func (acl *WAC) Allow(mode string, path string) bool {
 }
 
 func (acl *WAC) AllowRead(path string) bool {
-	return acl.Allow("Read", path)
+	return acl.allow("Read", path)
 }
 
 func (acl *WAC) AllowWrite(path string) bool {
-	return acl.Allow("Write", path)
+	return acl.allow("Write", path)
 }
 
 func (acl *WAC) AllowAppend(path string) bool {
-	return acl.Allow("Append", path)
+	return acl.allow("Append", path)
 }
