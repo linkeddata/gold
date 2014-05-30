@@ -15,7 +15,8 @@ func NewWAC(req *httpRequest, srv *Server, user string) *WAC {
 	return &WAC{req: req, srv: srv, user: user}
 }
 
-func (acl *WAC) allow(mode string, path string) bool {
+func (acl *WAC) allow(mode string, path string, request *httpRequest) bool {
+	origin := request.Header.Get("Origin")
 	accessType := "accessTo"
 	p, err := PathInfo(path)
 	if err != nil {
@@ -34,6 +35,12 @@ func (acl *WAC) allow(mode string, path string) bool {
 		if aclGraph.Len() > 0 {
 			for _, i := range aclGraph.All(nil, ns.acl.Get("mode"), ns.acl.Get(mode)) {
 				for _ = range aclGraph.All(i.Subject, ns.acl.Get(accessType), NewResource(p.Uri)) {
+					if len(origin) > 0 {
+						for _ = range aclGraph.All(i.Subject, ns.acl.Get("origin"), NewResource(origin)) {
+							goto allowOrigin
+						}
+					}
+				allowOrigin:
 					for _ = range aclGraph.All(i.Subject, ns.acl.Get("agent"), NewResource(acl.user)) {
 						return true
 					}
@@ -66,14 +73,14 @@ func (acl *WAC) allow(mode string, path string) bool {
 	return true
 }
 
-func (acl *WAC) AllowRead(path string) bool {
-	return acl.allow("Read", path)
+func (acl *WAC) AllowRead(path string, request *httpRequest) bool {
+	return acl.allow("Read", path, request)
 }
 
-func (acl *WAC) AllowWrite(path string) bool {
-	return acl.allow("Write", path)
+func (acl *WAC) AllowWrite(path string, request *httpRequest) bool {
+	return acl.allow("Write", path, request)
 }
 
-func (acl *WAC) AllowAppend(path string) bool {
-	return acl.allow("Append", path)
+func (acl *WAC) AllowAppend(path string, request *httpRequest) bool {
+	return acl.allow("Append", path, request)
 }

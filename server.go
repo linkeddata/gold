@@ -327,7 +327,7 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 		}
 
 		status := 501
-		if !acl.AllowRead(resource.Uri) {
+		if !acl.AllowRead(resource.Uri, req) {
 			return r.respond(403)
 		}
 
@@ -395,7 +395,7 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 								// TODO: check acls
 								guessType, _ := magic.TypeByFile(file)
 								if guessType == "text/plain" {
-									if acl.AllowRead(resource.Base + "/" + file) {
+									if acl.AllowRead(resource.Base+"/"+file, req) {
 										g.AppendFile(file, resource.Base+"/"+file)
 										g.AddTriple(root, NewResource("http://www.w3.org/ns/ldp#contains"), NewResource(resource.Base+"/"+file))
 									}
@@ -588,7 +588,7 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 		defer unlock()
 
 		// check append first
-		if !acl.AllowAppend(resource.Uri) && !acl.AllowWrite(resource.Uri) {
+		if !acl.AllowAppend(resource.Uri, req) && !acl.AllowWrite(resource.Uri, req) {
 			return r.respond(403)
 		}
 
@@ -770,7 +770,7 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 		unlock := lock(resource.Path)
 		defer unlock()
 
-		if !acl.AllowWrite(resource.Uri) {
+		if !acl.AllowWrite(resource.Uri, req) {
 			return r.respond(403)
 		}
 		if len(resource.Path) == 0 {
@@ -794,7 +794,7 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 		unlock := lock(resource.File)
 		defer unlock()
 
-		if !acl.AllowWrite(resource.Uri) {
+		if !acl.AllowWrite(resource.Uri, req) {
 			return r.respond(403)
 		}
 		err := os.MkdirAll(resource.File, 0755)
