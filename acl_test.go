@@ -127,6 +127,84 @@ func TestACLEmpty(t *testing.T) {
 	assert.Equal(t, 200, response.StatusCode)
 }
 
+func TestACLOrigin(t *testing.T) {
+	origin1 := "http://example.org/"
+	origin2 := "http://example.com/"
+
+	request, err := http.NewRequest("HEAD", testServer.URL+aclDir, nil)
+	response, err := user1h.Do(request)
+	response.Body.Close()
+	assert.NoError(t, err)
+	assert.Equal(t, 200, response.StatusCode)
+	acl := ParseLinkHeader(response.Header.Get("Link")).MatchRel("acl")
+
+	body := "<#Owner>" +
+		"	<http://www.w3.org/ns/auth/acl#accessTo> <" + testServer.URL + aclDir + ">, <" + acl + ">;" +
+		"	<http://www.w3.org/ns/auth/acl#agent> <" + user1 + ">;" +
+		"	<http://www.w3.org/ns/auth/acl#origin> <" + origin1 + ">;" +
+		"	<http://www.w3.org/ns/auth/acl#mode> <http://www.w3.org/ns/auth/acl#Read>, <http://www.w3.org/ns/auth/acl#Write> ." +
+		"<#Public>" +
+		"	<http://www.w3.org/ns/auth/acl#accessTo> <" + testServer.URL + aclDir + ">;" +
+		"	<http://www.w3.org/ns/auth/acl#agentClass> <http://xmlns.com/foaf/0.1/Agent>;" +
+		"	<http://www.w3.org/ns/auth/acl#origin> <" + origin1 + ">;" +
+		"	<http://www.w3.org/ns/auth/acl#mode> <http://www.w3.org/ns/auth/acl#Read> ."
+	request, err = http.NewRequest("PUT", acl, strings.NewReader(body))
+	request.Header.Add("Content-Type", "text/turtle")
+	response, err = user1h.Do(request)
+	response.Body.Close()
+	assert.NoError(t, err)
+	assert.Equal(t, 201, response.StatusCode)
+	assert.Equal(t, "10", response.Header.Get("Triples"))
+
+	// user1
+	request, err = http.NewRequest("HEAD", testServer.URL+aclDir, nil)
+	request.Header.Add("Content-Type", "text/turtle")
+	response, err = user1h.Do(request)
+	response.Body.Close()
+	assert.NoError(t, err)
+	assert.Equal(t, 200, response.StatusCode)
+
+	request, err = http.NewRequest("HEAD", testServer.URL+aclDir, nil)
+	request.Header.Add("Content-Type", "text/turtle")
+	request.Header.Add("Origin", origin1)
+	response, err = user1h.Do(request)
+	response.Body.Close()
+	assert.NoError(t, err)
+	assert.Equal(t, 200, response.StatusCode)
+
+	request, err = http.NewRequest("HEAD", testServer.URL+aclDir, nil)
+	request.Header.Add("Content-Type", "text/turtle")
+	request.Header.Add("Origin", origin2)
+	response, err = user1h.Do(request)
+	response.Body.Close()
+	assert.NoError(t, err)
+	assert.Equal(t, 403, response.StatusCode)
+
+	// agent
+	request, err = http.NewRequest("HEAD", testServer.URL+aclDir, nil)
+	request.Header.Add("Content-Type", "text/turtle")
+	response, err = httpClient.Do(request)
+	response.Body.Close()
+	assert.NoError(t, err)
+	assert.Equal(t, 200, response.StatusCode)
+
+	request, err = http.NewRequest("HEAD", testServer.URL+aclDir, nil)
+	request.Header.Add("Content-Type", "text/turtle")
+	request.Header.Add("Origin", origin1)
+	response, err = httpClient.Do(request)
+	response.Body.Close()
+	assert.NoError(t, err)
+	assert.Equal(t, 200, response.StatusCode)
+
+	request, err = http.NewRequest("HEAD", testServer.URL+aclDir, nil)
+	request.Header.Add("Content-Type", "text/turtle")
+	request.Header.Add("Origin", origin2)
+	response, err = httpClient.Do(request)
+	response.Body.Close()
+	assert.NoError(t, err)
+	assert.Equal(t, 403, response.StatusCode)
+}
+
 func TestACLOwnerOnly(t *testing.T) {
 	request, err := http.NewRequest("HEAD", testServer.URL+aclDir, nil)
 	response, err := user1h.Do(request)
