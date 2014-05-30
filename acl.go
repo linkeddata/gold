@@ -39,7 +39,7 @@ func (acl *WAC) allow(mode string, path string, request *httpRequest) bool {
 						for _ = range aclGraph.All(i.Subject, ns.acl.Get("origin"), NewResource(origin)) {
 							goto allowOrigin
 						}
-						break
+						continue
 					}
 				allowOrigin:
 					for _ = range aclGraph.All(i.Subject, ns.acl.Get("agent"), NewResource(acl.user)) {
