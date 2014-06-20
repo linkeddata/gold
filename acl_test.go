@@ -661,38 +661,41 @@ func TestACLDefaultForNew(t *testing.T) {
 	response.Body.Close()
 	assert.NoError(t, err)
 	assert.Equal(t, 403, response.StatusCode)
+}
 
-	request, err = http.NewRequest("DELETE", testServer.URL+aclDir+"abcd", nil)
-	assert.NoError(t, err)
-	response, err = user1h.Do(request)
-	assert.NoError(t, err)
+func TestACLWebIDDelegation(t *testing.T) {
+	request, err := http.NewRequest("POST", user1, strings.NewReader("<"+user1+"> <http://www.w3.org/ns/auth/acl#delegatee> <"+user2+"> ."))
+	request.Header.Add("Content-Type", "text/turtle")
+	response, err := user1h.Do(request)
 	response.Body.Close()
+	assert.NoError(t, err)
 	assert.Equal(t, 200, response.StatusCode)
 
-	request, err = http.NewRequest("DELETE", acl, nil)
-	assert.NoError(t, err)
-	response, err = user1h.Do(request)
-	assert.NoError(t, err)
+	request, err = http.NewRequest("POST", testServer.URL+aclDir+"abcd", strings.NewReader("<d> <e> <f> ."))
+	request.Header.Add("Content-Type", "text/turtle")
+	request.Header.Add("On-Behalf-Of", "<"+user1+">")
+	response, err = user2h.Do(request)
 	response.Body.Close()
+	assert.NoError(t, err)
 	assert.Equal(t, 200, response.StatusCode)
 }
 
 func TestACLCleanUp(t *testing.T) {
-	request, err := http.NewRequest("HEAD", testServer.URL+aclDir+"abc", nil)
+	request, err := http.NewRequest("DELETE", testServer.URL+aclDir+"abcd", nil)
 	assert.NoError(t, err)
 	response, err := user1h.Do(request)
 	assert.NoError(t, err)
 	response.Body.Close()
 	assert.Equal(t, 200, response.StatusCode)
 
-	request, err = http.NewRequest("HEAD", testServer.URL+aclDir, nil)
+	request, err = http.NewRequest("DELETE", testServer.URL+aclDir+"abc", nil)
 	assert.NoError(t, err)
 	response, err = user1h.Do(request)
 	assert.NoError(t, err)
 	response.Body.Close()
 	assert.Equal(t, 200, response.StatusCode)
 
-	request, err = http.NewRequest("DELETE", testServer.URL+aclDir+"abc", nil)
+	request, err = http.NewRequest("DELETE", testServer.URL+aclDir+",acl", nil)
 	assert.NoError(t, err)
 	response, err = user1h.Do(request)
 	assert.NoError(t, err)

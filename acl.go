@@ -12,6 +12,12 @@ type WAC struct {
 }
 
 func NewWAC(req *httpRequest, srv *Server, user string) *WAC {
+	if len(req.Header.Get("On-Behalf-Of")) > 0 {
+		delegator := debrack(req.Header.Get("On-Behalf-Of"))
+		if VerifyDelegator(delegator, user) {
+			user = delegator
+		}
+	}
 	return &WAC{req: req, srv: srv, user: user}
 }
 
@@ -84,4 +90,19 @@ func (acl *WAC) AllowWrite(path string) bool {
 
 func (acl *WAC) AllowAppend(path string) bool {
 	return acl.allow("Append", path)
+}
+
+func VerifyDelegator(delegator string, delegatee string) bool {
+	g := NewGraph(delegator)
+	err := g.LoadURI(delegator)
+	if err != nil {
+		println("Error loading graph for", delegator)
+	}
+
+	for _, val := range g.All(NewResource(delegator), NewResource("http://www.w3.org/ns/auth/acl#delegatee"), nil) {
+		if debrack(val.Object.String()) == delegatee {
+			return true
+		}
+	}
+	return false
 }
