@@ -258,6 +258,7 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 
 	// CORS
 	w.Header().Set("Access-Control-Allow-Credentials", "true")
+	w.Header().Set("Access-Control-Expose-Headers", "User, Triples, Location, Link, Vary, Last-Modified")
 	w.Header().Set("Access-Control-Max-Age", "60")
 	w.Header().Set("MS-Author-Via", "DAV, SPARQL")
 
@@ -371,6 +372,9 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 				root := NewResource(resource.Uri)
 				g.AddTriple(root, NewResource("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), NewResource("http://www.w3.org/ns/posix/stat#Directory"))
 				g.AddTriple(root, NewResource("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), NewResource("http://www.w3.org/ns/ldp#BasicContainer"))
+
+				g.AddTriple(root, NewResource("http://www.w3.org/ns/posix/stat#mtime"), NewLiteral(fmt.Sprintf("%d", stat.ModTime().Unix())))
+				g.AddTriple(root, NewResource("http://www.w3.org/ns/posix/stat#size"), NewLiteral(fmt.Sprintf("%d", stat.Size())))
 
 				kb := NewGraph(resource.MetaUri)
 				kb.ReadFile(resource.MetaFile)
@@ -604,7 +608,7 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 
 		// LDP
 		gotLDP := false
-		if req.Method == "POST" && len(req.Header.Get("Link")) > 0 {
+		if len(req.Header.Get("Link")) > 0 {
 			link := ParseLinkHeader(req.Header.Get("Link")).MatchRel("type")
 			if link == "http://www.w3.org/ns/ldp#Resource" || link == "http://www.w3.org/ns/ldp#BasicContainer" {
 				slug := req.Header.Get("Slug")
@@ -623,9 +627,13 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 					if strings.HasSuffix(slug, "/") {
 						slug = strings.TrimRight(slug, "/")
 					}
-					slug = slug + "-" + uuid
+					if req.Method == "POST" {
+						slug = slug + "-" + uuid
+					}
 				} else {
-					slug = uuid
+					if req.Method == "POST" {
+						slug = uuid
+					}
 				}
 				resource.Path += slug
 

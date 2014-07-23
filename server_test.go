@@ -279,6 +279,72 @@ func TestLDPPostLDPRNoSlug(t *testing.T) {
 	assert.Equal(t, 200, response.StatusCode)
 }
 
+func TestLDPPutLDPRWithSlug(t *testing.T) {
+	request, err := http.NewRequest("PUT", testServer.URL+"/_test/", strings.NewReader("@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n\n<> a <http://example.org/two>."))
+	request.Header.Add("Content-Type", "text/turtle")
+	request.Header.Add("Slug", "ldpr")
+	request.Header.Add("Link", "<http://www.w3.org/ns/ldp#Resource>; rel=\"type\"")
+	response, err := httpClient.Do(request)
+	response.Body.Close()
+	assert.NoError(t, err)
+	assert.Equal(t, 201, response.StatusCode)
+	newLDPR := response.Header.Get("Location")
+	assert.Equal(t, testServer.URL+"/_test/ldpr", newLDPR)
+
+	request, err = http.NewRequest("GET", newLDPR, nil)
+	assert.NoError(t, err)
+	request.Header.Add("Accept", "text/turtle")
+	response, err = httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, response.StatusCode)
+	assert.Equal(t, response.Header.Get("Triples"), "1")
+	body, err := ioutil.ReadAll(response.Body)
+	assert.NoError(t, err)
+	response.Body.Close()
+	assert.Equal(t, string(body), "@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n\n<>\n    a <http://example.org/two> .\n\n")
+
+	request, err = http.NewRequest("DELETE", newLDPR, nil)
+	response, err = httpClient.Do(request)
+	response.Body.Close()
+	assert.NoError(t, err)
+	assert.Equal(t, 200, response.StatusCode)
+}
+
+func TestLDPPutLDPCWithSlug(t *testing.T) {
+	request, err := http.NewRequest("PUT", testServer.URL+"/_test/ldpc", strings.NewReader("@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n\n<> a <http://example.org/two>."))
+	request.Header.Add("Content-Type", "text/turtle")
+	request.Header.Add("Link", "<http://www.w3.org/ns/ldp#BasicContainer>; rel=\"type\"")
+	response, err := httpClient.Do(request)
+	response.Body.Close()
+	assert.NoError(t, err)
+	assert.Equal(t, 201, response.StatusCode)
+	newLDPC := response.Header.Get("Location")
+	assert.NotEmpty(t, newLDPC)
+	metaURI := ParseLinkHeader(response.Header.Get("Link")).MatchRel("meta")
+	assert.Equal(t, newLDPC+",meta", metaURI)
+
+	request, err = http.NewRequest("GET", newLDPC, nil)
+	request.Header.Add("Accept", "text/turtle")
+	response, err = httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, response.StatusCode)
+	assert.Equal(t, 4, len(filepath.Base(newLDPC)))
+	assert.Equal(t, "9", response.Header.Get("Triples"))
+	response.Body.Close()
+
+	request, err = http.NewRequest("DELETE", metaURI, nil)
+	response, err = httpClient.Do(request)
+	response.Body.Close()
+	assert.NoError(t, err)
+	assert.Equal(t, 200, response.StatusCode)
+
+	request, err = http.NewRequest("DELETE", newLDPC, nil)
+	response, err = httpClient.Do(request)
+	response.Body.Close()
+	assert.NoError(t, err)
+	assert.Equal(t, 200, response.StatusCode)
+}
+
 func TestLDPGetLDPC(t *testing.T) {
 	testflight.WithServer(handler, func(r *testflight.Requester) {
 		request, err := http.NewRequest("GET", "/_test/", nil)
