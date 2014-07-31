@@ -62,48 +62,56 @@ func PathInfo(path string) (ldpath, error) {
 	if len(path) == 0 {
 		return res, errors.New("missing resource path")
 	}
+	// hack - if source URI contains "one%2b+%2btwo" then it is
+	// normally decoded to "one+ +two", but Go parses it to
+	// "one+++two", so we replace the plus with a blank space
+	// strings.Replace(path, "+", "%20", -1)
 
 	p, err := url.Parse(path)
 	if err != nil {
 		return res, err
 	}
 
-	if len(p.Path) == 0 {
-		path += "/"
-	}
-
 	// Add missing trailing slashes for dirs
 	res.FileType, err = magic.TypeByFile(p.Path)
 	if err == nil {
 		if res.FileType == "inode/directory" && !strings.HasSuffix(p.Path, "/") {
-			path += "/"
 			p.Path += "/"
 		}
 	}
 
-	if strings.HasPrefix(p.Path, "/") {
+	if strings.HasPrefix(p.Path, "/") && len(p.Path) > 0 {
 		p.Path = strings.TrimLeft(p.Path, "/")
+	} else if len(p.Path) == 0 {
+		p.Path += "/"
 	}
 
-	res.Uri = path
+	// hack: url.EncodeQuery() uses + instead of %20 to encode whitespaces in the path
+	//p.Path = strings.Replace(p.Path, " ", "%20", -1)
+
+	if len(p.Path) == 0 {
+		res.Uri = p.String() + "/"
+	} else {
+		res.Uri = p.String()
+	}
 	res.Base = p.Scheme + "://" + p.Host
 	res.Path = p.Path
 	res.File = p.Path
 
 	if strings.HasSuffix(p.Path, ",acl") {
-		res.AclUri = path
+		res.AclUri = res.Uri
 		res.AclFile = res.Path
-		res.MetaUri = path
+		res.MetaUri = res.Uri
 		res.MetaFile = res.Path
 	} else if strings.HasSuffix(res.Path, ",meta") {
-		res.AclUri = path + ACLSuffix
+		res.AclUri = res.Uri + ACLSuffix
 		res.AclFile = res.Path + ACLSuffix
-		res.MetaUri = path
+		res.MetaUri = res.Uri
 		res.MetaFile = res.Path
 	} else {
-		res.AclUri = path + ACLSuffix
+		res.AclUri = res.Uri + ACLSuffix
 		res.AclFile = res.Path + ACLSuffix
-		res.MetaUri = path + METASuffix
+		res.MetaUri = res.Uri + METASuffix
 		res.MetaFile = res.Path + METASuffix
 	}
 
@@ -608,7 +616,7 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 
 		// LDP
 		gotLDP := false
-		if len(req.Header.Get("Link")) > 0 {
+		if len(req.Header.Get("Link")) > 0 && dataMime == "text/turtle" {
 			link := ParseLinkHeader(req.Header.Get("Link")).MatchRel("type")
 			if link == "http://www.w3.org/ns/ldp#Resource" || link == "http://www.w3.org/ns/ldp#BasicContainer" {
 				slug := req.Header.Get("Slug")
@@ -715,7 +723,6 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 		}
 
 		f := new(os.File)
-
 		if dataMime != "multipart/form-data" {
 			f, err = os.OpenFile(resource.File, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
 			if err != nil {
@@ -726,6 +733,7 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 
 		if dataHasParser {
 			err = g.WriteFile(f, "text/turtle")
+			w.Header().Set("Triples", fmt.Sprintf("%d", g.Len()))
 		} else {
 			if dataMime == "multipart/form-data" {
 				err := req.ParseMultipartForm(100000)
@@ -741,7 +749,13 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 							if err != nil {
 								return r.respond(500)
 							}
-							dst, err := os.Create(resource.Path + files[i].Filename)
+							newFile := ""
+							if filepath.Base(resource.Path) == files[i].Filename {
+								newFile = resource.Path
+							} else {
+								newFile = resource.Path + files[i].Filename
+							}
+							dst, err := os.Create(newFile)
 							defer dst.Close()
 							if err != nil {
 								return r.respond(500)
@@ -751,6 +765,7 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 							}
 						}
 					}
+					return r.respond(201)
 				}
 			} else if dataMime == "application/x-www-form-urlencoded" {
 				err := req.ParseForm()
@@ -764,13 +779,10 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 			}
 		}
 
-		if dataHasParser {
-			w.Header().Set("Triples", fmt.Sprintf("%d", g.Len()))
-		}
-
 		if err != nil {
 			return r.respond(500)
 		} else if req.Method == "PUT" || gotLDP {
+			w.Header().Set("Location", resource.Uri)
 			return r.respond(201)
 		}
 

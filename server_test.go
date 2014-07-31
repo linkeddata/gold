@@ -98,7 +98,7 @@ func TestPathInfo(t *testing.T) {
 	p, err := PathInfo("")
 	assert.NotNil(t, err)
 
-	p, err = PathInfo(testServer.URL)
+	p, err = PathInfo(testServer.URL + "/")
 	assert.Nil(t, err)
 	assert.Equal(t, testServer.URL+"/", p.Uri)
 	assert.Equal(t, testServer.URL, p.Base)
@@ -177,6 +177,36 @@ func TestOPTIONSOrigin(t *testing.T) {
 		assert.Equal(t, 200, response.StatusCode)
 		assert.Equal(t, response.RawResponse.Header.Get("Access-Control-Allow-Origin"), origin)
 	})
+}
+
+func TestURIwithSpaces(t *testing.T) {
+	request, err := http.NewRequest("PUT", testServer.URL+"/_test/file name", nil)
+	assert.NoError(t, err)
+	request.Header.Add("Content-Type", "text/turtle")
+	response, err := httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.Equal(t, response.Header.Get("Location"), testServer.URL+"/_test/file%20name")
+
+	request, err = http.NewRequest("DELETE", response.Header.Get("Location"), nil)
+	assert.NoError(t, err)
+	response, err = httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, response.StatusCode)
+}
+
+func TestURIwithWeirdChars(t *testing.T) {
+	request, err := http.NewRequest("PUT", testServer.URL+"/_test/file name + %23frag", nil)
+	assert.NoError(t, err)
+	request.Header.Add("Content-Type", "text/turtle")
+	response, err := httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.Equal(t, response.Header.Get("Location"), testServer.URL+"/_test/file%20name%20+%20#frag")
+
+	request, err = http.NewRequest("DELETE", response.Header.Get("Location"), nil)
+	assert.NoError(t, err)
+	response, err = httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, response.StatusCode)
 }
 
 func TestLDPPostLDPC(t *testing.T) {
