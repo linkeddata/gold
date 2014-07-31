@@ -250,7 +250,7 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 	dataMime := req.Header.Get(HCType)
 	dataMime = strings.Split(dataMime, ";")[0]
 	dataHasParser := len(mimeParser[dataMime]) > 0
-	if len(dataMime) > 0 && !dataHasParser && req.Method != "PUT" {
+	if len(dataMime) > 0 && dataMime != "multipart/form-data" && !dataHasParser && req.Method != "PUT" {
 		return r.respond(415, "Unsupported Media Type:", dataMime)
 	}
 
@@ -747,7 +747,7 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 							file, err := files[i].Open()
 							defer file.Close()
 							if err != nil {
-								return r.respond(500)
+								return r.respond(500, err)
 							}
 							newFile := ""
 							if filepath.Base(resource.Path) == files[i].Filename {
@@ -758,13 +758,14 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 							dst, err := os.Create(newFile)
 							defer dst.Close()
 							if err != nil {
-								return r.respond(500)
+								return r.respond(500, err)
 							}
 							if _, err := io.Copy(dst, file); err != nil {
-								return r.respond(500)
+								return r.respond(500, err)
 							}
 						}
 					}
+
 					return r.respond(201)
 				}
 			} else if dataMime == "application/x-www-form-urlencoded" {
