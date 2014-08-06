@@ -24,14 +24,14 @@ func NewWAC(req *httpRequest, srv *Server, user string) *WAC {
 func (acl *WAC) allow(mode string, path string) bool {
 	origin := acl.req.Header.Get("Origin")
 	accessType := "accessTo"
-	p, err := PathInfo(path)
+	p, err := acl.srv.pathInfo(path)
 	if err != nil {
 		return false
 	}
 	depth := strings.Split(p.Path, "/")
 
 	for i := 0; i <= len(depth); i++ {
-		p, err := PathInfo(path)
+		p, err := acl.srv.pathInfo(path)
 		if err != nil {
 			return false
 		}

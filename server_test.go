@@ -95,10 +95,10 @@ func TestHTMLIndex(t *testing.T) {
 func TestPathInfo(t *testing.T) {
 	path := testServer.URL + "/_test/"
 
-	p, err := PathInfo("")
+	p, err := handler.pathInfo("")
 	assert.NotNil(t, err)
 
-	p, err = PathInfo(testServer.URL + "/")
+	p, err = handler.pathInfo(testServer.URL + "/")
 	assert.Nil(t, err)
 	assert.Equal(t, testServer.URL+"/", p.Uri)
 	assert.Equal(t, testServer.URL, p.Base)
@@ -109,7 +109,7 @@ func TestPathInfo(t *testing.T) {
 	assert.Equal(t, testServer.URL+"/"+METASuffix, p.MetaUri)
 	assert.Equal(t, METASuffix, p.MetaFile)
 
-	p, err = PathInfo(path)
+	p, err = handler.pathInfo(path)
 	assert.Nil(t, err)
 	assert.Equal(t, path, p.Uri)
 	assert.Equal(t, testServer.URL, p.Base)
@@ -120,7 +120,7 @@ func TestPathInfo(t *testing.T) {
 	assert.Equal(t, path+METASuffix, p.MetaUri)
 	assert.Equal(t, "_test/"+METASuffix, p.MetaFile)
 
-	p, err = PathInfo(path + "abc")
+	p, err = handler.pathInfo(path + "abc")
 	assert.Nil(t, err)
 	assert.Equal(t, path+"abc", p.Uri)
 	assert.Equal(t, testServer.URL, p.Base)
@@ -131,7 +131,7 @@ func TestPathInfo(t *testing.T) {
 	assert.Equal(t, path+"abc"+METASuffix, p.MetaUri)
 	assert.Equal(t, "_test/abc"+METASuffix, p.MetaFile)
 
-	p, err = PathInfo(path + ACLSuffix)
+	p, err = handler.pathInfo(path + ACLSuffix)
 	assert.Nil(t, err)
 	assert.Equal(t, path+ACLSuffix, p.Uri)
 	assert.Equal(t, testServer.URL, p.Base)
@@ -142,7 +142,7 @@ func TestPathInfo(t *testing.T) {
 	assert.Equal(t, path+ACLSuffix, p.MetaUri)
 	assert.Equal(t, "_test/"+ACLSuffix, p.MetaFile)
 
-	p, err = PathInfo(path + METASuffix)
+	p, err = handler.pathInfo(path + METASuffix)
 	assert.Nil(t, err)
 	assert.Equal(t, path+METASuffix, p.Uri)
 	assert.Equal(t, testServer.URL, p.Base)

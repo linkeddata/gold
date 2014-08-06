@@ -57,7 +57,7 @@ type ldpath struct {
 	MetaFile string
 }
 
-func PathInfo(path string) (ldpath, error) {
+func (s *Server) pathInfo(path string) (ldpath, error) {
 	var res ldpath
 	if len(path) == 0 {
 		return res, errors.New("missing resource path")
@@ -113,6 +113,28 @@ func PathInfo(path string) (ldpath, error) {
 		res.AclFile = res.Path + ACLSuffix
 		res.MetaUri = res.Uri + METASuffix
 		res.MetaFile = res.Path + METASuffix
+	}
+
+	if s.vhosts {
+		host, _, _ := net.SplitHostPort(p.Host)
+		if len(host) == 0 {
+			host = p.Host
+		}
+
+		res.File = host + "/" + res.File
+		res.AclFile = host + "/" + res.AclFile
+		res.MetaFile = host + "/" + res.MetaFile
+	}
+
+	root := s.root
+	if root == "." {
+		root = ""
+	}
+
+	if len(root) > 0 {
+		res.File = root + "/" + res.File
+		res.AclFile = root + "/" + res.AclFile
+		res.MetaFile = root + "/" + res.MetaFile
 	}
 
 	return res, nil
@@ -187,29 +209,6 @@ func NewServer(root string, vhosts bool) (s *Server) {
 	return
 }
 
-func (s *Server) reqPath(r *httpRequest) (path string) {
-	return s.uriPath(r.BaseURI())
-}
-
-func (s *Server) uriPath(uri string) (path string) {
-	lst := strings.SplitN(uri, "://", 2)
-	if s.vhosts {
-		paths := strings.SplitN(lst[1], "/", 2)
-		host, _, _ := net.SplitHostPort(paths[0])
-		if len(host) == 0 {
-			host = paths[0]
-		}
-		path = strings.Join([]string{host, paths[1]}, "/")
-	} else {
-		path = strings.SplitN(lst[1], "/", 2)[1]
-	}
-	r := strings.Join([]string{s.root, path}, "/")
-	if strings.HasPrefix(r, "./") {
-		r = r[2:]
-	}
-	return r
-}
-
 type response struct {
 	status  int
 	headers http.Header
@@ -278,7 +277,7 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 		w.Header().Set("Access-Control-Allow-Origin", origin)
 	}
 
-	resource, _ := PathInfo(req.BaseURI())
+	resource, _ := h.pathInfo(req.BaseURI())
 
 	// set ACL Link header
 	w.Header().Set("Link", brack(resource.AclUri)+"; rel=acl")
@@ -323,7 +322,7 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 			if path == "./" {
 				path = ""
 			}
-			resource, err = PathInfo(resource.Base + "/" + path)
+			resource, err = h.pathInfo(resource.Base + "/" + path)
 			if err != nil {
 				return r.respond(500, err)
 			}
@@ -379,7 +378,7 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 					_, xerr := os.Stat(resource.File + dirIndex)
 					status = 200
 					if xerr == nil {
-						resource, err = PathInfo(resource.Base + "/" + resource.Path + dirIndex)
+						resource, err = h.pathInfo(resource.Base + "/" + resource.Path + dirIndex)
 						if err != nil {
 							return r.respond(500, err)
 						}
@@ -460,7 +459,7 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 						var s Term
 						for _, info := range infos {
 							if info != nil {
-								f, err := PathInfo(resource.Uri + info.Name())
+								f, err := h.pathInfo(resource.Uri + info.Name())
 								if err != nil {
 									r.respond(500, err)
 								}
@@ -673,7 +672,7 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 				// }
 
 				if link == "http://www.w3.org/ns/ldp#Resource" {
-					resource, err = PathInfo(resource.Base + "/" + resource.Path)
+					resource, err = h.pathInfo(resource.Base + "/" + resource.Path)
 					if err != nil {
 						println("LDPR err:", err)
 						return r.respond(500, err)
@@ -684,7 +683,7 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 					if !strings.HasSuffix(resource.Path, "/") {
 						resource.Path += "/"
 					}
-					resource, err = PathInfo(resource.Base + "/" + resource.Path)
+					resource, err = h.pathInfo(resource.Base + "/" + resource.Path)
 					if err != nil {
 						return r.respond(500, err)
 					}
