@@ -342,15 +342,32 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 
 		unlock := lock(resource.File)
 		defer unlock()
-		g := NewGraph(resource.Uri)
 
 		stat, serr := os.Stat(resource.File)
 		if serr != nil {
 			r.respond(500, serr)
 		}
+
+		if os.IsNotExist(serr) {
+			return r.respond(404, err)
+		} else {
+			etag, err = NewETag(resource.File)
+			if err != nil {
+				return r.respond(500, err)
+			}
+			w.Header().Set("ETag", etag)
+		}
+
+		if !req.ifMatch(etag) {
+			return r.respond(412, "Precondition Failed")
+		}
+		if !req.ifNoneMatch(etag) {
+			return r.respond(412, "Precondition Failed")
+		}
+
+		g := NewGraph(resource.Uri)
+
 		switch {
-		case os.IsNotExist(serr):
-			status = 404
 		case stat.IsDir():
 			// if !strings.HasSuffix(resource.Path, "/") {
 			// 	resource.Path = resource.Path + "/"
@@ -490,28 +507,32 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 			}
 		default:
 			if req.Method == "GET" && strings.Contains(contentType, "text/html") {
-				w.Header().Set(HCType, contentType)
-				return r.respond(200, Skins[Skin])
+				magicType, err = magic.TypeByFile(resource.File)
+				maybeRDF = magicType == "text/plain"
+				if maybeRDF {
+					w.Header().Set(HCType, contentType)
+					return r.respond(200, Skins[Skin])
+				} else {
+					w.Header().Set(HCType, magicType)
+					w.Header().Set("Link", "<"+resource.MetaUri+">; rel=meta, <"+resource.AclUri+">; rel=acl")
+					w.WriteHeader(200)
+
+					f, err := os.Open(resource.File)
+					if err == nil {
+						defer func() {
+							if err := f.Close(); err != nil {
+								log.Println(f.Name, err)
+							}
+						}()
+						io.Copy(w, f)
+					}
+					return
+				}
 			} else {
 				status = 200
 				magicType, err = magic.TypeByFile(resource.File)
 				maybeRDF = magicType == "text/plain"
 			}
-		}
-
-		if status != 404 && len(resource.Path) > 0 {
-			etag, err = NewETag(resource.File)
-			if err != nil {
-				return r.respond(500, err)
-			}
-			w.Header().Set("ETag", etag)
-		}
-
-		if !req.ifMatch(etag) {
-			return r.respond(412, "Precondition Failed")
-		}
-		if !req.ifNoneMatch(etag) {
-			return r.respond(412, "Precondition Failed")
 		}
 
 		if status != 200 {
