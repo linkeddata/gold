@@ -24,10 +24,11 @@ const (
 )
 
 var (
-	Debug     = false
-	DirIndex  = []string{"index.html", "index.htm"}
-	Skin      = "tabulator"
-	Streaming = false // experimental
+	Debug          = false
+	DirIndex       = []string{"index.html", "index.htm"}
+	Skin           = "tabulator"
+	FileManagerUri = "https://linkeddata.github.io/warp/#list/"
+	Streaming      = false // experimental
 
 	methodsAll = []string{
 		"GET", "PUT", "POST", "OPTIONS", "HEAD", "MKCOL", "DELETE", "PATCH",
@@ -46,6 +47,7 @@ func init() {
 }
 
 type ldpath struct {
+	Obj      *url.URL
 	Uri      string
 	Base     string
 	Path     string
@@ -94,6 +96,7 @@ func (s *Server) pathInfo(path string) (ldpath, error) {
 	} else {
 		res.Uri = p.String()
 	}
+	res.Obj = p
 	res.Base = p.Scheme + "://" + p.Host
 	res.Path = p.Path
 	res.File = p.Path
@@ -385,9 +388,11 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 						w.Header().Set("Link", "<"+resource.MetaUri+">; rel=meta, <"+resource.AclUri+">; rel=acl")
 						break
 					} else {
-						//TODO load a skin to browse dir contents
+						//TODO load WARP here
 						w.Header().Set(HCType, contentType)
-						return r.respond(200, Skins[Skin])
+						//return r.respond(200, Skins[Skin])
+						urlStr := FileManagerUri + resource.Obj.Scheme + "/" + resource.Obj.Host + "/" + resource.Obj.Path
+						http.Redirect(w, req.Request, urlStr, 303)
 					}
 				}
 			} else {
