@@ -102,29 +102,40 @@ func WebIDTLSAuth(tls *tls.ConnectionState) (uri string, err error) {
 					println("[WebID-TLS] Trying to match modulus found in cert:")
 					println("[WebID-TLS]", n)
 				}
+				for _ = range g.All(keyT.Object, ns.cert.Get("modulus"), NewLiteral(n)) {
+					goto matchModulus
+				}
 				for _ = range g.All(keyT.Object, ns.cert.Get("modulus"), NewLiteralWithDatatype(n, NewResource("http://www.w3.org/2001/XMLSchema#hexBinary"))) {
-					if Debug {
-						println("[WebID-TLS] Found a matching modulus in the profile.")
-					}
-					for _ = range g.All(keyT.Object, ns.cert.Get("exponent"), NewLiteralWithDatatype(e, NewResource("http://www.w3.org/2001/XMLSchema#int"))) {
-						if Debug {
-							println("[WebID-TLS] Found a matching exponent in the profile.")
-							println("[WebID-TLS] Authenticated claim URI: ", claim)
-						}
-						uri = claim
-						webidL.Lock()
-						pkeyURI[pkeyk] = uri
-						webidL.Unlock()
-						return
-					}
-					if Debug {
-						println("[WebID-TLS] Could not find a matching exponent in the profile.")
-					}
+					goto matchModulus
+				}
+			matchModulus:
+				if Debug {
+					println("[WebID-TLS] Found a matching modulus in the profile.")
+				}
+
+				for _ = range g.All(keyT.Object, ns.cert.Get("exponent"), NewLiteral(e)) {
+					goto matchExponent
+				}
+				for _ = range g.All(keyT.Object, ns.cert.Get("exponent"), NewLiteralWithDatatype(e, NewResource("http://www.w3.org/2001/XMLSchema#int"))) {
+					goto matchExponent
+				}
+			matchExponent:
+				if Debug {
+					println("[WebID-TLS] Found a matching exponent in the profile.")
+					println("[WebID-TLS] Authenticated claim URI: ", claim)
+				}
+				uri = claim
+				webidL.Lock()
+				pkeyURI[pkeyk] = uri
+				webidL.Unlock()
+				return
+				if Debug {
+					println("[WebID-TLS] Could not find a matching exponent in the profile.")
 				}
 				if Debug {
 					println("[WebID-TLS] Could not find a matching modulus in the profile.")
 				}
-			}
+			}a
 			if Debug {
 				println("[WebID-TLS] Could not find a certificate in the profile.")
 			}
