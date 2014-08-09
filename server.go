@@ -134,9 +134,12 @@ func (s *Server) pathInfo(path string) (ldpath, error) {
 	}
 
 	if len(root) > 0 {
-		res.File = root + "/" + res.File
-		res.AclFile = root + "/" + res.AclFile
-		res.MetaFile = root + "/" + res.MetaFile
+		if !strings.HasSuffix(root, "/") {
+			root = root + "/"
+		}
+		res.File = root + res.File
+		res.AclFile = root + res.AclFile
+		res.MetaFile = root + res.MetaFile
 	}
 
 	return res, nil
