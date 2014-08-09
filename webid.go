@@ -135,7 +135,7 @@ func WebIDTLSAuth(tls *tls.ConnectionState) (uri string, err error) {
 				if Debug {
 					println("[WebID-TLS] Could not find a matching modulus in the profile.")
 				}
-			}a
+			}
 			if Debug {
 				println("[WebID-TLS] Could not find a certificate in the profile.")
 			}
