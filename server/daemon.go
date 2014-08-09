@@ -63,6 +63,13 @@ func init() {
 }
 
 func main() {
+	if *debug {
+		println("[Server] ---- Starting server ----")
+		println("[Server] Setting root to", *root)
+		println("[Server] Listening on port", *bind)
+		println("[Server] Using vhosts?", *vhosts)
+	}
+
 	var err error
 	handler := gold.NewServer(*root, *vhosts)
 

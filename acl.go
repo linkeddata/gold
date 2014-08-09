@@ -15,6 +15,9 @@ func NewWAC(req *httpRequest, srv *Server, user string) *WAC {
 	if len(req.Header.Get("On-Behalf-Of")) > 0 {
 		delegator := debrack(req.Header.Get("On-Behalf-Of"))
 		if VerifyDelegator(delegator, user) {
+			if Debug {
+				println("[WAC] Request User ID (delegation):", user)
+			}
 			user = delegator
 		}
 	}
@@ -96,7 +99,7 @@ func VerifyDelegator(delegator string, delegatee string) bool {
 	g := NewGraph(delegator)
 	err := g.LoadURI(delegator)
 	if err != nil {
-		println("Error loading graph for", delegator)
+		println("[WAC] Error loading graph for", delegator)
 	}
 
 	for _, val := range g.All(NewResource(delegator), NewResource("http://www.w3.org/ns/auth/acl#delegatee"), nil) {
