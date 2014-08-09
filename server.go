@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"net"
 	"net/http"
 	"net/url"
@@ -173,6 +172,9 @@ func (req *httpRequest) Auth() string {
 		remoteAddr := net.ParseIP(host)
 		user = "dns:" + remoteAddr.String()
 	}
+	if Debug {
+		println("[Server] Request User:", user)
+	}
 	return user
 }
 
@@ -209,6 +211,10 @@ func NewServer(root string, vhosts bool) (s *Server) {
 	s = new(Server)
 	s.root = root
 	s.vhosts = vhosts
+	if Debug {
+		println("[Server] ---- Server started ----")
+		println("[Server] Waiting for connections...")
+	}
 	return
 }
 
@@ -332,9 +338,9 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 			// TODO: use Depth header (WebDAV)
 		}
 
-		if len(resource.Path) == 0 {
-			resource.Path = h.root
-			resource.File = "."
+		if Debug {
+			println("[Server] Requested Resource URI:", resource.Uri)
+			println("[Server] Requested Resource File:", resource.File)
 		}
 
 		status := 501
@@ -371,9 +377,6 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 
 		switch {
 		case stat.IsDir():
-			// if !strings.HasSuffix(resource.Path, "/") {
-			// 	resource.Path = resource.Path + "/"
-			// }
 			if len(DirIndex) > 0 && contentType == "text/html" {
 				magicType = "text/html"
 				maybeRDF = false
@@ -388,9 +391,8 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 						w.Header().Set("Link", "<"+resource.MetaUri+">; rel=meta, <"+resource.AclUri+">; rel=acl")
 						break
 					} else {
-						//TODO load WARP here
+						//TODO load file manager skin from local preference file
 						w.Header().Set(HCType, contentType)
-						//return r.respond(200, Skins[Skin])
 						urlStr := FileManagerUri + resource.Obj.Scheme + "/" + resource.Obj.Host + "/" + resource.Obj.Path
 						http.Redirect(w, req.Request, urlStr, 303)
 					}
@@ -513,19 +515,18 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 			if req.Method == "GET" && strings.Contains(contentType, "text/html") {
 				magicType, err = magic.TypeByFile(resource.File)
 				maybeRDF = magicType == "text/plain"
+				w.Header().Set("Link", "<"+resource.MetaUri+">; rel=meta, <"+resource.AclUri+">; rel=acl")
 				if maybeRDF {
 					w.Header().Set(HCType, contentType)
 					return r.respond(200, Skins[Skin])
 				} else {
 					w.Header().Set(HCType, magicType)
-					w.Header().Set("Link", "<"+resource.MetaUri+">; rel=meta, <"+resource.AclUri+">; rel=acl")
 					w.WriteHeader(200)
-
 					f, err := os.Open(resource.File)
 					if err == nil {
 						defer func() {
 							if err := f.Close(); err != nil {
-								log.Println(f.Name, err)
+								println("[Server]", f.Name, err)
 							}
 						}()
 						io.Copy(w, f)
@@ -570,7 +571,7 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 				if err == nil {
 					defer func() {
 						if err := f.Close(); err != nil {
-							log.Println(f.Name, err)
+							println("[Server]", f.Name, err)
 						}
 					}()
 					io.Copy(w, f)
@@ -679,7 +680,7 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 				if link == "http://www.w3.org/ns/ldp#Resource" {
 					resource, err = h.pathInfo(resource.Base + "/" + resource.Path)
 					if err != nil {
-						println("LDPR err:", err)
+						println("[Server] LDPR err:", err)
 						return r.respond(500, err)
 					}
 					w.Header().Set("Location", resource.Uri)
@@ -763,7 +764,7 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 			if dataMime == "multipart/form-data" {
 				err := req.ParseMultipartForm(100000)
 				if err != nil {
-					log.Printf("Cannot parse multipart data: %+v\n", err)
+					println("[Server] Cannot parse multipart data: %+v\n", err)
 				} else {
 					m := req.MultipartForm
 					for elt := range m.File {
@@ -796,7 +797,7 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 			} else if dataMime == "application/x-www-form-urlencoded" {
 				err := req.ParseForm()
 				if err != nil {
-					log.Printf("Cannot parse form data: %+v\n", err)
+					println("[Server] Cannot parse form data: %+v\n", err)
 				} else {
 					// parse form and write file
 				}
