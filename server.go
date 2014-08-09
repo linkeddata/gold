@@ -674,12 +674,6 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 				}
 				resource.Path += slug
 
-				// if strings.HasSuffix(resource.Path, "/") {
-				// 	resource.Path += slug
-				// } else {
-				// 	resource.Path = resource.Path + "/" + slug // @@TODO@@
-				// }
-
 				if link == "http://www.w3.org/ns/ldp#Resource" {
 					resource, err = h.pathInfo(resource.Base + "/" + resource.Path)
 					if err != nil {
