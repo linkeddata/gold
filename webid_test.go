@@ -44,8 +44,8 @@ func newRSA(uri string) (*Graph, *rsa.PrivateKey, error) {
 	g := NewGraph(testServer.URL + "/_test/webid")
 	g.AddTriple(userTerm, ns.cert.Get("key"), keyTerm)
 	g.AddTriple(keyTerm, ns.rdf.Get("type"), ns.cert.Get("RSAPublicKey"))
-	g.AddTriple(keyTerm, ns.cert.Get("modulus"), NewLiteral(fmt.Sprintf("%x", priv.N)))
-	g.AddTriple(keyTerm, ns.cert.Get("exponent"), NewLiteral(fmt.Sprintf("%d", priv.E)))
+	g.AddTriple(keyTerm, ns.cert.Get("modulus"), NewLiteralWithDatatype(fmt.Sprintf("%x", priv.N), NewResource("http://www.w3.org/2001/XMLSchema#hexBinary")))
+	g.AddTriple(keyTerm, ns.cert.Get("exponent"), NewLiteralWithDatatype(fmt.Sprintf("%d", priv.E), NewResource("http://www.w3.org/2001/XMLSchema#int")))
 	return g, priv, nil
 }
 
