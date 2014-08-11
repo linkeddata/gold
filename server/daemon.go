@@ -72,16 +72,13 @@ func main() {
 	}
 
 	if *root != "." {
-		if strings.HasPrefix(*root, serverRoot) {
+		if strings.HasPrefix(*root, serverRoot) || strings.HasPrefix(*root, "/") {
 			serverRoot = *root
 		} else {
-			if strings.HasPrefix(*root, "/") {
-				serverRoot = serverRoot + *root
-			} else {
-				serverRoot = serverRoot + "/" + *root
-			}
+			serverRoot = serverRoot + "/" + *root
 		}
-	} else {
+	}
+	if !strings.HasSuffix(serverRoot, "/") {
 		serverRoot += "/"
 	}
 
