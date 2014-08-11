@@ -15,9 +15,7 @@ func NewWAC(req *httpRequest, srv *Server, user string) *WAC {
 	if len(req.Header.Get("On-Behalf-Of")) > 0 {
 		delegator := debrack(req.Header.Get("On-Behalf-Of"))
 		if VerifyDelegator(delegator, user) {
-			if Debug {
-				println("[WAC] Request User ID (delegation):", user)
-			}
+			DebugLog("WAC", "Request User ID (delegation): "+user)
 			user = delegator
 		}
 	}
@@ -33,51 +31,41 @@ func (acl *WAC) allow(mode string, path string) bool {
 	}
 	depth := strings.Split(p.Path, "/")
 
-	if Debug {
-		println("[WAC] Checking", mode, "access to", p.Uri, "for", acl.user)
-	}
+	DebugLog("WAC", "Checking <"+mode+"> access to "+p.Uri+" for WebID: "+acl.user)
 
-	for i := 0; i <= len(depth); i++ {
+	for i := 0; i < len(depth); i++ {
 		p, err := acl.srv.pathInfo(path)
 		if err != nil {
 			return false
 		}
 
-		if Debug {
-			println("[WAC] Looking for policies in", p.AclFile)
-		}
 		aclGraph := NewGraph(p.AclUri)
-		aclGraph.ReadFile(acl.srv.root + "/" + p.AclFile)
+		aclGraph.ReadFile(p.AclFile)
 		if aclGraph.Len() > 0 {
+			DebugLog("WAC", "Looking for policies in "+p.AclFile)
 			for _, i := range aclGraph.All(nil, ns.acl.Get("mode"), ns.acl.Get(mode)) {
+				DebugLog("WAC", "Found policy for <"+mode+">")
+
 				for _ = range aclGraph.All(i.Subject, ns.acl.Get(accessType), NewResource(p.Uri)) {
 					if len(origin) > 0 {
+						DebugLog("WAC", "Origin: "+origin)
 						for _ = range aclGraph.All(i.Subject, ns.acl.Get("origin"), NewResource(origin)) {
 							goto allowOrigin
 						}
 						continue
 					}
 				allowOrigin:
-					if Debug {
-						println("[WAC] Origin:", origin)
-					}
 					for _ = range aclGraph.All(i.Subject, ns.acl.Get("agent"), NewResource(acl.user)) {
-						if Debug {
-							println("[WAC] Access allowed for", acl.user)
-						}
+						DebugLog("WAC", "Access allowed for: "+acl.user)
 						return true
 					}
 					for _ = range aclGraph.All(i.Subject, ns.acl.Get("agentClass"), ns.foaf.Get("Agent")) {
-						if Debug {
-							println("[WAC] Access allowed for FOAF Agents")
-						}
+						DebugLog("WAC", "Access allowed for FOAF Agents")
 						return true
 					}
 				}
 			}
-			if Debug {
-				println("[WAC] Access denied!")
-			}
+			DebugLog("WAC", "Access denied for: "+acl.user)
 			return false
 		}
 
@@ -85,20 +73,27 @@ func (acl *WAC) allow(mode string, path string) bool {
 
 		if i == 0 {
 			if strings.HasSuffix(p.Path, "/") {
-				path = p.Base + "/" + filepath.Dir(filepath.Dir(p.Path)) + "/"
+				if filepath.Dir(filepath.Dir(p.Path)) == "." {
+					path = p.Base
+				} else {
+					path = p.Base + "/" + filepath.Dir(filepath.Dir(p.Path))
+				}
 			} else {
-				path = p.Base + "/" + filepath.Dir(p.Path) + "/"
+				path = p.Base + "/" + filepath.Dir(p.Path)
 			}
 		} else {
 			if len(p.Path) == 0 {
 				break
 			} else if filepath.Dir(filepath.Dir(p.Path)) == "." {
-				path = p.Base + "/"
+				path = p.Base
 			} else {
-				path = p.Base + "/" + filepath.Dir(filepath.Dir(p.Path)) + "/"
+				path = p.Base + "/" + filepath.Dir(filepath.Dir(p.Path))
 			}
 		}
+
+		path += "/"
 	}
+	DebugLog("WAC", "No ACL policies present - access allowed for: "+acl.user)
 	return true
 }
 
@@ -118,7 +113,7 @@ func VerifyDelegator(delegator string, delegatee string) bool {
 	g := NewGraph(delegator)
 	err := g.LoadURI(delegator)
 	if err != nil {
-		println("[WAC] Error loading graph for", delegator)
+		DebugLog("WAC", "Error loading graph for "+delegator)
 	}
 
 	for _, val := range g.All(NewResource(delegator), NewResource("http://www.w3.org/ns/auth/acl#delegatee"), nil) {
