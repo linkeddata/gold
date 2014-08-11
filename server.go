@@ -516,6 +516,7 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 			}
 		default:
 			if req.Method == "GET" && strings.Contains(contentType, "text/html") {
+				w.Header().Del("ETag")
 				magicType, err = magic.TypeByFile(resource.File)
 				maybeRDF = magicType == "text/plain"
 				w.Header().Set("Link", "<"+resource.MetaUri+">; rel=meta, <"+resource.AclUri+">; rel=acl")
