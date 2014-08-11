@@ -58,6 +58,12 @@ type ldpath struct {
 	MetaFile string
 }
 
+func DebugLog(location string, msg string) {
+	if Debug {
+		println("["+location+"]", msg)
+	}
+}
+
 func (s *Server) pathInfo(path string) (ldpath, error) {
 	var res ldpath
 	if len(path) == 0 {
@@ -175,9 +181,7 @@ func (req *httpRequest) Auth() string {
 		remoteAddr := net.ParseIP(host)
 		user = "dns:" + remoteAddr.String()
 	}
-	if Debug {
-		println("[Server] Request User:", user)
-	}
+	DebugLog("Server", "Request User: "+user)
 	return user
 }
 
@@ -214,10 +218,8 @@ func NewServer(root string, vhosts bool) (s *Server) {
 	s = new(Server)
 	s.root = root
 	s.vhosts = vhosts
-	if Debug {
-		println("[Server] ---- Server started ----")
-		println("[Server] Waiting for connections...")
-	}
+	DebugLog("Server", "---- Server started ----")
+	DebugLog("Server", "Waiting for connections...")
 	return
 }
 
@@ -253,6 +255,8 @@ func (h *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 	r = new(response)
 	var err error
+
+	DebugLog("Server", "------ New request from "+req.RemoteAddr+" ------")
 
 	user := req.Auth()
 	w.Header().Set("User", user)
@@ -341,10 +345,8 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 			// TODO: use Depth header (WebDAV)
 		}
 
-		if Debug {
-			println("[Server] Requested Resource URI:", resource.Uri)
-			println("[Server] Requested Resource File:", resource.File)
-		}
+		DebugLog("Server", "Requested Resource URI: "+resource.Uri)
+		DebugLog("Server", "Requested Resource Path: "+resource.File)
 
 		status := 501
 		if !acl.AllowRead(resource.Uri) {
