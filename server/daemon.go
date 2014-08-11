@@ -7,6 +7,8 @@ import (
 	"net"
 	"net/http"
 	"net/http/fcgi"
+	"os"
+	"strings"
 
 	"github.com/linkeddata/gold"
 )
@@ -63,15 +65,34 @@ func init() {
 }
 
 func main() {
+	serverRoot, err := os.Getwd()
+	if err != nil {
+		println("[Server] Error starting server:", err)
+		os.Exit(1)
+	}
+
+	if *root != "." {
+		if strings.HasPrefix(*root, serverRoot) {
+			serverRoot = *root
+		} else {
+			if strings.HasPrefix(*root, "/") {
+				serverRoot = serverRoot + *root
+			} else {
+				serverRoot = serverRoot + "/" + *root
+			}
+		}
+	} else {
+		serverRoot += "/"
+	}
+
 	if *debug {
 		println("[Server] ---- Starting server ----")
-		println("[Server] Setting root to", *root)
+		println("[Server] Setting root to", serverRoot)
 		println("[Server] Listening on port", *bind)
 		println("[Server] Using vhosts?", *vhosts)
 	}
 
-	var err error
-	handler := gold.NewServer(*root, *vhosts)
+	handler := gold.NewServer(serverRoot, *vhosts)
 
 	if len(*insec) > 0 {
 		err = http.ListenAndServe(*insec, handler)

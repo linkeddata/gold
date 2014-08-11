@@ -33,12 +33,19 @@ func (acl *WAC) allow(mode string, path string) bool {
 	}
 	depth := strings.Split(p.Path, "/")
 
+	if Debug {
+		println("[WAC] Checking", mode, "access to", p.Uri, "for", acl.user)
+	}
+
 	for i := 0; i <= len(depth); i++ {
 		p, err := acl.srv.pathInfo(path)
 		if err != nil {
 			return false
 		}
 
+		if Debug {
+			println("[WAC] Looking for policies in", p.AclFile)
+		}
 		aclGraph := NewGraph(p.AclUri)
 		aclGraph.ReadFile(acl.srv.root + "/" + p.AclFile)
 		if aclGraph.Len() > 0 {
@@ -51,13 +58,25 @@ func (acl *WAC) allow(mode string, path string) bool {
 						continue
 					}
 				allowOrigin:
+					if Debug {
+						println("[WAC] Origin:", origin)
+					}
 					for _ = range aclGraph.All(i.Subject, ns.acl.Get("agent"), NewResource(acl.user)) {
+						if Debug {
+							println("[WAC] Access allowed for", acl.user)
+						}
 						return true
 					}
 					for _ = range aclGraph.All(i.Subject, ns.acl.Get("agentClass"), ns.foaf.Get("Agent")) {
+						if Debug {
+							println("[WAC] Access allowed for FOAF Agents")
+						}
 						return true
 					}
 				}
+			}
+			if Debug {
+				println("[WAC] Access denied!")
 			}
 			return false
 		}
