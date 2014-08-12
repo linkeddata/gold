@@ -471,19 +471,30 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 						var s Term
 						for _, info := range infos {
 							if info != nil {
-								f, err := h.pathInfo(resource.Uri + info.Name())
+								res := resource.Uri + info.Name()
+								if info.IsDir() {
+									res += "/"
+								}
+								f, err := h.pathInfo(res)
 								if err != nil {
 									r.respond(500, err)
 								}
 								if info.IsDir() {
-									s = NewResource(f.Uri + "/")
+									s = NewResource(f.Uri)
 									if !showEmpty {
 										g.AddTriple(s, NewResource("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), NewResource("http://www.w3.org/ns/posix/stat#Directory"))
 										g.AddTriple(s, NewResource("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), NewResource("http://www.w3.org/ns/ldp#BasicContainer"))
 									}
+									kb := NewGraph(f.Uri)
+									kb.ReadFile(f.MetaFile)
+									if kb.Len() > 0 {
+										st := kb.One(NewResource(f.Uri), NewResource("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), nil)
+										if st != nil && st.Object != nil {
+											g.AddTriple(s, NewResource("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), st.Object)
+										}
+									}
 								} else {
 									s = NewResource(f.Uri)
-
 									if !showEmpty {
 										g.AddTriple(s, NewResource("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), NewResource("http://www.w3.org/ns/posix/stat#File"))
 										// add type if RDF resource
@@ -707,7 +718,7 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 						mg := NewGraph(resource.Uri)
 						mg.Parse(req.Body, dataMime)
 						for triple := range mg.IterTriples() {
-							subject := NewResource(resource.Uri)
+							subject := NewResource(".")
 							g.AddTriple(subject, triple.Predicate, triple.Object)
 						}
 						f, err := os.OpenFile(resource.MetaFile, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)

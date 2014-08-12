@@ -210,7 +210,7 @@ func TestURIwithWeirdChars(t *testing.T) {
 }
 
 func TestLDPPostLDPC(t *testing.T) {
-	request, err := http.NewRequest("POST", testServer.URL+"/_test/", strings.NewReader("@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n\n<> a <http://example.org/ldpc>."))
+	request, err := http.NewRequest("POST", testServer.URL+"/_test/", strings.NewReader("@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> .\n\n<> a <http://example.org/ldpc>."))
 	request.Header.Add("Content-Type", "text/turtle")
 	request.Header.Add("Slug", "ldpc")
 	request.Header.Add("Link", "<http://www.w3.org/ns/ldp#BasicContainer>; rel=\"type\"")
@@ -225,12 +225,17 @@ func TestLDPPostLDPC(t *testing.T) {
 	metaURI := ParseLinkHeader(response.Header.Get("Link")).MatchRel("meta")
 	assert.Equal(t, newLDPC+METASuffix, metaURI)
 
-	request, err = http.NewRequest("GET", newLDPC, nil)
+	request, err = http.NewRequest("GET", testServer.URL+"/_test/", nil)
 	request.Header.Add("Accept", "text/turtle")
 	response, err = httpClient.Do(request)
-	response.Body.Close()
 	assert.NoError(t, err)
 	assert.Equal(t, 200, response.StatusCode)
+	body, err = ioutil.ReadAll(response.Body)
+	response.Body.Close()
+	g := NewGraph(testServer.URL + "/_test/")
+	g.Parse(strings.NewReader(string(body)), "text/turtle")
+	assert.NotNil(t, g.One(NewResource(testServer.URL+"/_test/"), NewResource("http://www.w3.org/ns/ldp#contains"), NewResource(newLDPC)))
+	assert.NotNil(t, g.One(NewResource(newLDPC), NewResource("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), NewResource("http://example.org/ldpc")))
 
 	request, _ = http.NewRequest("GET", metaURI, nil)
 	request.Header.Add("Accept", "text/turtle")
