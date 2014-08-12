@@ -47,10 +47,14 @@ func (acl *WAC) allow(mode string, path string) bool {
 				DebugLog("WAC", "Found policy for <"+mode+">")
 
 				for _ = range aclGraph.All(i.Subject, ns.acl.Get(accessType), NewResource(p.Uri)) {
-					if len(origin) > 0 {
-						DebugLog("WAC", "Origin: "+origin)
-						for _ = range aclGraph.All(i.Subject, ns.acl.Get("origin"), NewResource(origin)) {
-							goto allowOrigin
+					origins := aclGraph.All(i.Subject, ns.acl.Get("origin"), nil)
+					if len(origin) > 0 && len(origins) > 0 {
+						DebugLog("WAC", "Origin set to: "+brack(origin))
+						for _, o := range origins {
+							if brack(origin) == o.Object.String() {
+								DebugLog("WAC", "Found policy for origin: "+o.Object.String())
+								goto allowOrigin
+							}
 						}
 						continue
 					}
