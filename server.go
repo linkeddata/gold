@@ -58,6 +58,19 @@ type ldpath struct {
 	MetaFile string
 }
 
+func GetServerRoot() string {
+	serverRoot, err := os.Getwd()
+	if err != nil {
+		println("[Server] Error starting server:", err)
+		os.Exit(1)
+	}
+
+	if !strings.HasSuffix(serverRoot, "/") {
+		serverRoot += "/"
+	}
+	return serverRoot
+}
+
 func DebugLog(location string, msg string) {
 	if Debug {
 		println("["+location+"]", msg)
@@ -106,7 +119,7 @@ func (s *Server) pathInfo(path string) (ldpath, error) {
 	res.Path = p.Path
 	res.File = p.Path
 
-	if strings.HasSuffix(p.Path, ",acl") {
+	if strings.HasSuffix(res.Path, ",acl") {
 		res.AclUri = res.Uri
 		res.AclFile = res.Path
 		res.MetaUri = res.Uri
@@ -256,7 +269,7 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 	r = new(response)
 	var err error
 
-	DebugLog("Server", "------ New request from "+req.RemoteAddr+" ------")
+	DebugLog("Server", "------ New "+req.Method+" request from "+req.RemoteAddr+" ------")
 
 	user := req.Auth()
 	w.Header().Set("User", user)
@@ -268,6 +281,8 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 	if len(dataMime) > 0 && dataMime != "multipart/form-data" && !dataHasParser && req.Method != "PUT" {
 		return r.respond(415, "Unsupported Media Type:", dataMime)
 	}
+
+	DebugLog("Server", "Content-Type: "+dataMime)
 
 	// Content Negotiation
 	contentType := "text/turtle"
@@ -294,6 +309,8 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 	}
 
 	resource, _ := h.pathInfo(req.BaseURI())
+	DebugLog("Server", "Resource URI: "+resource.Uri)
+	DebugLog("Server", "Resource Path: "+resource.File)
 
 	// set ACL Link header
 	w.Header().Set("Link", brack(resource.AclUri)+"; rel=acl")
@@ -344,9 +361,6 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 			}
 			// TODO: use Depth header (WebDAV)
 		}
-
-		DebugLog("Server", "Requested Resource URI: "+resource.Uri)
-		DebugLog("Server", "Requested Resource Path: "+resource.File)
 
 		status := 501
 		if !acl.AllowRead(resource.Uri) {
@@ -667,6 +681,7 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 
 				uuid, err := newUUID()
 				if err != nil {
+					DebugLog("Server", "LDPR UUID err: "+err.Error())
 					return r.respond(500, err)
 				}
 				uuid = uuid[:6]
@@ -691,7 +706,7 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 				if link == "http://www.w3.org/ns/ldp#Resource" {
 					resource, err = h.pathInfo(resource.Base + "/" + resource.Path)
 					if err != nil {
-						println("[Server] LDPR err:", err)
+						DebugLog("Server", "LDPR h.pathInfo err: "+err.Error())
 						return r.respond(500, err)
 					}
 					w.Header().Set("Location", resource.Uri)
@@ -702,6 +717,7 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 					}
 					resource, err = h.pathInfo(resource.Base + "/" + resource.Path)
 					if err != nil {
+						DebugLog("Server", "LDPC h.pathInfo err: "+err.Error())
 						return r.respond(500, err)
 					}
 
@@ -710,6 +726,7 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 
 					err = os.MkdirAll(resource.File, 0755)
 					if err != nil {
+						DebugLog("Server", "LDPC os.MkdirAll err: "+err.Error())
 						return r.respond(500, err)
 					}
 
@@ -723,11 +740,13 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 						}
 						f, err := os.OpenFile(resource.MetaFile, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
 						if err != nil {
+							DebugLog("Server", "LDPC os.OpenFile err: "+err.Error())
 							return r.respond(500, err)
 						}
 						defer f.Close()
 
 						if err = g.WriteFile(f, ""); err != nil {
+							DebugLog("Server", "LDPC g.WriteFile err: "+err.Error())
 							return r.respond(500, err)
 						}
 					}
@@ -756,11 +775,17 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 
 		err := os.MkdirAll(_path.Dir(resource.File), 0755)
 		if err != nil {
+			DebugLog("Server", "LDPR MkdirAll err: "+err.Error())
 			return r.respond(500, err)
 		}
 
 		f := new(os.File)
 		if dataMime != "multipart/form-data" {
+			stat, serr := os.Stat(resource.File)
+			if os.IsExist(serr) && stat.IsDir() {
+				resource.File = resource.File + "/" + METASuffix
+			}
+
 			f, err = os.OpenFile(resource.File, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
 			if err != nil {
 				return r.respond(500, err)
@@ -775,7 +800,7 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 			if dataMime == "multipart/form-data" {
 				err := req.ParseMultipartForm(100000)
 				if err != nil {
-					println("[Server] Cannot parse multipart data: %+v\n", err)
+					DebugLog("Server", "Cannot parse multipart data: "+err.Error())
 				} else {
 					m := req.MultipartForm
 					for elt := range m.File {
@@ -784,6 +809,7 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 							file, err := files[i].Open()
 							defer file.Close()
 							if err != nil {
+								DebugLog("Server", "multipart/form f.Open err: "+err.Error())
 								return r.respond(500, err)
 							}
 							newFile := ""
@@ -795,9 +821,11 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 							dst, err := os.Create(newFile)
 							defer dst.Close()
 							if err != nil {
+								DebugLog("Server", "multipart/form os.Create err: "+err.Error())
 								return r.respond(500, err)
 							}
 							if _, err := io.Copy(dst, file); err != nil {
+								DebugLog("Server", "multipart/form io.Copy err: "+err.Error())
 								return r.respond(500, err)
 							}
 						}
@@ -808,7 +836,7 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 			} else if dataMime == "application/x-www-form-urlencoded" {
 				err := req.ParseForm()
 				if err != nil {
-					println("[Server] Cannot parse form data: %+v\n", err)
+					println("Server", "Cannot parse form data: "+err.Error())
 				} else {
 					// parse form and write file
 				}
@@ -818,6 +846,7 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 		}
 
 		if err != nil {
+			DebugLog("Server", "Final/catchall err: "+err.Error())
 			return r.respond(500)
 		} else if req.Method == "PUT" || gotLDP {
 			w.Header().Set("Location", resource.Uri)
@@ -873,7 +902,6 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 
 	default:
 		return r.respond(405, "Method Not Allowed:", req.Method)
-
 	}
 	return
 }

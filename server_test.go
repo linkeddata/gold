@@ -16,7 +16,7 @@ import (
 )
 
 var (
-	handler = NewServer(".", false)
+	handler = NewServer(GetServerRoot(), false)
 
 	testDelete = true
 )
@@ -94,6 +94,7 @@ func TestHTMLIndex(t *testing.T) {
 
 func TestPathInfo(t *testing.T) {
 	path := testServer.URL + "/_test/"
+	sroot := GetServerRoot()
 
 	p, err := handler.pathInfo("")
 	assert.NotNil(t, err)
@@ -103,55 +104,55 @@ func TestPathInfo(t *testing.T) {
 	assert.Equal(t, testServer.URL+"/", p.Uri)
 	assert.Equal(t, testServer.URL, p.Base)
 	assert.Equal(t, "", p.Path)
-	assert.Equal(t, "", p.File)
+	assert.Equal(t, sroot, p.File)
 	assert.Equal(t, testServer.URL+"/"+ACLSuffix, p.AclUri)
-	assert.Equal(t, ACLSuffix, p.AclFile)
+	assert.Equal(t, sroot+ACLSuffix, p.AclFile)
 	assert.Equal(t, testServer.URL+"/"+METASuffix, p.MetaUri)
-	assert.Equal(t, METASuffix, p.MetaFile)
+	assert.Equal(t, sroot+METASuffix, p.MetaFile)
 
 	p, err = handler.pathInfo(path)
 	assert.Nil(t, err)
 	assert.Equal(t, path, p.Uri)
 	assert.Equal(t, testServer.URL, p.Base)
 	assert.Equal(t, "_test/", p.Path)
-	assert.Equal(t, "_test/", p.File)
+	assert.Equal(t, sroot+"_test/", p.File)
 	assert.Equal(t, path+ACLSuffix, p.AclUri)
-	assert.Equal(t, "_test/"+ACLSuffix, p.AclFile)
+	assert.Equal(t, sroot+"_test/"+ACLSuffix, p.AclFile)
 	assert.Equal(t, path+METASuffix, p.MetaUri)
-	assert.Equal(t, "_test/"+METASuffix, p.MetaFile)
+	assert.Equal(t, sroot+"_test/"+METASuffix, p.MetaFile)
 
 	p, err = handler.pathInfo(path + "abc")
 	assert.Nil(t, err)
 	assert.Equal(t, path+"abc", p.Uri)
 	assert.Equal(t, testServer.URL, p.Base)
 	assert.Equal(t, "_test/abc", p.Path)
-	assert.Equal(t, "_test/abc", p.File)
+	assert.Equal(t, sroot+"_test/abc", p.File)
 	assert.Equal(t, path+"abc"+ACLSuffix, p.AclUri)
-	assert.Equal(t, "_test/abc"+ACLSuffix, p.AclFile)
+	assert.Equal(t, sroot+"_test/abc"+ACLSuffix, p.AclFile)
 	assert.Equal(t, path+"abc"+METASuffix, p.MetaUri)
-	assert.Equal(t, "_test/abc"+METASuffix, p.MetaFile)
+	assert.Equal(t, sroot+"_test/abc"+METASuffix, p.MetaFile)
 
 	p, err = handler.pathInfo(path + ACLSuffix)
 	assert.Nil(t, err)
 	assert.Equal(t, path+ACLSuffix, p.Uri)
 	assert.Equal(t, testServer.URL, p.Base)
 	assert.Equal(t, "_test/"+ACLSuffix, p.Path)
-	assert.Equal(t, "_test/"+ACLSuffix, p.File)
+	assert.Equal(t, sroot+"_test/"+ACLSuffix, p.File)
 	assert.Equal(t, path+ACLSuffix, p.AclUri)
-	assert.Equal(t, "_test/"+ACLSuffix, p.AclFile)
+	assert.Equal(t, sroot+"_test/"+ACLSuffix, p.AclFile)
 	assert.Equal(t, path+ACLSuffix, p.MetaUri)
-	assert.Equal(t, "_test/"+ACLSuffix, p.MetaFile)
+	assert.Equal(t, sroot+"_test/"+ACLSuffix, p.MetaFile)
 
 	p, err = handler.pathInfo(path + METASuffix)
 	assert.Nil(t, err)
 	assert.Equal(t, path+METASuffix, p.Uri)
 	assert.Equal(t, testServer.URL, p.Base)
 	assert.Equal(t, "_test/"+METASuffix, p.Path)
-	assert.Equal(t, "_test/"+METASuffix, p.File)
+	assert.Equal(t, sroot+"_test/"+METASuffix, p.File)
 	assert.Equal(t, path+METASuffix+ACLSuffix, p.AclUri)
-	assert.Equal(t, "_test/"+METASuffix+ACLSuffix, p.AclFile)
+	assert.Equal(t, sroot+"_test/"+METASuffix+ACLSuffix, p.AclFile)
 	assert.Equal(t, path+METASuffix, p.MetaUri)
-	assert.Equal(t, "_test/"+METASuffix, p.MetaFile)
+	assert.Equal(t, sroot+"_test/"+METASuffix, p.MetaFile)
 }
 
 func TestOPTIONS(t *testing.T) {
