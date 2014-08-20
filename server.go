@@ -187,6 +187,16 @@ func (req httpRequest) BaseURI() string {
 	return scheme + "://" + host + port + req.URL.Path
 }
 
+func Dequote(etag string) string {
+	if strings.HasPrefix(etag, "\"") {
+		etag = strings.TrimLeft(etag, "\"")
+	}
+	if strings.HasSuffix(etag, "\"") {
+		etag = strings.TrimRight(etag, "\"")
+	}
+	return etag
+}
+
 func (req *httpRequest) Auth() string {
 	user, _ := WebIDTLSAuth(req.TLS)
 	if len(user) == 0 {
@@ -202,7 +212,7 @@ func (req httpRequest) ifMatch(etag string) bool {
 	if len(etag) == 0 {
 		return true
 	}
-	v := req.Header.Get("If-Match")
+	v := Dequote(req.Header.Get("If-Match"))
 	if len(v) == 0 {
 		return true
 	}
@@ -213,7 +223,7 @@ func (req httpRequest) ifNoneMatch(etag string) bool {
 	if len(etag) == 0 {
 		return true
 	}
-	v := req.Header.Get("If-None-Match")
+	v := Dequote(req.Header.Get("If-None-Match"))
 	if len(v) == 0 {
 		return true
 	}
@@ -382,7 +392,7 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 			if err != nil {
 				return r.respond(500, err)
 			}
-			w.Header().Set("ETag", etag)
+			w.Header().Set("ETag", "\""+etag+"\"")
 		}
 
 		if !req.ifMatch(etag) {
@@ -750,6 +760,7 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 							return r.respond(500, err)
 						}
 					}
+					w.Header().Set("Location", resource.Uri)
 					return r.respond(201)
 				}
 				gotLDP = true
