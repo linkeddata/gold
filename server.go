@@ -323,7 +323,8 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 	DebugLog("Server", "Resource Path: "+resource.File)
 
 	// set ACL Link header
-	w.Header().Set("Link", brack(resource.AclUri)+"; rel=acl")
+	w.Header().Set("Link", brack(resource.AclUri)+"; rel=\"acl\"")
+	w.Header().Add("Link", brack("http://www.w3.org/ns/ldp#Resource")+"; rel=\"type\"")
 
 	switch req.Method {
 	case "OPTIONS":
@@ -345,6 +346,13 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 			w.Header().Set("Access-Control-Allow-Origin", "*")
 		}
 		w.Header().Set("Allow", strings.Join(methodsAll, ", "))
+
+		// set LDP Link headers
+		stat, err := os.Stat(resource.File)
+		if err == nil && stat.IsDir() {
+			w.Header().Add("Link", brack("http://www.w3.org/ns/ldp#BasicContainer")+"; rel=\"type\"")
+		}
+
 		return r.respond(200)
 
 	case "GET", "HEAD":
@@ -372,6 +380,14 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 			// TODO: use Depth header (WebDAV)
 		}
 
+		// set LDP Link headers
+		stat, err := os.Stat(resource.File)
+		if err != nil {
+			r.respond(500, err.Error())
+		} else if stat.IsDir() {
+			w.Header().Add("Link", brack("http://www.w3.org/ns/ldp#BasicContainer")+"; rel=\"type\"")
+		}
+
 		status := 501
 		if !acl.AllowRead(resource.Uri) {
 			return r.respond(403)
@@ -380,12 +396,7 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 		unlock := lock(resource.File)
 		defer unlock()
 
-		stat, serr := os.Stat(resource.File)
-		if serr != nil {
-			r.respond(500, serr)
-		}
-
-		if os.IsNotExist(serr) {
+		if os.IsNotExist(err) {
 			return r.respond(404, err)
 		} else {
 			etag, err = NewETag(resource.File)
@@ -417,7 +428,7 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 						if err != nil {
 							return r.respond(500, err)
 						}
-						w.Header().Set("Link", "<"+resource.MetaUri+">; rel=meta, <"+resource.AclUri+">; rel=acl")
+						w.Header().Set("Link", "<"+resource.MetaUri+">; rel=\"meta\", <"+resource.AclUri+">; rel=\"acl\"")
 						break
 					} else {
 						//TODO load file manager skin from local preference file
@@ -428,6 +439,8 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 				}
 			} else {
 				magicType = "text/turtle"
+
+				w.Header().Add("Link", "<"+resource.MetaUri+">; rel=\"meta\"")
 
 				root := NewResource(resource.Uri)
 				g.AddTriple(root, NewResource("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), NewResource("http://www.w3.org/ns/posix/stat#Directory"))
@@ -661,6 +674,7 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 			fmt.Fprint(w, data)
 		}
 		return
+
 	case "PATCH":
 		unlock := lock(resource.File)
 		defer unlock()
@@ -712,6 +726,7 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 				return r.respond(500, err)
 			}
 		}
+
 	case "POST":
 		unlock := lock(resource.File)
 		defer unlock()
@@ -771,7 +786,9 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 				}
 
 				w.Header().Set("Location", resource.Uri)
-				w.Header().Set("Link", "<"+resource.MetaUri+">; rel=meta, <"+resource.AclUri+">; rel=acl")
+				w.Header().Set("Link", "<"+resource.MetaUri+">; rel=\"meta\", <"+resource.AclUri+">; rel=\"acl\"")
+				w.Header().Add("Link", brack("http://www.w3.org/ns/ldp#Resource")+"; rel=\"type\"")
+				w.Header().Add("Link", brack("http://www.w3.org/ns/ldp#BasicContainer")+"; rel=\"type\"")
 
 				err = os.MkdirAll(resource.File, 0755)
 				if err != nil {
@@ -809,7 +826,8 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 					return r.respond(500, err)
 				}
 				w.Header().Set("Location", resource.Uri)
-				w.Header().Set("Link", "<"+resource.Uri+">; rel=meta")
+				w.Header().Set("Link", "<"+resource.MetaUri+">; rel=\"meta\", <"+resource.AclUri+">; rel=\"acl\"")
+				w.Header().Add("Link", brack("http://www.w3.org/ns/ldp#Resource")+"; rel=\"type\"")
 			}
 			isNew = true
 		}
@@ -910,6 +928,7 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 				return r.respond(200)
 			}
 		}
+
 	case "PUT":
 		unlock := lock(resource.File)
 		defer unlock()

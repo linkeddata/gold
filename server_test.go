@@ -211,6 +211,7 @@ func TestURIwithWeirdChars(t *testing.T) {
 
 func TestLDPPostLDPC(t *testing.T) {
 	request, err := http.NewRequest("POST", testServer.URL+"/_test/", strings.NewReader("@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> .\n\n<> a <http://example.org/ldpc>."))
+	assert.NoError(t, err)
 	request.Header.Add("Content-Type", "text/turtle")
 	request.Header.Add("Slug", "ldpc")
 	request.Header.Add("Link", "<http://www.w3.org/ns/ldp#BasicContainer>; rel=\"type\"")
@@ -226,31 +227,38 @@ func TestLDPPostLDPC(t *testing.T) {
 	assert.Equal(t, newLDPC+METASuffix, metaURI)
 
 	request, err = http.NewRequest("GET", testServer.URL+"/_test/", nil)
+	assert.NoError(t, err)
 	request.Header.Add("Accept", "text/turtle")
 	response, err = httpClient.Do(request)
 	assert.NoError(t, err)
 	assert.Equal(t, 200, response.StatusCode)
 	body, err = ioutil.ReadAll(response.Body)
+	assert.NoError(t, err)
 	response.Body.Close()
 	g := NewGraph(testServer.URL + "/_test/")
 	g.Parse(strings.NewReader(string(body)), "text/turtle")
 	assert.NotNil(t, g.One(NewResource(testServer.URL+"/_test/"), NewResource("http://www.w3.org/ns/ldp#contains"), NewResource(newLDPC)))
 	assert.NotNil(t, g.One(NewResource(newLDPC), NewResource("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), NewResource("http://example.org/ldpc")))
 
-	request, _ = http.NewRequest("GET", metaURI, nil)
+	request, err = http.NewRequest("GET", metaURI, nil)
+	assert.NoError(t, err)
 	request.Header.Add("Accept", "text/turtle")
 	response, err = httpClient.Do(request)
 	response.Body.Close()
 	assert.Equal(t, response.Header.Get("Triples"), "1")
 
 	request, err = http.NewRequest("DELETE", metaURI, nil)
+	assert.NoError(t, err)
 	response, err = httpClient.Do(request)
+	assert.NoError(t, err)
 	response.Body.Close()
 	assert.NoError(t, err)
 	assert.Equal(t, 200, response.StatusCode)
 
-	request, _ = http.NewRequest("DELETE", newLDPC, nil)
+	request, err = http.NewRequest("DELETE", newLDPC, nil)
+	assert.NoError(t, err)
 	response, err = httpClient.Do(request)
+	assert.NoError(t, err)
 	response.Body.Close()
 	assert.NoError(t, err)
 	assert.Equal(t, 200, response.StatusCode)
@@ -258,6 +266,7 @@ func TestLDPPostLDPC(t *testing.T) {
 
 func TestLDPPostLDPRWithSlug(t *testing.T) {
 	request, err := http.NewRequest("POST", testServer.URL+"/_test/", strings.NewReader("@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n\n<> a <http://example.org/two>."))
+	assert.NoError(t, err)
 	request.Header.Add("Content-Type", "text/turtle")
 	request.Header.Add("Slug", "ldpr")
 	request.Header.Add("Link", "<http://www.w3.org/ns/ldp#Resource>; rel=\"type\"")
@@ -280,6 +289,7 @@ func TestLDPPostLDPRWithSlug(t *testing.T) {
 	assert.Equal(t, string(body), "@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n\n<>\n    a <http://example.org/two> .\n\n")
 
 	request, err = http.NewRequest("DELETE", newLDPR, nil)
+	assert.NoError(t, err)
 	response, err = httpClient.Do(request)
 	response.Body.Close()
 	assert.NoError(t, err)
@@ -391,6 +401,78 @@ func TestLDPPreferEmptyHeader(t *testing.T) {
 	response.Body.Close()
 	g.Parse(strings.NewReader(string(body)), "text/turtle")
 	assert.Nil(t, g.One(NewResource("/_test/abc"), nil, nil))
+}
+
+func TestLDPLinkHeaders(t *testing.T) {
+	request, err := http.NewRequest("HEAD", testServer.URL+"/_test/", nil)
+	assert.NoError(t, err)
+	response, err := httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.True(t, ParseLinkHeader(strings.Join(response.Header["Link"], ", ")).MatchUri("http://www.w3.org/ns/ldp#Resource"))
+	assert.True(t, ParseLinkHeader(strings.Join(response.Header["Link"], ", ")).MatchUri("http://www.w3.org/ns/ldp#BasicContainer"))
+
+	request, err = http.NewRequest("HEAD", testServer.URL+"/_test/abc", nil)
+	assert.NoError(t, err)
+	response, err = httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.True(t, ParseLinkHeader(strings.Join(response.Header["Link"], ", ")).MatchUri("http://www.w3.org/ns/ldp#Resource"))
+	assert.False(t, ParseLinkHeader(strings.Join(response.Header["Link"], ", ")).MatchUri("http://www.w3.org/ns/ldp#BasicContainer"))
+
+	request, err = http.NewRequest("OPTIONS", testServer.URL+"/_test/", nil)
+	assert.NoError(t, err)
+	response, err = httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.True(t, ParseLinkHeader(strings.Join(response.Header["Link"], ", ")).MatchUri("http://www.w3.org/ns/ldp#Resource"))
+	assert.True(t, ParseLinkHeader(strings.Join(response.Header["Link"], ", ")).MatchUri("http://www.w3.org/ns/ldp#BasicContainer"))
+
+	request, err = http.NewRequest("OPTIONS", testServer.URL+"/_test/abc", nil)
+	assert.NoError(t, err)
+	response, err = httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.True(t, ParseLinkHeader(strings.Join(response.Header["Link"], ", ")).MatchUri("http://www.w3.org/ns/ldp#Resource"))
+	assert.False(t, ParseLinkHeader(strings.Join(response.Header["Link"], ", ")).MatchUri("http://www.w3.org/ns/ldp#BasicContainer"))
+
+	request, err = http.NewRequest("GET", testServer.URL+"/_test/", nil)
+	assert.NoError(t, err)
+	response, err = httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.True(t, ParseLinkHeader(strings.Join(response.Header["Link"], ", ")).MatchUri("http://www.w3.org/ns/ldp#Resource"))
+	assert.True(t, ParseLinkHeader(strings.Join(response.Header["Link"], ", ")).MatchUri("http://www.w3.org/ns/ldp#BasicContainer"))
+
+	request, err = http.NewRequest("GET", testServer.URL+"/_test/abc", nil)
+	assert.NoError(t, err)
+	response, err = httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.True(t, ParseLinkHeader(strings.Join(response.Header["Link"], ", ")).MatchUri("http://www.w3.org/ns/ldp#Resource"))
+	assert.False(t, ParseLinkHeader(strings.Join(response.Header["Link"], ", ")).MatchUri("http://www.w3.org/ns/ldp#BasicContainer"))
+
+	request, err = http.NewRequest("PUT", testServer.URL+"/_test/abc", nil)
+	assert.NoError(t, err)
+	response, err = httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.True(t, ParseLinkHeader(strings.Join(response.Header["Link"], ", ")).MatchUri("http://www.w3.org/ns/ldp#Resource"))
+	assert.False(t, ParseLinkHeader(strings.Join(response.Header["Link"], ", ")).MatchUri("http://www.w3.org/ns/ldp#BasicContainer"))
+
+	request, err = http.NewRequest("POST", testServer.URL+"/_test/abc", nil)
+	assert.NoError(t, err)
+	response, err = httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.True(t, ParseLinkHeader(strings.Join(response.Header["Link"], ", ")).MatchUri("http://www.w3.org/ns/ldp#Resource"))
+	assert.False(t, ParseLinkHeader(strings.Join(response.Header["Link"], ", ")).MatchUri("http://www.w3.org/ns/ldp#BasicContainer"))
+
+	request, err = http.NewRequest("POST", testServer.URL+"/_test/", nil)
+	assert.NoError(t, err)
+	response, err = httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.True(t, ParseLinkHeader(strings.Join(response.Header["Link"], ", ")).MatchUri("http://www.w3.org/ns/ldp#Resource"))
+	assert.False(t, ParseLinkHeader(strings.Join(response.Header["Link"], ", ")).MatchUri("http://www.w3.org/ns/ldp#BasicContainer"))
+	newLDPR := response.Header.Get("Location")
+
+	request, err = http.NewRequest("DELETE", newLDPR, nil)
+	response, err = httpClient.Do(request)
+	response.Body.Close()
+	assert.NoError(t, err)
+	assert.Equal(t, 200, response.StatusCode)
 }
 
 func TestStreaming(t *testing.T) {
