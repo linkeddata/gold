@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"mime/multipart"
 	"net/http"
 	"os"
@@ -28,14 +29,12 @@ func TestMKCOL(t *testing.T) {
 		assert.Equal(t, 201, response.StatusCode)
 
 		response = r.Post("/_test/abc", "text/turtle", "<a> <b> <c>.")
-		assert.Equal(t, 200, response.StatusCode)
+		log.Printf("%+v\n", response.Body)
+		assert.Equal(t, 201, response.StatusCode)
 
 		request, _ = http.NewRequest("MKCOL", "/_test/abc", nil)
 		response = r.Do(request)
 		assert.Equal(t, 409, response.StatusCode)
-
-		response = r.Post("/_test", "text/turtle", "<a> <b> <c>.")
-		assert.Equal(t, 500, response.StatusCode)
 
 		request, _ = http.NewRequest("GET", "/_test", nil)
 		response = r.Do(request)
@@ -186,9 +185,9 @@ func TestURIwithSpaces(t *testing.T) {
 	request.Header.Add("Content-Type", "text/turtle")
 	response, err := httpClient.Do(request)
 	assert.NoError(t, err)
-	assert.Equal(t, response.Header.Get("Location"), testServer.URL+"/_test/file%20name")
+	assert.Equal(t, 201, response.StatusCode)
 
-	request, err = http.NewRequest("DELETE", response.Header.Get("Location"), nil)
+	request, err = http.NewRequest("DELETE", testServer.URL+"/_test/file name", nil)
 	assert.NoError(t, err)
 	response, err = httpClient.Do(request)
 	assert.NoError(t, err)
@@ -201,9 +200,9 @@ func TestURIwithWeirdChars(t *testing.T) {
 	request.Header.Add("Content-Type", "text/turtle")
 	response, err := httpClient.Do(request)
 	assert.NoError(t, err)
-	assert.Equal(t, response.Header.Get("Location"), testServer.URL+"/_test/file%20name%20+%20#frag")
+	assert.Equal(t, 201, response.StatusCode)
 
-	request, err = http.NewRequest("DELETE", response.Header.Get("Location"), nil)
+	request, err = http.NewRequest("DELETE", testServer.URL+"/_test/file name + %23frag", nil)
 	assert.NoError(t, err)
 	response, err = httpClient.Do(request)
 	assert.NoError(t, err)
@@ -309,72 +308,6 @@ func TestLDPPostLDPRNoSlug(t *testing.T) {
 	assert.Equal(t, "@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n\n<>\n    a <http://example.org/two> .\n\n", string(body))
 
 	request, err = http.NewRequest("DELETE", newLDPR, nil)
-	response, err = httpClient.Do(request)
-	response.Body.Close()
-	assert.NoError(t, err)
-	assert.Equal(t, 200, response.StatusCode)
-}
-
-func TestLDPPutLDPRWithSlug(t *testing.T) {
-	request, err := http.NewRequest("PUT", testServer.URL+"/_test/", strings.NewReader("@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n\n<> a <http://example.org/two>."))
-	request.Header.Add("Content-Type", "text/turtle")
-	request.Header.Add("Slug", "ldpr")
-	request.Header.Add("Link", "<http://www.w3.org/ns/ldp#Resource>; rel=\"type\"")
-	response, err := httpClient.Do(request)
-	response.Body.Close()
-	assert.NoError(t, err)
-	assert.Equal(t, 201, response.StatusCode)
-	newLDPR := response.Header.Get("Location")
-	assert.Equal(t, testServer.URL+"/_test/ldpr", newLDPR)
-
-	request, err = http.NewRequest("GET", newLDPR, nil)
-	assert.NoError(t, err)
-	request.Header.Add("Accept", "text/turtle")
-	response, err = httpClient.Do(request)
-	assert.NoError(t, err)
-	assert.Equal(t, 200, response.StatusCode)
-	assert.Equal(t, response.Header.Get("Triples"), "1")
-	body, err := ioutil.ReadAll(response.Body)
-	assert.NoError(t, err)
-	response.Body.Close()
-	assert.Equal(t, string(body), "@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n\n<>\n    a <http://example.org/two> .\n\n")
-
-	request, err = http.NewRequest("DELETE", newLDPR, nil)
-	response, err = httpClient.Do(request)
-	response.Body.Close()
-	assert.NoError(t, err)
-	assert.Equal(t, 200, response.StatusCode)
-}
-
-func TestLDPPutLDPCWithSlug(t *testing.T) {
-	request, err := http.NewRequest("PUT", testServer.URL+"/_test/ldpc", strings.NewReader("@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n\n<> a <http://example.org/two>."))
-	request.Header.Add("Content-Type", "text/turtle")
-	request.Header.Add("Link", "<http://www.w3.org/ns/ldp#BasicContainer>; rel=\"type\"")
-	response, err := httpClient.Do(request)
-	response.Body.Close()
-	assert.NoError(t, err)
-	assert.Equal(t, 201, response.StatusCode)
-	newLDPC := response.Header.Get("Location")
-	assert.NotEmpty(t, newLDPC)
-	metaURI := ParseLinkHeader(response.Header.Get("Link")).MatchRel("meta")
-	assert.Equal(t, newLDPC+",meta", metaURI)
-
-	request, err = http.NewRequest("GET", newLDPC, nil)
-	request.Header.Add("Accept", "text/turtle")
-	response, err = httpClient.Do(request)
-	assert.NoError(t, err)
-	assert.Equal(t, 200, response.StatusCode)
-	assert.Equal(t, 4, len(filepath.Base(newLDPC)))
-	assert.Equal(t, "9", response.Header.Get("Triples"))
-	response.Body.Close()
-
-	request, err = http.NewRequest("DELETE", metaURI, nil)
-	response, err = httpClient.Do(request)
-	response.Body.Close()
-	assert.NoError(t, err)
-	assert.Equal(t, 200, response.StatusCode)
-
-	request, err = http.NewRequest("DELETE", newLDPC, nil)
 	response, err = httpClient.Do(request)
 	response.Body.Close()
 	assert.NoError(t, err)
@@ -502,14 +435,14 @@ func TestPOSTSPARQL(t *testing.T) {
 		response := r.Do(request)
 		assert.Empty(t, response.Body)
 		assert.Equal(t, 200, response.StatusCode)
-		assert.Equal(t, response.RawResponse.Header.Get("Triples"), "2")
+		assert.Equal(t, "2", response.RawResponse.Header.Get("Triples"))
 
 		request, _ = http.NewRequest("POST", "/_test/abc", strings.NewReader("DELETE DATA { <a> <b> <c> . }"))
 		request.Header.Add("Content-Type", "application/sparql-update")
 		response = r.Do(request)
 		assert.Empty(t, response.Body)
 		assert.Equal(t, 200, response.StatusCode)
-		assert.Equal(t, response.RawResponse.Header.Get("Triples"), "1")
+		assert.Equal(t, "1", response.RawResponse.Header.Get("Triples"))
 	})
 }
 
@@ -518,18 +451,18 @@ func TestPOSTTurtle(t *testing.T) {
 		response := r.Post("/_test/abc", "text/turtle", "<a> <b> <c1> .")
 		assert.Empty(t, response.Body)
 		assert.Equal(t, 200, response.StatusCode)
-		assert.Equal(t, response.RawResponse.Header.Get("Triples"), "2")
+		assert.Equal(t, "2", response.RawResponse.Header.Get("Triples"))
 
 		response = r.Post("/_test/abc", "text/turtle", "<a> <b> <c2> .")
 		assert.Empty(t, response.Body)
 		assert.Equal(t, 200, response.StatusCode)
-		assert.Equal(t, response.RawResponse.Header.Get("Triples"), "3")
+		assert.Equal(t, "3", response.RawResponse.Header.Get("Triples"))
 
 		request, _ := http.NewRequest("GET", "/_test/abc", nil)
 		request.Header.Add("Accept", "text/turtle")
 		response = r.Do(request)
 		assert.Equal(t, 200, response.StatusCode)
-		assert.Equal(t, response.RawResponse.Header.Get("Triples"), "3")
+		assert.Equal(t, "3", response.RawResponse.Header.Get("Triples"))
 		assert.Equal(t, response.Body, "@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n\n<a>\n    <b> <c0>, <c1>, <c2> .\n\n")
 	})
 }
@@ -581,6 +514,18 @@ func TestIfMatch(t *testing.T) {
 		response = r.Do(request)
 		assert.Equal(t, 412, response.StatusCode)
 
+		request, _ = http.NewRequest("PATCH", "/_test/abc", strings.NewReader("<d> <e> <f> ."))
+		request.Header.Add("Content-Type", "text/turtle")
+		request.Header.Add("If-Match", "\""+ETag+"1\"")
+		response = r.Do(request)
+		assert.Equal(t, 412, response.StatusCode)
+
+		request, _ = http.NewRequest("POST", "/_test/abc", strings.NewReader("<d> <e> <f> ."))
+		request.Header.Add("Content-Type", "text/turtle")
+		request.Header.Add("If-Match", "\""+ETag+"1\"")
+		response = r.Do(request)
+		assert.Equal(t, 412, response.StatusCode)
+
 		response = r.Put("/_test/abc", "text/turtle", "<d> <e> <f> .")
 		assert.Empty(t, response.Body)
 		assert.Equal(t, 201, response.StatusCode)
@@ -610,6 +555,18 @@ func TestIfNoneMatch(t *testing.T) {
 		response = r.Do(request)
 		assert.Equal(t, 412, response.StatusCode)
 
+		request, _ = http.NewRequest("POST", "/_test/abc", strings.NewReader("<d> <e> <f> ."))
+		request.Header.Add("Accept", "text/turtle")
+		request.Header.Add("If-None-Match", ETag)
+		response = r.Do(request)
+		assert.Equal(t, 412, response.StatusCode)
+
+		request, _ = http.NewRequest("PATCH", "/_test/abc", strings.NewReader("<d> <e> <f> ."))
+		request.Header.Add("Accept", "text/turtle")
+		request.Header.Add("If-None-Match", ETag)
+		response = r.Do(request)
+		assert.Equal(t, 412, response.StatusCode)
+
 		request, _ = http.NewRequest("PUT", "/_test/abc", strings.NewReader("<d> <e> <f> ."))
 		request.Header.Add("Accept", "text/turtle")
 		request.Header.Add("If-None-Match", ETag+"1")
@@ -633,7 +590,16 @@ func TestGetJsonLd(t *testing.T) {
 	})
 }
 
-func TestPUTMultiForm(t *testing.T) {
+func TestPOSTForm(t *testing.T) {
+	testflight.WithServer(handler, func(r *testflight.Requester) {
+		request, _ := http.NewRequest("POST", "/_test/abc", nil)
+		request.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+		response := r.Do(request)
+		assert.Equal(t, 415, response.StatusCode)
+	})
+}
+
+func TestPOSTMultiForm(t *testing.T) {
 	testflight.WithServer(handler, func(r *testflight.Requester) {
 		path := "tests/img.jpg"
 		file, err := os.Open(path)
@@ -657,7 +623,7 @@ func TestPUTMultiForm(t *testing.T) {
 			errChan <- multiWriter.Close()
 		}()
 
-		request, _ := http.NewRequest("PUT", "", bodyReader)
+		request, _ := http.NewRequest("POST", "", bodyReader)
 		request.Header.Add("Content-Type", "multipart/form-data; boundary="+multiWriter.Boundary())
 		response := r.Do(request)
 		assert.Equal(t, 201, response.StatusCode)
@@ -722,10 +688,10 @@ func TestGlob(t *testing.T) {
 	testflight.WithServer(handler, func(r *testflight.Requester) {
 		response := r.Post("/_test/1", "text/turtle", "@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n\n<> a <http://example.org/one>;\n"+
 			"    <http://example.org/b> <#c> .\n    <#c> a <http://example.org/e> .")
-		assert.Equal(t, 200, response.StatusCode)
+		assert.Equal(t, 201, response.StatusCode)
 
 		response = r.Post("/_test/2", "text/turtle", "@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n\n<> a <http://example.org/two>.")
-		assert.Equal(t, 200, response.StatusCode)
+		assert.Equal(t, 201, response.StatusCode)
 
 		request, _ := http.NewRequest("GET", "/_test/*", nil)
 		response = r.Do(request)
