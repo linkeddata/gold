@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"mime/multipart"
 	"net/http"
 	"os"
@@ -29,7 +28,6 @@ func TestMKCOL(t *testing.T) {
 		assert.Equal(t, 201, response.StatusCode)
 
 		response = r.Post("/_test/abc", "text/turtle", "<a> <b> <c>.")
-		log.Printf("%+v\n", response.Body)
 		assert.Equal(t, 201, response.StatusCode)
 
 		request, _ = http.NewRequest("MKCOL", "/_test/abc", nil)
