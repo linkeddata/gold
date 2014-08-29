@@ -19,6 +19,11 @@ func TestLinkHeaderParser(t *testing.T) {
 	assert.True(t, l.MatchUri("http://www.w3.org/ns/ldp#Container"))
 	assert.False(t, l.MatchUri("http://www.w3.org/ns/ldp#Resource"))
 	assert.Equal(t, "http://www.w3.org/ns/ldp#Container", l.MatchRel("type"))
+
+	l = ParseLinkHeader("<http://www.w3.org/ns/ldp#Container>; rel=\"type\", <http://www.w3.org/ns/ldp#Resource>; rel=\"type\"")
+	assert.NotEmpty(t, l.headers)
+	assert.True(t, l.MatchUri("http://www.w3.org/ns/ldp#Container"))
+	assert.True(t, l.MatchUri("http://www.w3.org/ns/ldp#Resource"))
 }
 
 func TestPreferHeaderParser(t *testing.T) {
