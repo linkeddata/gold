@@ -14,7 +14,7 @@ func TestLinkHeaderParser(t *testing.T) {
 	l := ParseLinkHeader("")
 	assert.Equal(t, "", l.MatchRel("acl"))
 
-	l = ParseLinkHeader("<http://www.w3.org/ns/ldp#Container>; rel=\"type\"")
+	l = ParseLinkHeader("<http://www.w3.org/ns/ldp#Container>; rel='type'")
 	assert.NotEmpty(t, l.headers)
 	assert.True(t, l.MatchUri("http://www.w3.org/ns/ldp#Container"))
 	assert.False(t, l.MatchUri("http://www.w3.org/ns/ldp#Resource"))

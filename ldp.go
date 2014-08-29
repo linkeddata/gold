@@ -101,11 +101,11 @@ func ParseLinkHeader(header string) *linkheaders {
 			} else if strings.Index(s, "rel=") >= 0 {
 				s = strings.TrimLeft(s, "rel=")
 
-				if strings.HasPrefix(s, "\"") {
-					s = strings.TrimLeft(s, "\"")
+				if strings.HasPrefix(s, "\"") || strings.HasPrefix(s, "'") {
+					s = s[1:]
 				}
-				if strings.HasSuffix(s, "\"") {
-					s = strings.TrimRight(s, "\"")
+				if strings.HasSuffix(s, "\"") || strings.HasSuffix(s, "'") {
+					s = s[:len(s)-1]
 				}
 				item.rel = s
 			}
