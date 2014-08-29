@@ -61,7 +61,7 @@ type ldpath struct {
 func GetServerRoot() string {
 	serverRoot, err := os.Getwd()
 	if err != nil {
-		println("[Server] Error starting server:", err)
+		DebugLog("Server", "Error starting server:"+err.Error())
 		os.Exit(1)
 	}
 
@@ -567,7 +567,7 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 					if err == nil {
 						defer func() {
 							if err := f.Close(); err != nil {
-								println("[Server]", f.Name, err)
+								DebugLog("Server", "GET os.Open err: "+err.Error())
 							}
 						}()
 						io.Copy(w, f)
@@ -612,7 +612,7 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 				if err == nil {
 					defer func() {
 						if err := f.Close(); err != nil {
-							println("[Server]", f.Name, err)
+							DebugLog("Server", "GET f.Close err:"+err.Error())
 						}
 					}()
 					io.Copy(w, f)
@@ -661,8 +661,7 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 			fmt.Fprint(w, data)
 		}
 		return
-
-	case "PATCH", "POST", "PUT":
+	case "PATCH":
 		unlock := lock(resource.File)
 		defer unlock()
 
@@ -679,189 +678,295 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 			return r.respond(412, "Precondition Failed")
 		}
 
-		g := NewGraph(resource.Uri)
+		if dataHasParser {
+			g := NewGraph(resource.Uri)
+			g.ReadFile(resource.File)
+
+			switch dataMime {
+			case "application/json":
+				g.JSONPatch(req.Body)
+			case "application/sparql-update":
+				sparql := NewSPARQL(g.URI())
+				sparql.Parse(req.Body)
+				g.SPARQLUpdate(sparql)
+			default:
+				if dataHasParser {
+					g.Parse(req.Body, dataMime)
+				}
+			}
+
+			f, err := os.OpenFile(resource.File, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
+			if err != nil {
+				DebugLog("Server", "PATCH os.OpenFile err: "+err.Error())
+				return r.respond(500, err)
+			}
+			defer f.Close()
+
+			err = g.WriteFile(f, "text/turtle")
+			if err != nil {
+				DebugLog("Server", "PATCH g.WriteFile err: "+err.Error())
+			}
+			w.Header().Set("Triples", fmt.Sprintf("%d", g.Len()))
+
+			if err != nil {
+				return r.respond(500, err)
+			}
+		}
+	case "POST":
+		unlock := lock(resource.File)
+		defer unlock()
+
+		// check append first
+		if !acl.AllowAppend(resource.Uri) && !acl.AllowWrite(resource.Uri) {
+			return r.respond(403)
+		}
+
+		etag, _ := NewETag(resource.File)
+		if !req.ifMatch(etag) {
+			return r.respond(412, "Precondition Failed")
+		}
+		if !req.ifNoneMatch(etag) {
+			return r.respond(412, "Precondition Failed")
+		}
 
 		// LDP
-		gotLDP := false
-		if len(req.Header.Get("Link")) > 0 && dataMime == "text/turtle" {
+		isNew := false
+		stat, err := os.Stat(resource.File)
+		if err == nil && stat.IsDir() && dataMime != "multipart/form-data" {
 			link := ParseLinkHeader(req.Header.Get("Link")).MatchRel("type")
-			if link == "http://www.w3.org/ns/ldp#Resource" || link == "http://www.w3.org/ns/ldp#BasicContainer" {
-				slug := req.Header.Get("Slug")
-				stat, err := os.Stat(resource.File)
+			slug := req.Header.Get("Slug")
 
-				uuid, err := newUUID()
+			uuid, err := newUUID()
+			if err != nil {
+				DebugLog("Server", "POST LDP UUID err: "+err.Error())
+				return r.respond(500, err)
+			}
+			uuid = uuid[:6]
+
+			if !strings.HasSuffix(resource.Path, "/") {
+				resource.Path += "/"
+			}
+
+			if len(slug) > 0 {
+				if strings.HasPrefix(slug, "/") {
+					slug = strings.TrimLeft(slug, "/")
+				}
+				if strings.HasSuffix(slug, "/") {
+					slug = strings.TrimRight(slug, "/")
+				}
+				slug = slug + uuid
+			} else {
+				slug = uuid
+			}
+			resource.Path += slug
+
+			if len(link) > 0 && link == "http://www.w3.org/ns/ldp#BasicContainer" {
+				if !strings.HasSuffix(resource.Path, "/") {
+					resource.Path += "/"
+				}
+				resource, err = h.pathInfo(resource.Base + "/" + resource.Path)
 				if err != nil {
-					DebugLog("Server", "LDPR UUID err: "+err.Error())
+					DebugLog("Server", "POST LDPC h.pathInfo err: "+err.Error())
 					return r.respond(500, err)
 				}
-				uuid = uuid[:6]
 
-				if len(slug) > 0 && stat.IsDir() {
-					if strings.HasPrefix(slug, "/") {
-						slug = strings.TrimLeft(slug, "/")
+				w.Header().Set("Location", resource.Uri)
+				w.Header().Set("Link", "<"+resource.MetaUri+">; rel=meta, <"+resource.AclUri+">; rel=acl")
+
+				err = os.MkdirAll(resource.File, 0755)
+				if err != nil {
+					DebugLog("Server", "POST LDPC os.MkdirAll err: "+err.Error())
+					return r.respond(500, err)
+				}
+
+				//Replace the subject with the dir path instead of the meta file path
+				if dataHasParser {
+					g := NewGraph(resource.Uri)
+					mg := NewGraph(resource.Uri)
+					mg.Parse(req.Body, dataMime)
+					for triple := range mg.IterTriples() {
+						subject := NewResource(".")
+						g.AddTriple(subject, triple.Predicate, triple.Object)
 					}
-					if strings.HasSuffix(slug, "/") {
-						slug = strings.TrimRight(slug, "/")
+					f, err := os.OpenFile(resource.MetaFile, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
+					if err != nil {
+						DebugLog("Server", "POST LDPC os.OpenFile err: "+err.Error())
+						return r.respond(500, err)
 					}
-					if req.Method == "POST" {
-						slug = slug + "-" + uuid
-					}
-				} else {
-					if req.Method == "POST" {
-						slug = uuid
+					defer f.Close()
+
+					if err = g.WriteFile(f, ""); err != nil {
+						DebugLog("Server", "POST LDPC g.WriteFile err: "+err.Error())
+						return r.respond(500, err)
 					}
 				}
-				resource.Path += slug
+				w.Header().Set("Location", resource.Uri)
+				return r.respond(201)
+			} else {
+				resource, err = h.pathInfo(resource.Base + "/" + resource.Path)
+				if err != nil {
+					DebugLog("Server", "POST LDPR h.pathInfo err: "+err.Error())
+					return r.respond(500, err)
+				}
+				w.Header().Set("Location", resource.Uri)
+				w.Header().Set("Link", "<"+resource.Uri+">; rel=meta")
+			}
+			isNew = true
+		}
 
-				if link == "http://www.w3.org/ns/ldp#Resource" {
-					resource, err = h.pathInfo(resource.Base + "/" + resource.Path)
-					if err != nil {
-						DebugLog("Server", "LDPR h.pathInfo err: "+err.Error())
-						return r.respond(500, err)
-					}
-					w.Header().Set("Location", resource.Uri)
-					w.Header().Set("Link", "<"+resource.Uri+">; rel=meta")
-				} else if link == "http://www.w3.org/ns/ldp#BasicContainer" {
-					if !strings.HasSuffix(resource.Path, "/") {
-						resource.Path += "/"
-					}
-					resource, err = h.pathInfo(resource.Base + "/" + resource.Path)
-					if err != nil {
-						DebugLog("Server", "LDPC h.pathInfo err: "+err.Error())
-						return r.respond(500, err)
-					}
+		err = os.MkdirAll(_path.Dir(resource.File), 0755)
+		if err != nil {
+			DebugLog("Server", "POST MkdirAll err: "+err.Error())
+			return r.respond(500, err)
+		}
 
-					w.Header().Set("Location", resource.Uri)
-					w.Header().Set("Link", "<"+resource.MetaUri+">; rel=meta, <"+resource.AclUri+">; rel=acl")
-
-					err = os.MkdirAll(resource.File, 0755)
-					if err != nil {
-						DebugLog("Server", "LDPC os.MkdirAll err: "+err.Error())
-						return r.respond(500, err)
-					}
-
-					//Replace the subject with the dir path instead of the meta file path
-					if dataHasParser {
-						mg := NewGraph(resource.Uri)
-						mg.Parse(req.Body, dataMime)
-						for triple := range mg.IterTriples() {
-							subject := NewResource(".")
-							g.AddTriple(subject, triple.Predicate, triple.Object)
-						}
-						f, err := os.OpenFile(resource.MetaFile, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
+		if dataMime == "multipart/form-data" {
+			err := req.ParseMultipartForm(100000)
+			if err != nil {
+				DebugLog("Server", "POST parse multipart data err: "+err.Error())
+			} else {
+				m := req.MultipartForm
+				for elt := range m.File {
+					files := m.File[elt]
+					for i, _ := range files {
+						file, err := files[i].Open()
+						defer file.Close()
 						if err != nil {
-							DebugLog("Server", "LDPC os.OpenFile err: "+err.Error())
+							DebugLog("Server", "POST multipart/form f.Open err: "+err.Error())
 							return r.respond(500, err)
 						}
-						defer f.Close()
-
-						if err = g.WriteFile(f, ""); err != nil {
-							DebugLog("Server", "LDPC g.WriteFile err: "+err.Error())
+						newFile := ""
+						if filepath.Base(resource.Path) == files[i].Filename {
+							newFile = resource.Path
+						} else {
+							newFile = resource.Path + files[i].Filename
+						}
+						dst, err := os.Create(newFile)
+						defer dst.Close()
+						if err != nil {
+							DebugLog("Server", "POST multipart/form os.Create err: "+err.Error())
+							return r.respond(500, err)
+						}
+						if _, err := io.Copy(dst, file); err != nil {
+							DebugLog("Server", "POST multipart/form io.Copy err: "+err.Error())
 							return r.respond(500, err)
 						}
 					}
-					w.Header().Set("Location", resource.Uri)
-					return r.respond(201)
 				}
-				gotLDP = true
+				return r.respond(201)
 			}
-		}
+		} else {
+			stat, err = os.Stat(resource.File)
+			if os.IsNotExist(err) {
+				isNew = true
+			} else if os.IsExist(err) && stat.IsDir() {
+				resource.File = resource.File + "/" + METASuffix
+			}
 
-		if req.Method != "PUT" {
-			g.ReadFile(resource.File)
-		}
-
-		switch dataMime {
-		case "application/json":
-			g.JSONPatch(req.Body)
-		case "application/sparql-update":
-			sparql := NewSPARQL(g.URI())
-			sparql.Parse(req.Body)
-			g.SPARQLUpdate(sparql)
-		default:
 			if dataHasParser {
-				g.Parse(req.Body, dataMime)
+				g := NewGraph(resource.Uri)
+				g.ReadFile(resource.File)
+
+				switch dataMime {
+				case "application/json":
+					g.JSONPatch(req.Body)
+				case "application/sparql-update":
+					sparql := NewSPARQL(g.URI())
+					sparql.Parse(req.Body)
+					g.SPARQLUpdate(sparql)
+				default:
+					g.Parse(req.Body, dataMime)
+				}
+
+				f, err := os.OpenFile(resource.File, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
+				if err != nil {
+					DebugLog("Server", "POST os.OpenFile err: "+err.Error())
+					return r.respond(500, err.Error())
+				}
+				defer f.Close()
+
+				err = g.WriteFile(f, "text/turtle")
+				if err != nil {
+					DebugLog("Server", "POST g.WriteFile err: "+err.Error())
+				}
+				w.Header().Set("Triples", fmt.Sprintf("%d", g.Len()))
+			} else {
+				f, err := os.OpenFile(resource.File, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
+				if err != nil {
+					DebugLog("Server", "POST os.OpenFile err: "+err.Error())
+					return r.respond(500, err.Error())
+				}
+				defer f.Close()
+				_, err = io.Copy(f, req.Body)
+				if err != nil {
+					DebugLog("Server", "POST os.OpenFile err: "+err.Error())
+					return r.respond(500, err.Error())
+				}
 			}
+
+			if isNew {
+				return r.respond(201)
+			} else {
+				return r.respond(200)
+			}
+		}
+	case "PUT":
+		unlock := lock(resource.File)
+		defer unlock()
+
+		// check append first
+		if !acl.AllowAppend(resource.Uri) && !acl.AllowWrite(resource.Uri) {
+			return r.respond(403)
+		}
+
+		etag, _ := NewETag(resource.File)
+		if !req.ifMatch(etag) {
+			return r.respond(412, "Precondition Failed")
+		}
+		if !req.ifNoneMatch(etag) {
+			return r.respond(412, "Precondition Failed")
+		}
+
+		isNew := true
+		_, err = os.Stat(resource.File)
+		if os.IsExist(err) {
+			isNew = false
 		}
 
 		err := os.MkdirAll(_path.Dir(resource.File), 0755)
 		if err != nil {
-			DebugLog("Server", "LDPR MkdirAll err: "+err.Error())
+			DebugLog("Server", "PATCH MkdirAll err: "+err.Error())
 			return r.respond(500, err)
 		}
 
-		f := new(os.File)
-		if dataMime != "multipart/form-data" {
-			stat, serr := os.Stat(resource.File)
-			if os.IsExist(serr) && stat.IsDir() {
-				resource.File = resource.File + "/" + METASuffix
-			}
-
-			f, err = os.OpenFile(resource.File, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
-			if err != nil {
-				return r.respond(500, err)
-			}
-			defer f.Close()
+		f, err := os.OpenFile(resource.File, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
+		if err != nil {
+			DebugLog("Server", "PATCH os.OpenFile err: "+err.Error())
+			return r.respond(500, err)
 		}
+		defer f.Close()
 
 		if dataHasParser {
+			g := NewGraph(resource.Uri)
+			g.Parse(req.Body, dataMime)
 			err = g.WriteFile(f, "text/turtle")
+			if err != nil {
+				DebugLog("Server", "PATCH g.WriteFile err: "+err.Error())
+			}
 			w.Header().Set("Triples", fmt.Sprintf("%d", g.Len()))
 		} else {
-			if dataMime == "multipart/form-data" {
-				err := req.ParseMultipartForm(100000)
-				if err != nil {
-					DebugLog("Server", "Cannot parse multipart data: "+err.Error())
-				} else {
-					m := req.MultipartForm
-					for elt := range m.File {
-						files := m.File[elt]
-						for i, _ := range files {
-							file, err := files[i].Open()
-							defer file.Close()
-							if err != nil {
-								DebugLog("Server", "multipart/form f.Open err: "+err.Error())
-								return r.respond(500, err)
-							}
-							newFile := ""
-							if filepath.Base(resource.Path) == files[i].Filename {
-								newFile = resource.Path
-							} else {
-								newFile = resource.Path + files[i].Filename
-							}
-							dst, err := os.Create(newFile)
-							defer dst.Close()
-							if err != nil {
-								DebugLog("Server", "multipart/form os.Create err: "+err.Error())
-								return r.respond(500, err)
-							}
-							if _, err := io.Copy(dst, file); err != nil {
-								DebugLog("Server", "multipart/form io.Copy err: "+err.Error())
-								return r.respond(500, err)
-							}
-						}
-					}
-
-					return r.respond(201)
-				}
-			} else if dataMime == "application/x-www-form-urlencoded" {
-				err := req.ParseForm()
-				if err != nil {
-					println("Server", "Cannot parse form data: "+err.Error())
-				} else {
-					// parse form and write file
-				}
-			} else {
-				_, err = io.Copy(f, req.Body)
+			_, err = io.Copy(f, req.Body)
+			if err != nil {
+				DebugLog("Server", "PATCH io.Copy err: "+err.Error())
 			}
 		}
 
 		if err != nil {
-			DebugLog("Server", "Final/catchall err: "+err.Error())
 			return r.respond(500)
-		} else if req.Method == "PUT" || gotLDP {
-			w.Header().Set("Location", resource.Uri)
+		} else if isNew {
 			return r.respond(201)
+		} else {
+			return r.respond(200)
 		}
 
 	case "DELETE":
