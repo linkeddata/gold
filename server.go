@@ -786,7 +786,7 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 				}
 
 				w.Header().Set("Location", resource.Uri)
-				w.Header().Set("Link", "<"+resource.MetaUri+">; rel=\"meta\", <"+resource.AclUri+">; rel=\"acl\"")
+				w.Header().Set("Link", brack(resource.MetaUri)+"; rel=\"meta\", "+brack(resource.AclUri)+"; rel=\"acl\"")
 				w.Header().Add("Link", brack("http://www.w3.org/ns/ldp#Resource")+"; rel=\"type\"")
 				w.Header().Add("Link", brack("http://www.w3.org/ns/ldp#BasicContainer")+"; rel=\"type\"")
 
