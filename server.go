@@ -324,13 +324,17 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 
 	// set ACL Link header
 	w.Header().Set("Link", brack(resource.AclUri)+"; rel=\"acl\"")
+
+	// generic headers
+	w.Header().Set("Accept-Patch", "application/json")
+	w.Header().Set("Accept-Post", "text/turtle, application/json")
+	w.Header().Set("Allow", strings.Join(methodsAll, ", "))
+
+	// LDP header
 	w.Header().Add("Link", brack("http://www.w3.org/ns/ldp#Resource")+"; rel=\"type\"")
 
 	switch req.Method {
 	case "OPTIONS":
-		w.Header().Set("Accept-Patch", "application/json")
-		w.Header().Set("Accept-Post", "text/turtle,application/json")
-
 		// TODO: WAC
 		corsReqH := req.Header["Access-Control-Request-Headers"] // CORS preflight only
 		if len(corsReqH) > 0 {
@@ -345,7 +349,6 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 		if len(origin) < 1 {
 			w.Header().Set("Access-Control-Allow-Origin", "*")
 		}
-		w.Header().Set("Allow", strings.Join(methodsAll, ", "))
 
 		// set LDP Link headers
 		stat, err := os.Stat(resource.File)
@@ -855,9 +858,9 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 						}
 						newFile := ""
 						if filepath.Base(resource.Path) == files[i].Filename {
-							newFile = resource.Path
+							newFile = resource.File
 						} else {
-							newFile = resource.Path + files[i].Filename
+							newFile = resource.File + files[i].Filename
 						}
 						dst, err := os.Create(newFile)
 						defer dst.Close()
