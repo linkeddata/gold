@@ -447,6 +447,7 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 
 				root := NewResource(resource.Uri)
 				g.AddTriple(root, NewResource("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), NewResource("http://www.w3.org/ns/posix/stat#Directory"))
+				g.AddTriple(root, NewResource("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), NewResource("http://www.w3.org/ns/ldp#Container"))
 				g.AddTriple(root, NewResource("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), NewResource("http://www.w3.org/ns/ldp#BasicContainer"))
 
 				g.AddTriple(root, NewResource("http://www.w3.org/ns/posix/stat#mtime"), NewLiteral(fmt.Sprintf("%d", stat.ModTime().Unix())))
@@ -524,6 +525,7 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 									if !showEmpty {
 										g.AddTriple(s, NewResource("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), NewResource("http://www.w3.org/ns/posix/stat#Directory"))
 										g.AddTriple(s, NewResource("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), NewResource("http://www.w3.org/ns/ldp#BasicContainer"))
+										g.AddTriple(s, NewResource("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), NewResource("http://www.w3.org/ns/ldp#Container"))
 									}
 									kb := NewGraph(f.Uri)
 									kb.ReadFile(f.MetaFile)
@@ -949,22 +951,27 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 			return r.respond(412, "Precondition Failed")
 		}
 
+		err = os.MkdirAll(_path.Dir(resource.File), 0755)
+		if err != nil {
+			DebugLog("Server", "PUT MkdirAll err: "+err.Error())
+			return r.respond(500, err)
+		}
+
 		isNew := true
-		_, err = os.Stat(resource.File)
+		stat, err := os.Stat(resource.File)
 		if os.IsExist(err) {
 			isNew = false
 		}
 
-		err := os.MkdirAll(_path.Dir(resource.File), 0755)
-		if err != nil {
-			DebugLog("Server", "PATCH MkdirAll err: "+err.Error())
-			return r.respond(500, err)
-		}
-
 		f, err := os.OpenFile(resource.File, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
 		if err != nil {
-			DebugLog("Server", "PATCH os.OpenFile err: "+err.Error())
-			return r.respond(500, err)
+			DebugLog("Server", "PUT os.OpenFile err: "+err.Error())
+			if stat.IsDir() {
+				w.Header().Add("Link", brack(resource.Uri)+"; rel=\"describedby\"")
+				return r.respond(406, "Cannot use PUT on a directory.")
+			} else {
+				return r.respond(500, err)
+			}
 		}
 		defer f.Close()
 
@@ -973,13 +980,13 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 			g.Parse(req.Body, dataMime)
 			err = g.WriteFile(f, "text/turtle")
 			if err != nil {
-				DebugLog("Server", "PATCH g.WriteFile err: "+err.Error())
+				DebugLog("Server", "PUT g.WriteFile err: "+err.Error())
 			}
 			w.Header().Set("Triples", fmt.Sprintf("%d", g.Len()))
 		} else {
 			_, err = io.Copy(f, req.Body)
 			if err != nil {
-				DebugLog("Server", "PATCH io.Copy err: "+err.Error())
+				DebugLog("Server", "PUT io.Copy err: "+err.Error())
 			}
 		}
 
