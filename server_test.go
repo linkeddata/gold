@@ -207,6 +207,18 @@ func TestURIwithWeirdChars(t *testing.T) {
 	assert.Equal(t, 200, response.StatusCode)
 }
 
+func TestLDPPUTContainer(t *testing.T) {
+	request, err := http.NewRequest("PUT", testServer.URL+"/_test/", nil)
+	assert.NoError(t, err)
+	request.Header.Add("Content-Type", "text/turtle")
+	response, err := httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.Equal(t, 406, response.StatusCode)
+
+	describedURI := ParseLinkHeader(response.Header.Get("Link")).MatchRel("describedby")
+	assert.NotNil(t, describedURI)
+}
+
 func TestLDPPostLDPC(t *testing.T) {
 	request, err := http.NewRequest("POST", testServer.URL+"/_test/", strings.NewReader("@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> .\n\n<> a <http://example.org/ldpc>."))
 	assert.NoError(t, err)
