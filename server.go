@@ -1,6 +1,7 @@
 package gold
 
 import (
+	"bufio"
 	"errors"
 	"fmt"
 	"io"
@@ -544,6 +545,30 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 										guessType, _ := magic.TypeByFile(f.File)
 
 										if guessType == "text/plain" {
+											// open file and attempt to read the first line
+											// Open an input file, exit on error.
+											fd, err := os.Open(f.File)
+											if err != nil {
+												DebugLog("Server", "GET find mime type error:"+err.Error())
+											}
+											defer fd.Close()
+
+											scanner := bufio.NewScanner(fd)
+
+											// stop after the first line
+											for scanner.Scan() {
+												if strings.HasPrefix(scanner.Text(), "@prefix") {
+													maybeRDF = true
+												}
+												break
+											}
+											// log potential errors
+											if err := scanner.Err(); err != nil {
+												DebugLog("Server", "GET scan err: "+scanner.Err().Error())
+											}
+										}
+
+										if maybeRDF {
 											kb := NewGraph(f.Uri)
 											kb.ReadFile(f.File)
 											if kb.Len() > 0 {
