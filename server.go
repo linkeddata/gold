@@ -558,24 +558,20 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 											// stop after the first line
 											for scanner.Scan() {
 												if strings.HasPrefix(scanner.Text(), "@prefix") {
-													maybeRDF = true
+													kb := NewGraph(f.Uri)
+													kb.ReadFile(f.File)
+													if kb.Len() > 0 {
+														st := kb.One(NewResource(f.Uri), NewResource("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), nil)
+														if st != nil && st.Object != nil {
+															g.AddTriple(s, NewResource("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), st.Object)
+														}
+													}
 												}
 												break
 											}
 											// log potential errors
 											if err := scanner.Err(); err != nil {
 												DebugLog("Server", "GET scan err: "+scanner.Err().Error())
-											}
-										}
-
-										if maybeRDF {
-											kb := NewGraph(f.Uri)
-											kb.ReadFile(f.File)
-											if kb.Len() > 0 {
-												st := kb.One(NewResource(f.Uri), NewResource("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), nil)
-												if st != nil && st.Object != nil {
-													g.AddTriple(s, NewResource("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), st.Object)
-												}
 											}
 										}
 									}
