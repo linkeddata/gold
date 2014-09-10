@@ -6,6 +6,19 @@ Linked Data server for Go
 
 ## Install
 
+### From docker repository:
+
+    sudo docker pull linkeddata/gold
+
+    sudo docker run -p local-ip:local-port:443 linkeddata/gold
+
+Replace local-ip and local-port with your computer's IP address and port number.
+
+To check the status of the container, type `sudo docker ps`
+
+
+### From Github:
+
 Setup Go + dependencies:
 
     # on OSX eg.
