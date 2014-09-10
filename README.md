@@ -10,11 +10,19 @@ Linked Data server for Go
 
     sudo docker pull linkeddata/gold
 
-    sudo docker run -p local-ip:local-port:443 linkeddata/gold
+    sudo docker run -p ip:port:443 linkeddata/gold
 
-Replace local-ip and local-port with your computer's IP address and port number.
+Replace `ip` and `port` with your host computer's IP address and port number.
 
-To check the status of the container, type `sudo docker ps`
+To check the status of the container, type:
+
+    sudo docker ps
+
+`IMPORTANT`: if you want to mount a host directory into the container, you can use the -v parameter:
+
+    sudo docker run -p ip:port:443 -v /var/www:/gold-data linkeddata/gold
+
+This will mount the host directory, `/var/www/`, into the container as the `/gold-data/` directory. Doing this will allow you to reuse the data directory without worrying about persistence inside the container.
 
 
 ### From Github:
