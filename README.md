@@ -48,7 +48,11 @@ Optionally, you can install some extra dependencies used by the tests:
 
 Run the server:
 
-    $GOPATH/bin/server -bind=:8888 -root="/home/user/data/" -debug
+    $GOPATH/bin/server -bind=":8888" -root="/home/user/data/" -debug
+    
+Alternatively, you can compile and run it from the source dir in one command:
+    
+    go run $GOPATH/src/github.com/linkeddata/gold/server/daemon.go -bind=":8888" -root="/home/user/data/" -debug
 
 To see a list of avialable options:
 
