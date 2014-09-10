@@ -48,6 +48,10 @@ Optionally, you can install some extra dependencies used by the tests:
 
 Run the server:
 
+    $GOPATH/bin/server -bind=:8888 -root="/home/user/data/" -debug
+
+To see a list of avialable options:
+
     $GOPATH/bin/server -help
 
 ## License
