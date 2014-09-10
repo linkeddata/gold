@@ -20,9 +20,9 @@ To check the status of the container, type:
 
 `IMPORTANT`: if you want to mount a host directory into the container, you can use the -v parameter:
 
-    sudo docker run -p ip:port:443 -v /var/www:/gold-data linkeddata/gold
+    sudo docker run -p ip:port:443 -v /home/user/data:/data linkeddata/gold
 
-This will mount the host directory, `/var/www/`, into the container as the `/gold-data/` directory. Doing this will allow you to reuse the data directory without worrying about persistence inside the container.
+This will mount the host directory, `/home/user/data`, into the container as the `/data/` directory. Doing this will allow you to reuse the data directory without worrying about persistence inside the container.
 
 
 ### From Github:
