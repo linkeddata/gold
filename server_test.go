@@ -594,27 +594,29 @@ func TestIfMatch(t *testing.T) {
 	testflight.WithServer(handler, func(r *testflight.Requester) {
 		request, _ := http.NewRequest("HEAD", "/_test/abc", nil)
 		response := r.Do(request)
+
 		ETag := response.RawResponse.Header.Get("ETag")
+		newTag := ETag[:len(ETag)-1] + "1\""
 
 		request, _ = http.NewRequest("HEAD", "/_test/abc", nil)
-		request.Header.Add("If-Match", "\""+ETag+"\"")
+		request.Header.Add("If-Match", ETag+", "+newTag)
 		response = r.Do(request)
 		assert.Equal(t, 200, response.StatusCode)
 
 		request, _ = http.NewRequest("HEAD", "/_test/abc", nil)
-		request.Header.Add("If-Match", "\""+ETag+"1\"")
+		request.Header.Add("If-Match", newTag)
 		response = r.Do(request)
 		assert.Equal(t, 412, response.StatusCode)
 
 		request, _ = http.NewRequest("PATCH", "/_test/abc", strings.NewReader("<d> <e> <f> ."))
 		request.Header.Add("Content-Type", "text/turtle")
-		request.Header.Add("If-Match", "\""+ETag+"1\"")
+		request.Header.Add("If-Match", newTag)
 		response = r.Do(request)
 		assert.Equal(t, 412, response.StatusCode)
 
 		request, _ = http.NewRequest("POST", "/_test/abc", strings.NewReader("<d> <e> <f> ."))
 		request.Header.Add("Content-Type", "text/turtle")
-		request.Header.Add("If-Match", "\""+ETag+"1\"")
+		request.Header.Add("If-Match", newTag)
 		response = r.Do(request)
 		assert.Equal(t, 412, response.StatusCode)
 
@@ -629,7 +631,9 @@ func TestIfNoneMatch(t *testing.T) {
 		request, _ := http.NewRequest("HEAD", "/_test/abc", nil)
 		response := r.Do(request)
 		assert.Equal(t, 200, response.StatusCode)
+
 		ETag := response.RawResponse.Header.Get("ETag")
+		newTag := ETag[:len(ETag)-1] + "1\""
 
 		request, _ = http.NewRequest("HEAD", "/_test/abc", nil)
 		request.Header.Add("If-None-Match", ETag)
@@ -637,7 +641,7 @@ func TestIfNoneMatch(t *testing.T) {
 		assert.Equal(t, 304, response.StatusCode)
 
 		request, _ = http.NewRequest("HEAD", "/_test/abc", nil)
-		request.Header.Add("If-None-Match", ETag+"1")
+		request.Header.Add("If-None-Match", ETag+", "+newTag)
 		response = r.Do(request)
 		assert.Equal(t, 200, response.StatusCode)
 
@@ -661,7 +665,7 @@ func TestIfNoneMatch(t *testing.T) {
 
 		request, _ = http.NewRequest("PUT", "/_test/abc", strings.NewReader("<d> <e> <f> ."))
 		request.Header.Add("Accept", "text/turtle")
-		request.Header.Add("If-None-Match", ETag+"1")
+		request.Header.Add("If-None-Match", newTag)
 		response = r.Do(request)
 		assert.Equal(t, 201, response.StatusCode)
 

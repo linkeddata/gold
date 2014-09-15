@@ -188,16 +188,6 @@ func (req httpRequest) BaseURI() string {
 	return scheme + "://" + host + port + req.URL.Path
 }
 
-func Dequote(etag string) string {
-	if strings.HasPrefix(etag, "\"") {
-		etag = strings.TrimLeft(etag, "\"")
-	}
-	if strings.HasSuffix(etag, "\"") {
-		etag = strings.TrimRight(etag, "\"")
-	}
-	return etag
-}
-
 func (req *httpRequest) Auth() string {
 	user, _ := WebIDTLSAuth(req.TLS)
 	if len(user) == 0 {
@@ -213,22 +203,34 @@ func (req httpRequest) ifMatch(etag string) bool {
 	if len(etag) == 0 {
 		return true
 	}
-	v := Dequote(req.Header.Get("If-Match"))
-	if len(v) == 0 {
+	if len(req.Header.Get("If-Match")) == 0 {
 		return true
 	}
-	return v == "*" || v == etag
+	val := strings.Split(req.Header.Get("If-Match"), ",")
+	for _, v := range val {
+		v = strings.TrimSpace(v)
+		if v == "*" || v == etag {
+			return true
+		}
+	}
+	return false
 }
 
 func (req httpRequest) ifNoneMatch(etag string) bool {
 	if len(etag) == 0 {
 		return true
 	}
-	v := Dequote(req.Header.Get("If-None-Match"))
-	if len(v) == 0 {
+	if len(req.Header.Get("If-None-Match")) == 0 {
 		return true
 	}
-	return v != "*" && v != etag
+	val := strings.Split(req.Header.Get("If-None-Match"), ",")
+	for _, v := range val {
+		v = strings.TrimSpace(v)
+		if v != "*" && v != etag {
+			return true
+		}
+	}
+	return false
 }
 
 type Server struct {
@@ -410,10 +412,10 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 			w.Header().Set("ETag", "\""+etag+"\"")
 		}
 
-		if !req.ifMatch(etag) {
+		if !req.ifMatch("\"" + etag + "\"") {
 			return r.respond(412, "Precondition Failed")
 		}
-		if !req.ifNoneMatch(etag) {
+		if !req.ifNoneMatch("\"" + etag + "\"") {
 			return r.respond(304, "Not Modified")
 		}
 
@@ -711,10 +713,10 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 		}
 
 		etag, _ := NewETag(resource.File)
-		if !req.ifMatch(etag) {
+		if !req.ifMatch("\"" + etag + "\"") {
 			return r.respond(412, "Precondition Failed")
 		}
-		if !req.ifNoneMatch(etag) {
+		if !req.ifNoneMatch("\"" + etag + "\"") {
 			return r.respond(412, "Precondition Failed")
 		}
 
@@ -763,10 +765,10 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 		}
 
 		etag, _ := NewETag(resource.File)
-		if !req.ifMatch(etag) {
+		if !req.ifMatch("\"" + etag + "\"") {
 			return r.respond(412, "Precondition Failed")
 		}
-		if !req.ifNoneMatch(etag) {
+		if !req.ifNoneMatch("\"" + etag + "\"") {
 			return r.respond(412, "Precondition Failed")
 		}
 
@@ -965,10 +967,10 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 		}
 
 		etag, _ := NewETag(resource.File)
-		if !req.ifMatch(etag) {
+		if !req.ifMatch("\"" + etag + "\"") {
 			return r.respond(412, "Precondition Failed")
 		}
-		if !req.ifNoneMatch(etag) {
+		if !req.ifNoneMatch("\"" + etag + "\"") {
 			return r.respond(412, "Precondition Failed")
 		}
 
