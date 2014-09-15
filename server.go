@@ -414,7 +414,7 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 			return r.respond(412, "Precondition Failed")
 		}
 		if !req.ifNoneMatch(etag) {
-			return r.respond(412, "Precondition Failed")
+			return r.respond(304, "Not Modified")
 		}
 
 		g := NewGraph(resource.Uri)
