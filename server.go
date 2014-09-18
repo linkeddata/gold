@@ -326,15 +326,12 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 	DebugLog("Server", "Resource Path: "+resource.File)
 
 	// set ACL Link header
-	w.Header().Set("Link", brack(resource.AclUri)+"; rel=\"acl\"")
+	w.Header().Set("Link", brack(resource.AclUri)+"; rel=\"acl\", "+brack(resource.MetaUri)+"; rel=\"meta\"")
 
 	// generic headers
 	w.Header().Set("Accept-Patch", "application/json")
 	w.Header().Set("Accept-Post", "text/turtle, application/json")
 	w.Header().Set("Allow", strings.Join(methodsAll, ", "))
-
-	// LDP header
-	w.Header().Add("Link", brack("http://www.w3.org/ns/ldp#Resource")+"; rel=\"type\"")
 
 	switch req.Method {
 	case "OPTIONS":
@@ -358,6 +355,7 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 		if err == nil && stat.IsDir() {
 			w.Header().Add("Link", brack("http://www.w3.org/ns/ldp#BasicContainer")+"; rel=\"type\"")
 		}
+		w.Header().Add("Link", brack("http://www.w3.org/ns/ldp#Resource")+"; rel=\"type\"")
 
 		return r.respond(200)
 
@@ -386,6 +384,9 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 			// TODO: use Depth header (WebDAV)
 		}
 
+		// overwrite ACL Link header
+		w.Header().Set("Link", brack(resource.AclUri)+"; rel=\"acl\", "+brack(resource.MetaUri)+"; rel=\"meta\"")
+
 		// set LDP Link headers
 		stat, err := os.Stat(resource.File)
 		if err != nil {
@@ -393,6 +394,7 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 		} else if stat.IsDir() {
 			w.Header().Add("Link", brack("http://www.w3.org/ns/ldp#BasicContainer")+"; rel=\"type\"")
 		}
+		w.Header().Add("Link", brack("http://www.w3.org/ns/ldp#Resource")+"; rel=\"type\"")
 
 		status := 501
 		if !acl.AllowRead(resource.Uri) {
@@ -855,6 +857,7 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 				}
 				w.Header().Set("Location", resource.Uri)
 				w.Header().Set("Link", "<"+resource.MetaUri+">; rel=\"meta\", <"+resource.AclUri+">; rel=\"acl\"")
+				// LDP header
 				w.Header().Add("Link", brack("http://www.w3.org/ns/ldp#Resource")+"; rel=\"type\"")
 			}
 			isNew = true
@@ -960,6 +963,9 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 	case "PUT":
 		unlock := lock(resource.File)
 		defer unlock()
+
+		// LDP header
+		w.Header().Add("Link", brack("http://www.w3.org/ns/ldp#Resource")+"; rel=\"type\"")
 
 		// check append first
 		if !acl.AllowAppend(resource.Uri) && !acl.AllowWrite(resource.Uri) {
