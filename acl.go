@@ -62,6 +62,10 @@ func (acl *WAC) allow(mode string, path string) bool {
 					}
 				allowOrigin:
 					DebugLog("WAC", "In allowOrigin")
+					for _ = range aclGraph.All(i.Subject, ns.acl.Get("owner"), NewResource(acl.user)) {
+						DebugLog("WAC", "Access allowed for: "+acl.user)
+						return true
+					}
 					for _ = range aclGraph.All(i.Subject, ns.acl.Get("agent"), NewResource(acl.user)) {
 						DebugLog("WAC", "Access allowed for: "+acl.user)
 						return true

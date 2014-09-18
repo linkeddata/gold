@@ -230,7 +230,7 @@ func TestACLOwnerOnly(t *testing.T) {
 
 	body := "<#Owner>" +
 		"	<http://www.w3.org/ns/auth/acl#accessTo> <" + testServer.URL + aclDir + ">, <" + acl + ">;" +
-		"	<http://www.w3.org/ns/auth/acl#agent> <" + user1 + ">;" +
+		"	<http://www.w3.org/ns/auth/acl#owner> <" + user1 + ">;" +
 		"	<http://www.w3.org/ns/auth/acl#mode> <http://www.w3.org/ns/auth/acl#Read>, <http://www.w3.org/ns/auth/acl#Write> ."
 	request, err = http.NewRequest("PUT", acl, strings.NewReader(body))
 	assert.NoError(t, err)
