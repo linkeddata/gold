@@ -231,7 +231,7 @@ func TestACLOwnerOnly(t *testing.T) {
 	body := "<#Owner>" +
 		"	<http://www.w3.org/ns/auth/acl#accessTo> <" + testServer.URL + aclDir + ">, <" + acl + ">;" +
 		"	<http://www.w3.org/ns/auth/acl#owner> <" + user1 + ">;" +
-		"	<http://www.w3.org/ns/auth/acl#mode> <http://www.w3.org/ns/auth/acl#Read>, <http://www.w3.org/ns/auth/acl#Write> ."
+		"	<http://www.w3.org/ns/auth/acl#mode> <http://www.w3.org/ns/auth/acl#Control> ."
 	request, err = http.NewRequest("PUT", acl, strings.NewReader(body))
 	assert.NoError(t, err)
 	request.Header.Add("Content-Type", "text/turtle")
@@ -239,7 +239,7 @@ func TestACLOwnerOnly(t *testing.T) {
 	assert.NoError(t, err)
 	response.Body.Close()
 	assert.Equal(t, 201, response.StatusCode)
-	assert.Equal(t, "5", response.Header.Get("Triples"))
+	assert.Equal(t, "4", response.Header.Get("Triples"))
 
 	// user1
 	request, err = http.NewRequest("HEAD", acl, nil)
@@ -248,7 +248,7 @@ func TestACLOwnerOnly(t *testing.T) {
 	assert.NoError(t, err)
 	response.Body.Close()
 	assert.Equal(t, 200, response.StatusCode)
-	assert.Equal(t, "5", response.Header.Get("Triples"))
+	assert.Equal(t, "4", response.Header.Get("Triples"))
 
 	request, err = http.NewRequest("HEAD", testServer.URL+aclDir, nil)
 	assert.NoError(t, err)

@@ -43,6 +43,37 @@ func (acl *WAC) allow(mode string, path string) bool {
 		aclGraph.ReadFile(p.AclFile)
 		if aclGraph.Len() > 0 {
 			DebugLog("WAC", "Looking for policies in "+p.AclFile)
+			// TODO make it more elegant instead of duplicating code
+			for _, i := range aclGraph.All(nil, ns.acl.Get("mode"), ns.acl.Get("Control")) {
+				for _ = range aclGraph.All(i.Subject, ns.acl.Get(accessType), NewResource(p.Uri)) {
+					for _ = range aclGraph.All(i.Subject, ns.acl.Get("owner"), NewResource(acl.user)) {
+						DebugLog("WAC", "Access allowed for: "+acl.user)
+						return true
+					}
+					for _ = range aclGraph.All(i.Subject, ns.acl.Get("agent"), NewResource(acl.user)) {
+						DebugLog("WAC", "Access allowed for: "+acl.user)
+						return true
+					}
+					for _, t := range aclGraph.All(i.Subject, ns.acl.Get("agentClass"), nil) {
+						// check for foaf groups
+						DebugLog("WAC", "Found agentClass policy")
+						if t.Object.Equal(ns.foaf.Get("Agent")) {
+							DebugLog("WAC", "Access allowed for FOAF Agents")
+							return true
+						} else {
+							groupURI := debrack(t.Object.String())
+							groupGraph := NewGraph(groupURI)
+							groupGraph.LoadURI(groupURI)
+							if groupGraph.Len() > 0 && groupGraph.One(t.Object, ns.rdf.Get("type"), ns.foaf.Get("Group")) != nil {
+								for _ = range groupGraph.All(t.Object, ns.foaf.Get("member"), NewResource(acl.user)) {
+									DebugLog("WAC", acl.user+" listed as a member of the group "+groupURI)
+									return true
+								}
+							}
+						}
+					}
+				}
+			}
 			for _, i := range aclGraph.All(nil, ns.acl.Get("mode"), ns.acl.Get(mode)) {
 				DebugLog("WAC", "Found policy for <"+mode+">")
 
