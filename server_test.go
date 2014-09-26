@@ -249,6 +249,7 @@ func TestLDPPostLDPC(t *testing.T) {
 	g.Parse(strings.NewReader(string(body)), "text/turtle")
 	assert.NotNil(t, g.One(NewResource(testServer.URL+"/_test/"), NewResource("http://www.w3.org/ns/ldp#contains"), NewResource(newLDPC)))
 	assert.NotNil(t, g.One(NewResource(newLDPC), NewResource("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), NewResource("http://example.org/ldpc")))
+	assert.NotNil(t, g.One(NewResource(newLDPC), NewResource("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), NewResource("http://www.w3.org/ns/ldp#BasicContainer")))
 
 	request, err = http.NewRequest("GET", metaURI, nil)
 	assert.NoError(t, err)
