@@ -825,6 +825,7 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 					DebugLog("Server", "POST LDPC os.MkdirAll err: "+err.Error())
 					return r.respond(500, err)
 				}
+				DebugLog("Server", "Created dir "+resource.File)
 
 				//Replace the subject with the dir path instead of the meta file path
 				if dataHasParser {
@@ -835,6 +836,7 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 						subject := NewResource(".")
 						g.AddTriple(subject, triple.Predicate, triple.Object)
 					}
+
 					f, err := os.OpenFile(resource.MetaFile, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
 					if err != nil {
 						DebugLog("Server", "POST LDPC os.OpenFile err: "+err.Error())
@@ -926,19 +928,20 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 				default:
 					g.Parse(req.Body, dataMime)
 				}
+				if g.Len() > 0 {
+					f, err := os.OpenFile(resource.File, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
+					if err != nil {
+						DebugLog("Server", "POST os.OpenFile err: "+err.Error())
+						return r.respond(500, err.Error())
+					}
+					defer f.Close()
 
-				f, err := os.OpenFile(resource.File, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
-				if err != nil {
-					DebugLog("Server", "POST os.OpenFile err: "+err.Error())
-					return r.respond(500, err.Error())
+					err = g.WriteFile(f, "text/turtle")
+					if err != nil {
+						DebugLog("Server", "POST g.WriteFile err: "+err.Error())
+					}
+					w.Header().Set("Triples", fmt.Sprintf("%d", g.Len()))
 				}
-				defer f.Close()
-
-				err = g.WriteFile(f, "text/turtle")
-				if err != nil {
-					DebugLog("Server", "POST g.WriteFile err: "+err.Error())
-				}
-				w.Header().Set("Triples", fmt.Sprintf("%d", g.Len()))
 			} else {
 				f, err := os.OpenFile(resource.File, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
 				if err != nil {
@@ -980,10 +983,22 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 			return r.respond(412, "Precondition Failed")
 		}
 
-		err = os.MkdirAll(_path.Dir(resource.File), 0755)
-		if err != nil {
-			DebugLog("Server", "PUT MkdirAll err: "+err.Error())
-			return r.respond(500, err)
+		// LDP PUT should be merged with LDP POST into a common LDP "method" switch
+		link := ParseLinkHeader(req.Header.Get("Link")).MatchRel("type")
+		if len(link) > 0 && link == "http://www.w3.org/ns/ldp#BasicContainer" {
+			err := os.MkdirAll(resource.File, 0755)
+			if err != nil {
+				DebugLog("Server", "PUT MkdirAll err: "+err.Error())
+				return r.respond(500, err)
+			} else {
+				return r.respond(201)
+			}
+		} else {
+			err := os.MkdirAll(_path.Dir(resource.File), 0755)
+			if err != nil {
+				DebugLog("Server", "PUT MkdirAll err: "+err.Error())
+				return r.respond(500, err)
+			}
 		}
 
 		isNew := true
