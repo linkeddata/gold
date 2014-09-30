@@ -83,6 +83,7 @@ func (s *Server) pathInfo(path string) (ldpath, error) {
 	if len(path) == 0 {
 		return res, errors.New("missing resource path")
 	}
+
 	// hack - if source URI contains "one%2b+%2btwo" then it is
 	// normally decoded to "one+ +two", but Go parses it to
 	// "one+++two", so we replace the plus with a blank space
@@ -93,8 +94,13 @@ func (s *Server) pathInfo(path string) (ldpath, error) {
 		return res, err
 	}
 
+	root := s.root
+	if root == "." {
+		root = ""
+	}
+
 	// Add missing trailing slashes for dirs
-	res.FileType, err = magic.TypeByFile(p.Path)
+	res.FileType, err = magic.TypeByFile(root + p.Path)
 	if err == nil {
 		if res.FileType == "inode/directory" && !strings.HasSuffix(p.Path, "/") {
 			p.Path += "/"
@@ -146,11 +152,6 @@ func (s *Server) pathInfo(path string) (ldpath, error) {
 		res.File = host + "/" + res.File
 		res.AclFile = host + "/" + res.AclFile
 		res.MetaFile = host + "/" + res.MetaFile
-	}
-
-	root := s.root
-	if root == "." {
-		root = ""
 	}
 
 	if len(root) > 0 {
@@ -990,9 +991,14 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 			if err != nil {
 				DebugLog("Server", "PUT MkdirAll err: "+err.Error())
 				return r.respond(500, err)
-			} else {
-				return r.respond(201)
 			}
+			// refresh resource and set the right headers
+			resource, err = h.pathInfo(resource.Uri)
+			w.Header().Set("Link", "<"+resource.MetaUri+">; rel=\"meta\", <"+resource.AclUri+">; rel=\"acl\"")
+			// LDP header
+			w.Header().Add("Link", brack("http://www.w3.org/ns/ldp#Resource")+"; rel=\"type\"")
+
+			return r.respond(201)
 		} else {
 			err := os.MkdirAll(_path.Dir(resource.File), 0755)
 			if err != nil {
