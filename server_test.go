@@ -217,6 +217,26 @@ func TestLDPPUTContainer(t *testing.T) {
 
 	describedURI := ParseLinkHeader(response.Header.Get("Link")).MatchRel("describedby")
 	assert.NotNil(t, describedURI)
+
+	request, err = http.NewRequest("PUT", testServer.URL+"/_test/dir", nil)
+	assert.NoError(t, err)
+	request.Header.Add("Link", "<http://www.w3.org/ns/ldp#BasicContainer>; rel=\"type\"")
+	request.Header.Add("Content-Type", "text/turtle")
+	response, err = httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.Equal(t, 201, response.StatusCode)
+
+	metaURI := ParseLinkHeader(response.Header.Get("Link")).MatchRel("meta")
+	assert.Equal(t, testServer.URL+"/_test/dir/"+METASuffix, metaURI)
+
+	aclURI := ParseLinkHeader(response.Header.Get("Link")).MatchRel("acl")
+	assert.Equal(t, testServer.URL+"/_test/dir/"+ACLSuffix, aclURI)
+
+	request, err = http.NewRequest("DELETE", testServer.URL+"/_test/dir/", nil)
+	assert.NoError(t, err)
+	response, err = httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, response.StatusCode)
 }
 
 func TestLDPPostLDPC(t *testing.T) {
