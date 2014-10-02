@@ -865,7 +865,6 @@ func TestDELETEFolders(t *testing.T) {
 		assert.Equal(t, 404, response.StatusCode)
 
 		response = r.Delete("/_test", "", "")
-		assert.Empty(t, response.Body)
 		assert.Equal(t, 404, response.StatusCode)
 
 		response = r.Delete("/", "", "")

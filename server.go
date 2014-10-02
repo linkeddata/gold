@@ -399,7 +399,7 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 
 		status := 501
 		if !acl.AllowRead(resource.Uri) {
-			return r.respond(403)
+			return r.respond(403, "403 - Forbidden")
 		}
 
 		unlock := lock(resource.File)
@@ -416,10 +416,10 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 		}
 
 		if !req.ifMatch("\"" + etag + "\"") {
-			return r.respond(412, "Precondition Failed")
+			return r.respond(412, "412 - Precondition Failed")
 		}
 		if !req.ifNoneMatch("\"" + etag + "\"") {
-			return r.respond(304, "Not Modified")
+			return r.respond(304, "304 - Not Modified")
 		}
 
 		g := NewGraph(resource.Uri)
@@ -712,15 +712,15 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 
 		// check append first
 		if !acl.AllowAppend(resource.Uri) && !acl.AllowWrite(resource.Uri) {
-			return r.respond(403)
+			return r.respond(403, "403 - Forbidden")
 		}
 
 		etag, _ := NewETag(resource.File)
 		if !req.ifMatch("\"" + etag + "\"") {
-			return r.respond(412, "Precondition Failed")
+			return r.respond(412, "412 - Precondition Failed")
 		}
 		if !req.ifNoneMatch("\"" + etag + "\"") {
-			return r.respond(412, "Precondition Failed")
+			return r.respond(412, "412 - Precondition Failed")
 		}
 
 		if dataHasParser {
@@ -764,15 +764,15 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 
 		// check append first
 		if !acl.AllowAppend(resource.Uri) && !acl.AllowWrite(resource.Uri) {
-			return r.respond(403)
+			return r.respond(403, "403 - Forbidden")
 		}
 
 		etag, _ := NewETag(resource.File)
 		if !req.ifMatch("\"" + etag + "\"") {
-			return r.respond(412, "Precondition Failed")
+			return r.respond(412, "412 - Precondition Failed")
 		}
 		if !req.ifNoneMatch("\"" + etag + "\"") {
-			return r.respond(412, "Precondition Failed")
+			return r.respond(412, "412 - Precondition Failed")
 		}
 
 		// LDP
@@ -973,15 +973,15 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 
 		// check append first
 		if !acl.AllowAppend(resource.Uri) && !acl.AllowWrite(resource.Uri) {
-			return r.respond(403)
+			return r.respond(403, "403 - Forbidden")
 		}
 
 		etag, _ := NewETag(resource.File)
 		if !req.ifMatch("\"" + etag + "\"") {
-			return r.respond(412, "Precondition Failed")
+			return r.respond(412, "412 - Precondition Failed")
 		}
 		if !req.ifNoneMatch("\"" + etag + "\"") {
-			return r.respond(412, "Precondition Failed")
+			return r.respond(412, "412 - Precondition Failed")
 		}
 
 		// LDP PUT should be merged with LDP POST into a common LDP "method" switch
@@ -1018,7 +1018,7 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 			DebugLog("Server", "PUT os.OpenFile err: "+err.Error())
 			if stat.IsDir() {
 				w.Header().Add("Link", brack(resource.Uri)+"; rel=\"describedby\"")
-				return r.respond(406, "Cannot use PUT on a directory.")
+				return r.respond(406, "406 - Cannot use PUT on a directory.")
 			} else {
 				return r.respond(500, err)
 			}
@@ -1041,7 +1041,7 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 		}
 
 		if err != nil {
-			return r.respond(500)
+			return r.respond(500, err)
 		} else if isNew {
 			return r.respond(201)
 		} else {
@@ -1053,21 +1053,21 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 		defer unlock()
 
 		if !acl.AllowWrite(resource.Uri) {
-			return r.respond(403)
+			return r.respond(403, "403 - Forbidden")
 		}
 		if len(resource.Path) == 0 {
-			return r.respond(500, "cannot DELETE /")
+			return r.respond(500, "500 - Cannot DELETE /")
 		}
 		err := os.Remove(resource.File)
 		if err != nil {
 			if os.IsNotExist(err) {
-				return r.respond(404)
+				return r.respond(404, "404 - Not found")
 			}
 			return r.respond(500, err)
 		} else {
 			_, err := os.Stat(resource.File)
 			if err == nil {
-				return r.respond(409)
+				return r.respond(409, err)
 			}
 		}
 		return
@@ -1077,7 +1077,7 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 		defer unlock()
 
 		if !acl.AllowWrite(resource.Uri) {
-			return r.respond(403)
+			return r.respond(403, "403 - Forbidden")
 		}
 		err := os.MkdirAll(resource.File, 0755)
 		if err != nil {
@@ -1096,7 +1096,7 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 		return r.respond(201)
 
 	default:
-		return r.respond(405, "Method Not Allowed:", req.Method)
+		return r.respond(405, "405 - Method Not Allowed:", req.Method)
 	}
 	return
 }
