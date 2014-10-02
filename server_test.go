@@ -841,6 +841,7 @@ func TestHEAD(t *testing.T) {
 		assert.Empty(t, response.Body)
 		assert.Equal(t, 200, response.StatusCode)
 		assert.Equal(t, "2", response.RawResponse.Header.Get("Triples"))
+		assert.NotEmpty(t, response.RawResponse.Header.Get("Content-Length"))
 	})
 }
 
