@@ -395,6 +395,9 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 		} else if stat.IsDir() {
 			w.Header().Add("Link", brack("http://www.w3.org/ns/ldp#BasicContainer")+"; rel=\"type\"")
 		}
+		if req.Method == "HEAD" {
+			w.Header().Add("Content-Length", fmt.Sprintf("%d", stat.Size()))
+		}
 		w.Header().Add("Link", brack("http://www.w3.org/ns/ldp#Resource")+"; rel=\"type\"")
 
 		status := 501
@@ -639,6 +642,10 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 			}
 		}
 
+		if req.Method == "HEAD" {
+			return r.respond(status)
+		}
+
 		if !maybeRDF && len(magicType) > 0 {
 			if len(resource.Path) > 4 {
 				if strings.HasSuffix(resource.Path, ".html") || strings.HasSuffix(resource.Path, ".htm") {
@@ -647,9 +654,6 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 			}
 			w.Header().Set(HCType, magicType)
 			w.WriteHeader(status)
-			if req.Method == "HEAD" {
-				return
-			}
 
 			if status == 200 {
 				f, err := os.Open(resource.File)
@@ -663,10 +667,6 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 				}
 			}
 			return
-		}
-
-		if req.Method == "HEAD" {
-			return r.respond(status)
 		}
 
 		data := ""
