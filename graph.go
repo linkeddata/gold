@@ -3,6 +3,7 @@ package gold
 import (
 	"crypto/tls"
 	"encoding/json"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
@@ -292,11 +293,16 @@ func (g *Graph) LoadURI(uri string) (err error) {
 	q.Header.Set("Accept", "text/turtle,text/n3,application/rdf+xml")
 	r, err := httpClient.Do(q)
 	if err != nil {
+		DebugLog("Graph", "LoadURI httpClient error: "+err.Error())
 		return
 	}
 	if r != nil {
 		defer r.Body.Close()
-		g.ParseBase(r.Body, r.Header.Get("Content-Type"), doc)
+		if r.StatusCode == 200 {
+			g.ParseBase(r.Body, r.Header.Get("Content-Type"), doc)
+		} else {
+			err = fmt.Errorf("Could not fetch graph from %s - HTTP %d", uri, r.StatusCode)
+		}
 	}
 	return
 }
