@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"mime/multipart"
 	"net/http"
 	"os"
@@ -601,7 +602,7 @@ func TestPATCHJson(t *testing.T) {
 
 func TestPUTTurtle(t *testing.T) {
 	testflight.WithServer(handler, func(r *testflight.Requester) {
-		response := r.Put("/_test/abc", "text/turtle", "<d> <e> <f> .")
+		response := r.Put("/_test/abc", "text/turtle", "<d> <e> <f> ; <h> <i> .")
 		assert.Empty(t, response.Body)
 		assert.Equal(t, 201, response.StatusCode)
 
@@ -609,7 +610,19 @@ func TestPUTTurtle(t *testing.T) {
 		request.Header.Add("Accept", "text/turtle")
 		response = r.Do(request)
 		assert.Equal(t, 200, response.StatusCode)
-		assert.Equal(t, response.Body, "@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n\n<d>\n    <e> <f> .\n\n")
+		assert.Equal(t, response.Body, "@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n\n<d>\n    <e> <f> ;\n    <h> <i> .\n\n")
+	})
+}
+
+func TestHEAD(t *testing.T) {
+	testflight.WithServer(handler, func(r *testflight.Requester) {
+		request, _ := http.NewRequest("HEAD", "/_test/abc", nil)
+		response := r.Do(request)
+		assert.Empty(t, response.Body)
+		assert.Equal(t, 200, response.StatusCode)
+		assert.Equal(t, "2", response.RawResponse.Header.Get("Triples"))
+		log.Printf("%+v\n", response.RawResponse)
+		assert.NotEmpty(t, response.RawResponse.Header.Get("Content-Length"))
 	})
 }
 
@@ -831,17 +844,6 @@ func TestGlob(t *testing.T) {
 		request, _ = http.NewRequest("DELETE", "/_test/2", nil)
 		response = r.Do(request)
 		assert.Equal(t, 200, response.StatusCode)
-	})
-}
-
-func TestHEAD(t *testing.T) {
-	testflight.WithServer(handler, func(r *testflight.Requester) {
-		request, _ := http.NewRequest("HEAD", "/_test/abc", nil)
-		response := r.Do(request)
-		assert.Empty(t, response.Body)
-		assert.Equal(t, 200, response.StatusCode)
-		assert.Equal(t, "2", response.RawResponse.Header.Get("Triples"))
-		assert.NotEmpty(t, response.RawResponse.Header.Get("Content-Length"))
 	})
 }
 
