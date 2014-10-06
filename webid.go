@@ -65,21 +65,21 @@ func WebIDTLSAuth(tls *tls.ConnectionState) (uri string, err error) {
 			continue
 		}
 
-		DebugLog("WebID-TLS", "Found public key from client.")
+		DebugLog("WebID-TLS", "Found public key from client containing WebID claim: "+claim)
 
 		pkeyk := fmt.Sprint([]string{t, n, e})
 		webidL.Lock()
 		uri = pkeyURI[pkeyk]
 		webidL.Unlock()
 		if len(uri) > 0 {
-			DebugLog("WebID-TLS", "Found WebID:"+uri)
+			DebugLog("WebID-TLS", "Authenticated WebID:"+uri)
 			return
 		}
 
 		g := NewGraph(claim)
 		err = g.LoadURI(claim)
 		if err != nil {
-			DebugLog("WebID-TLS", "Could not load the user's profile from: "+claim)
+			DebugLog("WebID-TLS", err.Error())
 			return
 		}
 
