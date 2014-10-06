@@ -396,7 +396,7 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 			w.Header().Add("Link", brack("http://www.w3.org/ns/ldp#BasicContainer")+"; rel=\"type\"")
 		}
 		if req.Method == "HEAD" && stat != nil {
-			w.Header().Add("Content-Length", fmt.Sprintf("%d", stat.Size()))
+			w.Header().Set("Content-Length", fmt.Sprintf("%d", stat.Size()))
 		}
 		w.Header().Add("Link", brack("http://www.w3.org/ns/ldp#Resource")+"; rel=\"type\"")
 

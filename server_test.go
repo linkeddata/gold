@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"mime/multipart"
 	"net/http"
 	"os"
@@ -621,7 +620,6 @@ func TestHEAD(t *testing.T) {
 		assert.Empty(t, response.Body)
 		assert.Equal(t, 200, response.StatusCode)
 		assert.Equal(t, "2", response.RawResponse.Header.Get("Triples"))
-		log.Printf("%+v\n", response.RawResponse)
 		assert.NotEmpty(t, response.RawResponse.Header.Get("Content-Length"))
 	})
 }
