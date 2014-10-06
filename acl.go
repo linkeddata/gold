@@ -31,34 +31,35 @@ func (acl *WAC) allow(mode string, path string) bool {
 	}
 	depth := strings.Split(p.Path, "/")
 
-	DebugLog("WAC", "Checking <"+mode+"> access to "+p.Uri+" for WebID: "+acl.user)
-
 	for i := 0; i < len(depth); i++ {
 		p, err := acl.srv.pathInfo(path)
 		if err != nil {
 			return false
 		}
 
+		DebugLog("WAC", "Checking "+accessType+" <"+mode+"> to "+p.Uri+" for WebID: "+acl.user)
+		DebugLog("WAC", "Looking for policies in "+p.AclFile)
+
 		aclGraph := NewGraph(p.AclUri)
 		aclGraph.ReadFile(p.AclFile)
 		if aclGraph.Len() > 0 {
-			DebugLog("WAC", "Looking for policies in "+p.AclFile)
+			DebugLog("WAC", "Found policies in "+p.AclFile)
 			// TODO make it more elegant instead of duplicating code
 			for _, i := range aclGraph.All(nil, ns.acl.Get("mode"), ns.acl.Get("Control")) {
 				for _ = range aclGraph.All(i.Subject, ns.acl.Get(accessType), NewResource(p.Uri)) {
 					for _ = range aclGraph.All(i.Subject, ns.acl.Get("owner"), NewResource(acl.user)) {
-						DebugLog("WAC", "Access allowed for: "+acl.user)
+						DebugLog("WAC", mode+" access allowed (as owner) for: "+acl.user)
 						return true
 					}
 					for _ = range aclGraph.All(i.Subject, ns.acl.Get("agent"), NewResource(acl.user)) {
-						DebugLog("WAC", "Access allowed for: "+acl.user)
+						DebugLog("WAC", mode+" access allowed (as agent) for: "+acl.user)
 						return true
 					}
 					for _, t := range aclGraph.All(i.Subject, ns.acl.Get("agentClass"), nil) {
 						// check for foaf groups
 						DebugLog("WAC", "Found agentClass policy")
 						if t.Object.Equal(ns.foaf.Get("Agent")) {
-							DebugLog("WAC", "Access allowed for FOAF Agents")
+							DebugLog("WAC", mode+" access allowed as FOAF Agent")
 							return true
 						} else {
 							groupURI := debrack(t.Object.String())
@@ -75,7 +76,7 @@ func (acl *WAC) allow(mode string, path string) bool {
 				}
 			}
 			for _, i := range aclGraph.All(nil, ns.acl.Get("mode"), ns.acl.Get(mode)) {
-				DebugLog("WAC", "Found policy for <"+mode+">")
+				DebugLog("WAC", "Found "+accessType+" policy for <"+mode+">")
 
 				for _ = range aclGraph.All(i.Subject, ns.acl.Get(accessType), NewResource(p.Uri)) {
 					origins := aclGraph.All(i.Subject, ns.acl.Get("origin"), nil)
@@ -94,18 +95,18 @@ func (acl *WAC) allow(mode string, path string) bool {
 				allowOrigin:
 					DebugLog("WAC", "In allowOrigin")
 					for _ = range aclGraph.All(i.Subject, ns.acl.Get("owner"), NewResource(acl.user)) {
-						DebugLog("WAC", "Access allowed for: "+acl.user)
+						DebugLog("WAC", mode+" access allowed (as owner) for: "+acl.user)
 						return true
 					}
 					for _ = range aclGraph.All(i.Subject, ns.acl.Get("agent"), NewResource(acl.user)) {
-						DebugLog("WAC", "Access allowed for: "+acl.user)
+						DebugLog("WAC", mode+" access allowed (as agent) for: "+acl.user)
 						return true
 					}
 					for _, t := range aclGraph.All(i.Subject, ns.acl.Get("agentClass"), nil) {
 						// check for foaf groups
 						DebugLog("WAC", "Found agentClass policy")
 						if t.Object.Equal(ns.foaf.Get("Agent")) {
-							DebugLog("WAC", "Access allowed for FOAF Agents")
+							DebugLog("WAC", mode+" access allowed as FOAF Agent")
 							return true
 						} else {
 							groupURI := debrack(t.Object.String())
@@ -121,7 +122,7 @@ func (acl *WAC) allow(mode string, path string) bool {
 					}
 				}
 			}
-			DebugLog("WAC", "Access denied for: "+acl.user)
+			DebugLog("WAC", mode+" access denied for: "+acl.user)
 			return false
 		}
 
