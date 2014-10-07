@@ -131,7 +131,7 @@ func (s *Server) pathInfo(path string) (ldpath, error) {
 		res.AclFile = res.Path
 		res.MetaUri = res.Uri
 		res.MetaFile = res.Path
-	} else if strings.HasSuffix(res.Path, ",meta") {
+	} else if strings.HasSuffix(res.Path, ",meta") || strings.HasSuffix(res.Path, ",meta/") {
 		res.AclUri = res.Uri + ACLSuffix
 		res.AclFile = res.Path + ACLSuffix
 		res.MetaUri = res.Uri
@@ -539,9 +539,10 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 									kb := NewGraph(f.Uri)
 									kb.ReadFile(f.MetaFile)
 									if kb.Len() > 0 {
-										st := kb.One(NewResource(f.Uri), NewResource("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), nil)
-										if st != nil && st.Object != nil {
-											g.AddTriple(s, NewResource("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), st.Object)
+										for _, st := range kb.All(s, NewResource("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), nil) {
+											if st != nil && st.Object != nil {
+												g.AddTriple(s, NewResource("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), st.Object)
+											}
 										}
 									}
 								} else {
@@ -569,9 +570,10 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 													kb := NewGraph(f.Uri)
 													kb.ReadFile(f.File)
 													if kb.Len() > 0 {
-														st := kb.One(NewResource(f.Uri), NewResource("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), nil)
-														if st != nil && st.Object != nil {
-															g.AddTriple(s, NewResource("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), st.Object)
+														for _, st := range kb.All(NewResource(f.Uri), NewResource("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), nil) {
+															if st != nil && st.Object != nil {
+																g.AddTriple(s, NewResource("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), st.Object)
+															}
 														}
 													}
 												}
@@ -800,7 +802,12 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 				if strings.HasSuffix(slug, "/") {
 					slug = strings.TrimRight(slug, "/")
 				}
-				slug = slug + uuid
+				// TODO check if resource exists already and respond with 409
+				s, _ := os.Stat(resource.File + slug)
+				if s != nil {
+					DebugLog("Server", "POST LDP - A resource with the same name already exists: "+resource.Path+slug)
+					return r.respond(409, "409 - Conflict! A resource with the same name already exists.")
+				}
 			} else {
 				slug = uuid
 			}
@@ -866,10 +873,14 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 			isNew = true
 		}
 
-		err = os.MkdirAll(_path.Dir(resource.File), 0755)
-		if err != nil {
-			DebugLog("Server", "POST MkdirAll err: "+err.Error())
-			return r.respond(500, err)
+		if stat == nil {
+			err = os.MkdirAll(_path.Dir(resource.File), 0755)
+			if err != nil {
+				DebugLog("Server", "POST MkdirAll err: "+err.Error())
+				return r.respond(500, err)
+			} else {
+				DebugLog("Server", "Created resource "+_path.Dir(resource.File))
+			}
 		}
 
 		if dataMime == "multipart/form-data" {
@@ -929,20 +940,20 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 				default:
 					g.Parse(req.Body, dataMime)
 				}
-				if g.Len() > 0 {
-					f, err := os.OpenFile(resource.File, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
-					if err != nil {
-						DebugLog("Server", "POST os.OpenFile err: "+err.Error())
-						return r.respond(500, err.Error())
-					}
-					defer f.Close()
-
-					err = g.WriteFile(f, "text/turtle")
-					if err != nil {
-						DebugLog("Server", "POST g.WriteFile err: "+err.Error())
-					}
-					w.Header().Set("Triples", fmt.Sprintf("%d", g.Len()))
+				f, err := os.OpenFile(resource.File, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
+				if err != nil {
+					DebugLog("Server", "POST os.OpenFile err: "+err.Error())
+					return r.respond(500, err.Error())
 				}
+				defer f.Close()
+
+				err = g.WriteFile(f, "text/turtle")
+				if err != nil {
+					DebugLog("Server", "POST g.WriteFile err: "+err.Error())
+				} else {
+					DebugLog("Server", "Wrote resource file: "+resource.File)
+				}
+				w.Header().Set("Triples", fmt.Sprintf("%d", g.Len()))
 			} else {
 				f, err := os.OpenFile(resource.File, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
 				if err != nil {
