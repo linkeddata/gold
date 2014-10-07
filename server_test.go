@@ -319,6 +319,15 @@ func TestLDPPostLDPRWithSlug(t *testing.T) {
 	response.Body.Close()
 	assert.Equal(t, string(body), "@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n\n<>\n    a <http://example.org/two> .\n\n")
 
+	request, err = http.NewRequest("POST", testServer.URL+"/_test/", nil)
+	assert.NoError(t, err)
+	request.Header.Add("Content-Type", "text/turtle")
+	request.Header.Add("Slug", "ldpr")
+	request.Header.Add("Link", "<http://www.w3.org/ns/ldp#Resource>; rel=\"type\"")
+	response, err = httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.Equal(t, 409, response.StatusCode)
+
 	request, err = http.NewRequest("DELETE", newLDPR, nil)
 	assert.NoError(t, err)
 	response, err = httpClient.Do(request)
