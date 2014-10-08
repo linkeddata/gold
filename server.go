@@ -852,9 +852,11 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 					}
 					defer f.Close()
 
-					if err = g.WriteFile(f, ""); err != nil {
-						DebugLog("Server", "POST LDPC g.WriteFile err: "+err.Error())
-						return r.respond(500, err)
+					if g.Len() > 0 {
+						if err = g.WriteFile(f, ""); err != nil {
+							DebugLog("Server", "POST LDPC g.WriteFile err: "+err.Error())
+							return r.respond(500, err)
+						}
 					}
 				}
 				w.Header().Set("Location", resource.Uri)
@@ -946,12 +948,13 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 					return r.respond(500, err.Error())
 				}
 				defer f.Close()
-
-				err = g.WriteFile(f, "text/turtle")
-				if err != nil {
-					DebugLog("Server", "POST g.WriteFile err: "+err.Error())
-				} else {
-					DebugLog("Server", "Wrote resource file: "+resource.File)
+				if g.Len() > 0 {
+					err = g.WriteFile(f, "text/turtle")
+					if err != nil {
+						DebugLog("Server", "POST g.WriteFile err: "+err.Error())
+					} else {
+						DebugLog("Server", "Wrote resource file: "+resource.File)
+					}
 				}
 				w.Header().Set("Triples", fmt.Sprintf("%d", g.Len()))
 			} else {
