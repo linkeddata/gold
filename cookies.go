@@ -1,8 +1,6 @@
 package gold
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
 	"net/http"
 
 	"github.com/gorilla/securecookie"
@@ -12,28 +10,18 @@ var (
 	s = NewSecureCookie()
 )
 
-// Converts string to sha2
-func SHA2(str string) string {
-	bytes := []byte(str)
-
-	h := sha256.New()
-	h.Write(bytes)
-
-	return hex.EncodeToString(h.Sum(nil))
-}
-
 func NewSecureCookie() *securecookie.SecureCookie {
 	return securecookie.New(securecookie.GenerateRandomKey(64), securecookie.GenerateRandomKey(32))
 }
 
-func SetCookieHandler(w http.ResponseWriter, user string) {
+func SetCookie(w http.ResponseWriter, user string) {
 	DebugLog("Cookie", "Setting new cookie for "+user)
 	value := map[string]string{
 		"user": user,
 	}
-	if encoded, err := s.Encode("session", value); err == nil {
+	if encoded, err := s.Encode("Session", value); err == nil {
 		cookie := &http.Cookie{
-			Name:  "session",
+			Name:  "Session",
 			Value: encoded,
 			Path:  "/",
 		}
@@ -43,13 +31,12 @@ func SetCookieHandler(w http.ResponseWriter, user string) {
 	}
 }
 
-func ReadCookieHandler(w http.ResponseWriter, r *httpRequest) (user string) {
-	//DebugLog("Cookie", "Cookie: "+fmt.Sprintf("%+v\n", s))
+func ReadCookie(w http.ResponseWriter, r *httpRequest) (user string) {
 	user = ""
-	cookie, err := r.Cookie("session")
+	cookie, err := r.Cookie("Session")
 	if err == nil {
 		value := make(map[string]string)
-		if err = s.Decode("session", cookie.Value, &value); err == nil {
+		if err = s.Decode("Session", cookie.Value, &value); err == nil {
 			user = value["user"]
 			DebugLog("Cookie", "The value of User is "+user)
 			return
@@ -61,4 +48,15 @@ func ReadCookieHandler(w http.ResponseWriter, r *httpRequest) (user string) {
 	}
 
 	return
+}
+
+func DeleteCookie(w http.ResponseWriter, user string) {
+	cookie := &http.Cookie{
+		Name:   "Session",
+		Value:  "deleted",
+		Path:   "/",
+		MaxAge: -1,
+	}
+
+	http.SetCookie(w, cookie)
 }

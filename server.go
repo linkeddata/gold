@@ -59,6 +59,14 @@ type ldpath struct {
 	MetaFile string
 }
 
+type errorString struct {
+	s string
+}
+
+func (e *errorString) Error() string {
+	return e.s
+}
+
 func GetServerRoot() string {
 	serverRoot, err := os.Getwd()
 	if err != nil {
@@ -190,7 +198,7 @@ func (req httpRequest) BaseURI() string {
 }
 
 func (req *httpRequest) Auth(w http.ResponseWriter) string {
-	user := ReadCookieHandler(w, req)
+	user := ReadCookie(w, req)
 	if len(user) == 0 {
 		user, _ = WebIDTLSAuth(req.TLS)
 		if len(user) == 0 {
@@ -200,7 +208,7 @@ func (req *httpRequest) Auth(w http.ResponseWriter) string {
 		} else {
 			DebugLog("Auth", "WebID-TLS authentication successful for User: "+user)
 			// start session
-			SetCookieHandler(w, user)
+			SetCookie(w, user)
 		}
 	} else {
 		DebugLog("Auth", "Cookie authentication successful for User: "+user)
