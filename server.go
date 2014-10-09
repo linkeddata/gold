@@ -189,14 +189,23 @@ func (req httpRequest) BaseURI() string {
 	return scheme + "://" + host + port + req.URL.Path
 }
 
-func (req *httpRequest) Auth() string {
-	user, _ := WebIDTLSAuth(req.TLS)
+func (req *httpRequest) Auth(w http.ResponseWriter) string {
+	user := ReadCookieHandler(w, req)
 	if len(user) == 0 {
-		host, _, _ := net.SplitHostPort(req.RemoteAddr)
-		remoteAddr := net.ParseIP(host)
-		user = "dns:" + remoteAddr.String()
+		user, _ = WebIDTLSAuth(req.TLS)
+		if len(user) == 0 {
+			host, _, _ := net.SplitHostPort(req.RemoteAddr)
+			remoteAddr := net.ParseIP(host)
+			user = "dns:" + remoteAddr.String()
+		} else {
+			DebugLog("Auth", "WebID-TLS authentication successful for User: "+user)
+			// start session
+			SetCookieHandler(w, user)
+		}
+	} else {
+		DebugLog("Auth", "Cookie authentication successful for User: "+user)
 	}
-	DebugLog("Server", "Request User: "+user)
+	DebugLog("Auth", "Request User: "+user)
 	return user
 }
 
@@ -267,6 +276,7 @@ func (h *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	defer func() {
 		req.Body.Close()
 	}()
+
 	r := h.handle(w, &httpRequest{req})
 	for key, _ := range r.headers {
 		w.Header().Set(key, r.headers.Get(key))
@@ -285,7 +295,7 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 
 	DebugLog("Server", "------ New "+req.Method+" request from "+req.RemoteAddr+" ------")
 
-	user := req.Auth()
+	user := req.Auth(w)
 	w.Header().Set("User", user)
 	acl := NewWAC(req, h, user)
 
