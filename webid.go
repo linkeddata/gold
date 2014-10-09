@@ -72,7 +72,6 @@ func WebIDTLSAuth(tls *tls.ConnectionState) (uri string, err error) {
 		uri = pkeyURI[pkeyk]
 		webidL.Unlock()
 		if len(uri) > 0 {
-			DebugLog("WebID-TLS", "Authenticated WebID:"+uri)
 			return
 		}
 
