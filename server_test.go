@@ -769,20 +769,10 @@ func TestPOSTMultiForm(t *testing.T) {
 
 		response = r.Delete("/img.jpg", "", "")
 		assert.Equal(t, 200, response.StatusCode)
-
-		response = r.Get("/img.jpg")
-		assert.Equal(t, 404, response.StatusCode)
 	})
 }
 
 func TestLISTDIR(t *testing.T) {
-	// request, err := http.NewRequest("GET", testServer.URL+"/", nil)
-	// assert.NoError(t, err)
-	// request.Header.Add("Accept", "text/turtle")
-	// response, err := httpClient.Do(request)
-	// assert.NoError(t, err)
-	// assert.Equal(t, 200, response.StatusCode)
-
 	request, err := http.NewRequest("MKCOL", testServer.URL+"/_test/dir", nil)
 	assert.NoError(t, err)
 	response, err := httpClient.Do(request)

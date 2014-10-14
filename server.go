@@ -197,26 +197,6 @@ func (req httpRequest) BaseURI() string {
 	return scheme + "://" + host + port + req.URL.Path
 }
 
-func (req *httpRequest) Auth(w http.ResponseWriter) string {
-	user := ReadCookie(w, req)
-	if len(user) == 0 {
-		user, _ = WebIDTLSAuth(req.TLS)
-		if len(user) == 0 {
-			host, _, _ := net.SplitHostPort(req.RemoteAddr)
-			remoteAddr := net.ParseIP(host)
-			user = "dns:" + remoteAddr.String()
-		} else {
-			DebugLog("Auth", "WebID-TLS authentication successful for User: "+user)
-			// start session
-			SetCookie(w, user)
-		}
-	} else {
-		DebugLog("Auth", "Cookie authentication successful for User: "+user)
-	}
-	DebugLog("Auth", "Request User: "+user)
-	return user
-}
-
 func (req httpRequest) ifMatch(etag string) bool {
 	if len(etag) == 0 {
 		return true
@@ -311,7 +291,8 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 	dataMime = strings.Split(dataMime, ";")[0]
 	dataHasParser := len(mimeParser[dataMime]) > 0
 	if len(dataMime) > 0 && dataMime != "multipart/form-data" && !dataHasParser && req.Method != "PUT" {
-		return r.respond(415, "Unsupported Media Type:", dataMime)
+		DebugLog("Server", "Request contains unsupported Media Type:"+dataMime)
+		return r.respond(415, "HTTP 415 - Unsupported Media Type:", dataMime)
 	}
 
 	DebugLog("Server", "Content-Type: "+dataMime)
@@ -322,7 +303,8 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 	if len(acceptList) > 0 && acceptList[0].SubType != "*" {
 		contentType, err = acceptList.Negotiate(serializerMimes...)
 		if err != nil {
-			return r.respond(406, err) // Not Acceptable
+			DebugLog("Server", "Content type not acceptable: "+err.Error())
+			return r.respond(406, "HTTP 406 - Content type not acceptable: "+err.Error())
 		}
 	}
 
