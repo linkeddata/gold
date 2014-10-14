@@ -37,9 +37,10 @@ Setup Go + dependencies:
 
     mkdir ~/go; export GOPATH=~/go
 
-Use the `go get` command:
+Use the `go get` command to install the server and the securecookie library:
 
     go get github.com/linkeddata/gold/server
+    go get github.com/gorilla/securecookie
     
 Optionally, you can install some extra dependencies used by the tests:
 
