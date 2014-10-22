@@ -371,18 +371,19 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 
 		// check for glob
 		glob = false
-		if strings.Contains(filepath.Base(resource.Path), "*") {
+		if strings.Contains(resource.Obj.Path, "*") {
 			glob = true
-			globPath = resource.Path
-			path := filepath.Dir(resource.Path) + "/"
-			if path == "./" {
+			path := filepath.Dir(resource.Obj.Path)
+			globPath = resource.File
+			if path == "." {
 				path = ""
+			} else {
+				path += "/"
 			}
 			resource, err = h.pathInfo(resource.Base + "/" + path)
 			if err != nil {
 				return r.respond(500, err)
 			}
-			// TODO: use Depth header (WebDAV)
 		}
 
 		// overwrite ACL Link header
@@ -485,9 +486,13 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 								// TODO: check acls
 								guessType, _ := magic.TypeByFile(file)
 								if guessType == "text/plain" {
-									if acl.AllowRead(resource.Base + "/" + file) {
-										g.AppendFile(file, resource.Base+"/"+file)
-										g.AddTriple(root, NewResource("http://www.w3.org/ns/ldp#contains"), NewResource(resource.Base+"/"+file))
+									res, err := h.pathInfo(resource.Base + "/" + filepath.Dir(resource.Path) + "/" + filepath.Base(file))
+									if err != nil {
+										return r.respond(500, err)
+									}
+									if acl.AllowRead(res.Uri) {
+										g.AppendFile(res.File, res.Uri)
+										g.AddTriple(root, NewResource("http://www.w3.org/ns/ldp#contains"), NewResource(res.Uri))
 									}
 								}
 							}
