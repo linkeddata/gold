@@ -30,6 +30,14 @@ var (
 	FileManagerUri = "https://linkeddata.github.io/warp/#list/"
 	Streaming      = false // experimental
 
+	webExtensions = map[string]string{
+		"css":  "text/css",
+		"js":   "text/javascript",
+		"htm":  "text/html",
+		"html": "text/html",
+		"txt":  "text/txt",
+	}
+
 	methodsAll = []string{
 		"GET", "PUT", "POST", "OPTIONS", "HEAD", "MKCOL", "DELETE", "PATCH",
 	}
@@ -606,10 +614,21 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 				maybeRDF = true
 			}
 		default:
+			magicType, err = magic.TypeByFile(resource.File)
+			if magicType == "text/plain" {
+				maybeRDF = true
+				for ext := range webExtensions {
+					if strings.HasSuffix(resource.File, ext) {
+						maybeRDF = false
+						magicType = webExtensions[ext]
+						break
+					}
+				}
+			}
+			status = 200
+
 			if req.Method == "GET" && strings.Contains(contentType, "text/html") {
 				w.Header().Del("ETag")
-				magicType, err = magic.TypeByFile(resource.File)
-				maybeRDF = magicType == "text/plain"
 				w.Header().Set("Link", "<"+resource.MetaUri+">; rel=meta, <"+resource.AclUri+">; rel=acl")
 				if maybeRDF {
 					w.Header().Set(HCType, contentType)
@@ -628,10 +647,6 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 					}
 					return
 				}
-			} else {
-				status = 200
-				magicType, err = magic.TypeByFile(resource.File)
-				maybeRDF = magicType == "text/plain"
 			}
 		}
 
@@ -650,15 +665,11 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 		}
 
 		if req.Method == "HEAD" {
+			w.Header().Set(HCType, magicType)
 			return r.respond(status)
 		}
 
 		if !maybeRDF && len(magicType) > 0 {
-			if len(resource.Path) > 4 {
-				if strings.HasSuffix(resource.Path, ".html") || strings.HasSuffix(resource.Path, ".htm") {
-					magicType = "text/html"
-				}
-			}
 			w.Header().Set(HCType, magicType)
 			w.WriteHeader(status)
 
