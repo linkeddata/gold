@@ -17,8 +17,6 @@ import (
 
 var (
 	handler = NewServer(GetServerRoot(), false)
-
-	testDelete = true
 )
 
 func TestMKCOL(t *testing.T) {
@@ -62,6 +60,32 @@ func TestSkin(t *testing.T) {
 	})
 }
 
+func TestWebContent(t *testing.T) {
+	testflight.WithServer(handler, func(r *testflight.Requester) {
+		request, _ := http.NewRequest("PUT", "/_test/alert.js", strings.NewReader("alert('test');"))
+		request.Header.Add("Content-Type", "application/javascript")
+		response := r.Do(request)
+		assert.Equal(t, 201, response.StatusCode)
+		request, _ = http.NewRequest("PUT", "/_test/reset.css", strings.NewReader("* { padding: 0; }"))
+		request.Header.Add("Content-Type", "text/css")
+		response = r.Do(request)
+		assert.Equal(t, 201, response.StatusCode)
+
+		request, _ = http.NewRequest("GET", "/_test/alert.js", nil)
+		response = r.Do(request)
+		assert.Equal(t, 200, response.StatusCode)
+		assert.Contains(t, response.RawResponse.Header.Get("Content-Type"), "application/javascript")
+
+		request, _ = http.NewRequest("GET", "/_test/reset.css", nil)
+		response = r.Do(request)
+		assert.Equal(t, 200, response.StatusCode)
+		assert.Contains(t, response.RawResponse.Header.Get("Content-Type"), "text/css; charset=utf-8")
+
+		assert.Equal(t, 200, r.Delete("/_test/alert.js", "", "").StatusCode)
+		assert.Equal(t, 200, r.Delete("/_test/reset.css", "", "").StatusCode)
+	})
+}
+
 func TestHTMLIndex(t *testing.T) {
 	testflight.WithServer(handler, func(r *testflight.Requester) {
 		request, _ := http.NewRequest("HEAD", "/_test/index.html", nil)
@@ -83,9 +107,7 @@ func TestHTMLIndex(t *testing.T) {
 		assert.Equal(t, request.URL.String()+"index.html,meta", ParseLinkHeader(response.RawResponse.Header.Get("Link")).MatchRel("meta"))
 		assert.Equal(t, request.URL.String()+"index.html,acl", ParseLinkHeader(response.RawResponse.Header.Get("Link")).MatchRel("acl"))
 
-		request, _ = http.NewRequest("DELETE", "/_test/index.html", nil)
-		response = r.Do(request)
-		assert.Equal(t, 200, response.StatusCode)
+		assert.Equal(t, 200, r.Delete("/_test/index.html", "", "").StatusCode)
 	})
 }
 
@@ -834,20 +856,14 @@ func TestGlob(t *testing.T) {
 		assert.Equal(t, g.One(NewResource(testServer.URL+"/_test/1#c"), ns.rdf.Get("type"), NewResource("http://example.org/e")).Object, NewResource("http://example.org/e"))
 		assert.Equal(t, g.One(NewResource(testServer.URL+"/_test/2"), ns.rdf.Get("type"), NewResource("http://example.org/two")).Object, NewResource("http://example.org/two"))
 
-		request, _ = http.NewRequest("DELETE", "/_test/1", nil)
-		response = r.Do(request)
-		assert.Equal(t, 200, response.StatusCode)
-
-		request, _ = http.NewRequest("DELETE", "/_test/2", nil)
-		response = r.Do(request)
-		assert.Equal(t, 200, response.StatusCode)
+		assert.Equal(t, 200, r.Delete("/_test/1", "", "").StatusCode)
+		assert.Equal(t, 200, r.Delete("/_test/2", "", "").StatusCode)
 	})
 }
 
 func TestDELETEFiles(t *testing.T) {
 	testflight.WithServer(handler, func(r *testflight.Requester) {
-		response := r.Delete("/_test/abc", "", "")
-		assert.Equal(t, 200, response.StatusCode)
+		assert.Equal(t, 200, r.Delete("/_test/abc", "", "").StatusCode)
 	})
 }
 
@@ -914,8 +930,7 @@ func TestRawContent(t *testing.T) {
 		assert.Equal(t, response.StatusCode, 200)
 		assert.Equal(t, response.RawResponse.Header.Get(HCType), ctype)
 		assert.Equal(t, len(response.Body), stat.Size())
-		response = r.Delete("/test.raw", "", "")
-		assert.Equal(t, response.StatusCode, 200)
+		assert.Equal(t, 200, r.Delete("/test.raw", "", "").StatusCode)
 	})
 }
 

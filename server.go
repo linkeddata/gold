@@ -615,16 +615,7 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 			}
 		default:
 			magicType, err = magic.TypeByFile(resource.File)
-			if magicType == "text/plain" {
-				maybeRDF = true
-				for ext := range webExtensions {
-					if strings.HasSuffix(resource.File, ext) {
-						maybeRDF = false
-						magicType = webExtensions[ext]
-						break
-					}
-				}
-			}
+			maybeRDF = magicType == "text/plain"
 			status = 200
 
 			if req.Method == "GET" && strings.Contains(contentType, "text/html") {
@@ -652,6 +643,13 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 
 		if status != 200 {
 			return r.respond(status)
+		}
+
+		if extn := strings.LastIndex(resource.File, "."); extn >= 0 {
+			if mime, known := mimeTypes[resource.File[extn:]]; known {
+				magicType = mime
+				maybeRDF = false
+			}
 		}
 
 		if maybeRDF {
