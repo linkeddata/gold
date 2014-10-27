@@ -30,14 +30,6 @@ var (
 	FileManagerUri = "https://linkeddata.github.io/warp/#list/"
 	Streaming      = false // experimental
 
-	webExtensions = map[string]string{
-		"css":  "text/css",
-		"js":   "text/javascript",
-		"htm":  "text/html",
-		"html": "text/html",
-		"txt":  "text/txt",
-	}
-
 	methodsAll = []string{
 		"GET", "PUT", "POST", "OPTIONS", "HEAD", "MKCOL", "DELETE", "PATCH",
 	}
@@ -370,7 +362,7 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 
 	case "GET", "HEAD":
 		var (
-			magicType string
+			magicType = resource.FileType
 			maybeRDF  bool
 			glob      bool
 			globPath  string
@@ -614,7 +606,6 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 				maybeRDF = true
 			}
 		default:
-			magicType, err = magic.TypeByFile(resource.File)
 			maybeRDF = magicType == "text/plain"
 			status = 200
 
