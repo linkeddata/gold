@@ -13,6 +13,7 @@ import (
 	_path "path"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/presbrey/magicmime"
 )
@@ -24,6 +25,7 @@ const (
 )
 
 var (
+	CookieAge      = 24 * time.Hour
 	Debug          = false
 	DirIndex       = []string{"index.html", "index.htm"}
 	Skin           = "tabulator"

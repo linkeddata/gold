@@ -2,6 +2,7 @@ package gold
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/gorilla/securecookie"
 )
@@ -21,9 +22,10 @@ func SetCookie(w http.ResponseWriter, user string) {
 	}
 	if encoded, err := s.Encode("Session", value); err == nil {
 		cookie := &http.Cookie{
-			Name:  "Session",
-			Value: encoded,
-			Path:  "/",
+			Expires: time.Now().Add(CookieAge),
+			Name:    "Session",
+			Path:    "/",
+			Value:   encoded,
 		}
 		http.SetCookie(w, cookie)
 	} else {

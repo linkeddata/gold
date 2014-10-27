@@ -9,12 +9,14 @@ import (
 	"net/http/fcgi"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/linkeddata/gold"
 )
 
 var (
 	bind    = flag.String("bind", "", "bind address (empty: fcgi)")
+	cookieT = flag.Duration("cookieAge", 24*time.Hour, "lifetime for cookies")
 	debug   = flag.Bool("debug", false, "output extra logging")
 	insec   = flag.String("insecure", "", "insecure HTTP listener (for bechmarking, empty: off)")
 	root    = flag.String("root", ".", "path to file storage root")
@@ -60,6 +62,7 @@ LMEOXuCrAMT/nApK629bgSlTU6P9PZd+05yRbHt4Ds1S
 
 func init() {
 	flag.Parse()
+	gold.CookieAge = *cookieT
 	gold.Debug = *debug
 	gold.Skin = *skin
 }
