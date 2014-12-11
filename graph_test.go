@@ -4,8 +4,28 @@ import (
 	"strings"
 	"testing"
 
+	jsonld "github.com/linkeddata/gojsonld"
 	"github.com/stretchr/testify/assert"
 )
+
+func TestJSONTerm2Term(t *testing.T) {
+	term := jsonld.NewResource("http://test.org/")
+	res1 := jterm2term(term)
+	res2 := NewResource("http://test.org/")
+	assert.True(t, res2.Equal(res1))
+
+	term = jsonld.NewLiteralWithDatatype("text", jsonld.NewResource("http://www.w3.org/2001/XMLSchema#hexBinary"))
+	res1 = jterm2term(term)
+	res2 = NewLiteralWithDatatype("text", NewResource("http://www.w3.org/2001/XMLSchema#hexBinary"))
+	assert.True(t, res2.Equal(res1))
+}
+
+func TestParseJSONLD(t *testing.T) {
+	r := strings.NewReader("{ \"@id\": \"http://greggkellogg.net/foaf#me\", \"http://xmlns.com/foaf/0.1/name\": \"Gregg Kellogg\" }")
+	g := NewGraph("https://test.org/")
+	g.Parse(r, "application/ld+json")
+	assert.Equal(t, 1, g.Len())
+}
 
 func TestGraphPatch(t *testing.T) {
 	var (
