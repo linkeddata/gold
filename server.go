@@ -29,7 +29,7 @@ var (
 	Debug          = false
 	DirIndex       = []string{"index.html", "index.htm"}
 	Skin           = "tabulator"
-	FileManagerUri = "https://linkeddata.github.io/warp/#list/"
+	FileManagerUri = "http://linkeddata.github.io/warp/#list/"
 	Streaming      = false // experimental
 
 	methodsAll = []string{
