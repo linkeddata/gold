@@ -1,6 +1,7 @@
 package gold
 
 import (
+	"bytes"
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
@@ -11,6 +12,7 @@ import (
 	"net/url"
 	"os"
 
+	jsonld "github.com/linkeddata/gojsonld"
 	crdf "github.com/presbrey/goraptor"
 )
 
@@ -53,6 +55,7 @@ func init() {
 	mimeParser["text/n3"] = mimeParser["text/turtle"]
 	mimeParser["application/json"] = "internal"
 	mimeParser["application/sparql-update"] = "internal"
+	mimeParser["application/ld+json"] = "jsonld"
 
 	for name, syntax := range crdf.SerializerSyntax {
 		switch name {
@@ -111,6 +114,22 @@ func term2term(term crdf.Term) Term {
 		}
 	case *crdf.Uri:
 		return NewResource(term.String())
+	}
+	return nil
+}
+
+func jterm2term(term jsonld.Term) Term {
+	switch term := term.(type) {
+	case *jsonld.BlankNode:
+		return NewBlankNode(term.RawValue())
+	case *jsonld.Literal:
+		if len(term.Datatype.String()) > 0 {
+			return NewLiteralWithLanguageAndDatatype(term.Value, term.Language, NewResource(term.Datatype.RawValue()))
+		} else {
+			return NewLiteral(term.Value)
+		}
+	case *jsonld.Resource:
+		return NewResource(term.RawValue())
 	}
 	return nil
 }
@@ -226,11 +245,29 @@ func (g *Graph) Parse(reader io.Reader, mime string) {
 	if len(parserName) == 0 {
 		parserName = "guess"
 	}
-	parser := crdf.NewParser(parserName)
-	defer parser.Free()
-	out := parser.Parse(reader, g.uri)
-	for s := range out {
-		g.AddStatement(s)
+	if parserName == "jsonld" {
+		buf := new(bytes.Buffer)
+		buf.ReadFrom(reader)
+		jsonData, err := jsonld.ReadJSON(buf.Bytes())
+		options := &jsonld.Options{}
+		options.Base = ""
+		options.ProduceGeneralizedRdf = false
+		dataSet, err := jsonld.ToRDF(jsonData, options)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		for t := range dataSet.IterTriples() {
+			g.AddTriple(jterm2term(t.Subject), jterm2term(t.Predicate), jterm2term(t.Object))
+		}
+
+	} else {
+		parser := crdf.NewParser(parserName)
+		defer parser.Free()
+		out := parser.Parse(reader, g.uri)
+		for s := range out {
+			g.AddStatement(s)
+		}
 	}
 }
 
