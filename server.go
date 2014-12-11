@@ -394,6 +394,7 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 		// set LDP Link headers
 		stat, err := os.Stat(resource.File)
 		if err != nil {
+			DebugLog("Server", "Got a stat error: "+err.Error())
 			r.respond(500, err.Error())
 		} else if stat.IsDir() {
 			w.Header().Add("Link", brack("http://www.w3.org/ns/ldp#BasicContainer")+"; rel=\"type\"")
