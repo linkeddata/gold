@@ -66,6 +66,12 @@ func TestWebContent(t *testing.T) {
 		request.Header.Add("Content-Type", "application/javascript")
 		response := r.Do(request)
 		assert.Equal(t, 201, response.StatusCode)
+
+		request, _ = http.NewRequest("PUT", "/_test/text.txt", strings.NewReader("foo bar"))
+		request.Header.Add("Content-Type", "text/txt")
+		response = r.Do(request)
+		assert.Equal(t, 201, response.StatusCode)
+
 		request, _ = http.NewRequest("PUT", "/_test/reset.css", strings.NewReader("* { padding: 0; }"))
 		request.Header.Add("Content-Type", "text/css")
 		response = r.Do(request)
@@ -76,6 +82,11 @@ func TestWebContent(t *testing.T) {
 		assert.Equal(t, 200, response.StatusCode)
 		assert.Contains(t, response.RawResponse.Header.Get("Content-Type"), "application/javascript")
 
+		request, _ = http.NewRequest("GET", "/_test/text.txt", nil)
+		response = r.Do(request)
+		assert.Equal(t, 200, response.StatusCode)
+		assert.Contains(t, response.RawResponse.Header.Get("Content-Type"), "text/plain")
+
 		request, _ = http.NewRequest("GET", "/_test/reset.css", nil)
 		response = r.Do(request)
 		assert.Equal(t, 200, response.StatusCode)
@@ -83,6 +94,7 @@ func TestWebContent(t *testing.T) {
 
 		assert.Equal(t, 200, r.Delete("/_test/alert.js", "", "").StatusCode)
 		assert.Equal(t, 200, r.Delete("/_test/reset.css", "", "").StatusCode)
+		assert.Equal(t, 200, r.Delete("/_test/text.txt", "", "").StatusCode)
 	})
 }
 
