@@ -123,7 +123,7 @@ func jterm2term(term jsonld.Term) Term {
 	case *jsonld.BlankNode:
 		return NewBlankNode(term.RawValue())
 	case *jsonld.Literal:
-		if len(term.Datatype.String()) > 0 {
+		if term.Datatype != nil && len(term.Datatype.String()) > 0 {
 			return NewLiteralWithLanguageAndDatatype(term.Value, term.Language, NewResource(term.Datatype.RawValue()))
 		} else {
 			return NewLiteral(term.Value)
@@ -385,7 +385,7 @@ func (g *Graph) serializeJsonLd() ([]byte, error) {
 			v := map[string]string{
 				"@value": t.Value,
 			}
-			if len(t.Datatype.String()) > 0 {
+			if t.Datatype != nil && len(t.Datatype.String()) > 0 {
 				v["@type"] = t.Datatype.String()
 			}
 			if len(t.Language) > 0 {
