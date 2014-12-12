@@ -454,8 +454,6 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 					}
 				}
 			} else {
-				magicType = "text/turtle"
-
 				w.Header().Add("Link", "<"+resource.MetaUri+">; rel=\"meta\"")
 
 				root := NewResource(resource.Uri)
@@ -709,6 +707,7 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 		} else {
 			data, err = g.Serialize(contentType)
 		}
+
 		if err != nil {
 			return r.respond(500, err)
 		} else if len(data) > 0 {
