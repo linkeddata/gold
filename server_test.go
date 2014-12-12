@@ -25,7 +25,7 @@ func TestMKCOL(t *testing.T) {
 		response := r.Do(request)
 		assert.Equal(t, 201, response.StatusCode)
 
-		response = r.Post("/_test/abc", "text/turtle", "<a> <b> <c>.")
+		response = r.Put("/_test/abc", "text/turtle", "<a> <b> <c>.")
 		assert.Equal(t, 201, response.StatusCode)
 
 		request, _ = http.NewRequest("MKCOL", "/_test/abc", nil)
@@ -760,6 +760,12 @@ func TestGetJsonLd(t *testing.T) {
 		e := r.Url("/_test/e")
 		f := r.Url("/_test/f")
 		assert.Equal(t, response.Body, fmt.Sprintf(`[{"@id":"http://%s","http://%s":[{"@id":"http://%s"}]}]`, d, e, f))
+
+		request, _ = http.NewRequest("GET", "/_test/", nil)
+		request.Header.Add("Accept", "application/ld+json")
+		response = r.Do(request)
+		assert.Equal(t, 200, response.StatusCode)
+		assert.Equal(t, "9", response.RawResponse.Header.Get("Triples"))
 	})
 }
 
