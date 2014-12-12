@@ -21,10 +21,18 @@ func TestJSONTerm2Term(t *testing.T) {
 }
 
 func TestParseJSONLD(t *testing.T) {
-	r := strings.NewReader("{ \"@id\": \"http://greggkellogg.net/foaf#me\", \"http://xmlns.com/foaf/0.1/name\": \"Gregg Kellogg\" }")
+	r := strings.NewReader(`{ "@id": "http://greggkellogg.net/foaf#me", "http://xmlns.com/foaf/0.1/name": "Gregg Kellogg" }`)
 	g := NewGraph("https://test.org/")
 	g.Parse(r, "application/ld+json")
 	assert.Equal(t, 1, g.Len())
+}
+
+func TestSerializeJSONLD(t *testing.T) {
+	g := NewGraph("https://test.org/")
+	g.AddTriple(NewResource("a"), NewResource("b"), NewResource("c"))
+	assert.Equal(t, 1, g.Len())
+	toJson, _ := g.Serialize("application/ld+json")
+	assert.Equal(t, `[{"@id":"a","b":[{"@id":"c"}]}]`, toJson)
 }
 
 func TestGraphPatch(t *testing.T) {
