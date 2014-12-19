@@ -1,6 +1,6 @@
 .PHONY: test cover
 test:
-	go get code.google.com/p/go.tools/cmd/cover
+	go get golang.org/x/tools/cmd/cover
 	go test -cover -v .
 
 bench:
