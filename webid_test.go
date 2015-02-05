@@ -66,13 +66,13 @@ func newRSAcert(uri string, priv *rsa.PrivateKey) (*tls.Certificate, error) {
 		// ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
 	}
 	rawValues := []asn1.RawValue{
-		asn1.RawValue{Class: 0, Tag: 16, IsCompound: true, Bytes: []byte(uri)},
+		{Class: 0, Tag: 16, IsCompound: true, Bytes: []byte(uri)},
 	}
 	values, err := asn1.Marshal(rawValues)
 	if err != nil {
 		return nil, err
 	}
-	template.ExtraExtensions = []pkix.Extension{pkix.Extension{Id: subjectAltName, Value: values}}
+	template.ExtraExtensions = []pkix.Extension{{Id: subjectAltName, Value: values}}
 
 	keyPEM := bytes.NewBuffer(nil)
 	err = pem.Encode(keyPEM, &pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(priv)})

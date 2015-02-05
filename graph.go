@@ -66,7 +66,7 @@ func init() {
 	}
 	mimeSerializer["application/ld+json"] = "internal"
 	mimeSerializer["text/html"] = "internal"
-	for mime, _ := range mimeSerializer {
+	for mime := range mimeSerializer {
 		serializerMimes = append(serializerMimes, mime)
 	}
 }
@@ -234,7 +234,7 @@ func (g *Graph) All(s Term, p Term, o Term) []*Triple {
 
 func (g *Graph) AddStatement(st *crdf.Statement) {
 	s, p, o := term2term(st.Subject), term2term(st.Predicate), term2term(st.Object)
-	for _ = range g.All(s, p, o) {
+	for range g.All(s, p, o) {
 		return
 	}
 	g.AddTriple(s, p, o)
@@ -376,7 +376,7 @@ func (g *Graph) serializeJsonLd() ([]byte, error) {
 		switch t := elt.Object.(type) {
 		case *Resource:
 			one[elt.Predicate.(*Resource).URI] = []map[string]string{
-				map[string]string{
+				{
 					"@id": t.URI,
 				},
 			}

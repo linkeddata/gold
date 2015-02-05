@@ -268,7 +268,7 @@ func (h *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}()
 
 	r := h.handle(w, &httpRequest{req})
-	for key, _ := range r.headers {
+	for key := range r.headers {
 		w.Header().Set(key, r.headers.Get(key))
 	}
 	if r.status > 0 {
@@ -900,7 +900,7 @@ func (h *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 				m := req.MultipartForm
 				for elt := range m.File {
 					files := m.File[elt]
-					for i, _ := range files {
+					for i := range files {
 						file, err := files[i].Open()
 						defer file.Close()
 						if err != nil {

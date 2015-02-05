@@ -84,21 +84,21 @@ func WebIDTLSAuth(tls *tls.ConnectionState) (uri string, err error) {
 
 		for _, keyT := range g.All(NewResource(claim), ns.cert.Get("key"), nil) {
 			DebugLog("WebID-TLS", "Found a public key in the profile.")
-			for _ = range g.All(keyT.Object, ns.rdf.Get("type"), ns.cert.Get(t)) {
+			for range g.All(keyT.Object, ns.rdf.Get("type"), ns.cert.Get(t)) {
 				DebugLog("WebID-TLS", "Trying to match modulus found in cert:")
 				DebugLog("WebID-TLS", n)
-				for _ = range g.All(keyT.Object, ns.cert.Get("modulus"), NewLiteral(n)) {
+				for range g.All(keyT.Object, ns.cert.Get("modulus"), NewLiteral(n)) {
 					goto matchModulus
 				}
-				for _ = range g.All(keyT.Object, ns.cert.Get("modulus"), NewLiteralWithDatatype(n, NewResource("http://www.w3.org/2001/XMLSchema#hexBinary"))) {
+				for range g.All(keyT.Object, ns.cert.Get("modulus"), NewLiteralWithDatatype(n, NewResource("http://www.w3.org/2001/XMLSchema#hexBinary"))) {
 					goto matchModulus
 				}
 			matchModulus:
 				DebugLog("WebID-TLS", "Found a matching modulus in the profile.")
-				for _ = range g.All(keyT.Object, ns.cert.Get("exponent"), NewLiteral(e)) {
+				for range g.All(keyT.Object, ns.cert.Get("exponent"), NewLiteral(e)) {
 					goto matchExponent
 				}
-				for _ = range g.All(keyT.Object, ns.cert.Get("exponent"), NewLiteralWithDatatype(e, NewResource("http://www.w3.org/2001/XMLSchema#int"))) {
+				for range g.All(keyT.Object, ns.cert.Get("exponent"), NewLiteralWithDatatype(e, NewResource("http://www.w3.org/2001/XMLSchema#int"))) {
 					goto matchExponent
 				}
 			matchExponent:
