@@ -30,5 +30,13 @@ jQuery(document).ready(function() {
 </div>
 </body>
 </html>`,
+		"404": `<!DOCTYPE html>
+<html id="docHTML">
+<head>
+</head>
+<body>
+    <h1>404 - oh noes, there's nothing here</h1>
+</body>
+</html>`,
 	}
 )
