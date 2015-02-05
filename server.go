@@ -296,11 +296,20 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 	r = new(response)
 	var err error
 
+	resource, _ := s.pathInfo(req.BaseURI())
+	DebugLog("Server", "Resource URI: "+resource.URI)
+	DebugLog("Server", "Resource Path: "+resource.File)
+
 	DebugLog("Server", "------ New "+req.Method+" request from "+req.RemoteAddr+" ------")
 
 	user := req.Auth(w)
 	w.Header().Set("User", user)
 	acl := NewWAC(req, s, user)
+
+	// Intercept API requests
+	if strings.HasPrefix(resource.Path, ",system/") {
+		r = HandleSystem(w, req)
+	}
 
 	dataMime := req.Header.Get(HCType)
 	dataMime = strings.Split(dataMime, ";")[0]
@@ -336,10 +345,6 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 		origin = origins[0]
 		w.Header().Set("Access-Control-Allow-Origin", origin)
 	}
-
-	resource, _ := s.pathInfo(req.BaseURI())
-	DebugLog("Server", "Resource URI: "+resource.URI)
-	DebugLog("Server", "Resource Path: "+resource.File)
 
 	// set ACL Link header
 	w.Header().Set("Link", brack(resource.AclURI)+"; rel=\"acl\", "+brack(resource.MetaURI)+"; rel=\"meta\"")

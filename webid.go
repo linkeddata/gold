@@ -1,15 +1,30 @@
 package gold
 
 import (
+	"bytes"
+	"crypto/rand"
 	"crypto/rsa"
 	"crypto/tls"
+	"crypto/x509"
+	"crypto/x509/pkix"
 	"encoding/asn1"
+	"encoding/pem"
 	"fmt"
+	"math/big"
+	"strings"
 	"sync"
+	"time"
+)
+
+const (
+	rsaBits = 2048
 )
 
 var (
 	subjectAltName = []int{2, 5, 29, 17}
+
+	notBefore = time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC)
+	notAfter  = time.Date(2049, 12, 31, 23, 59, 59, 0, time.UTC)
 
 	// cache
 	webidL  = new(sync.Mutex)
@@ -116,4 +131,71 @@ func WebIDTLSAuth(tls *tls.ConnectionState) (uri string, err error) {
 		DebugLog("WebID-TLS", "Could not find a certificate public key in the profile.")
 	}
 	return
+}
+
+func NewWebIDProfile(uri string) (*Graph, *rsa.PrivateKey, error) {
+	priv, err := rsa.GenerateKey(rand.Reader, rsaBits)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	profileURI := strings.Split(uri, "#")[0]
+	userTerm := NewResource(uri)
+	keyTerm := NewResource(profileURI + "#key")
+
+	g := NewGraph(profileURI)
+	g.AddTriple(userTerm, ns.cert.Get("key"), keyTerm)
+	g.AddTriple(keyTerm, ns.rdf.Get("type"), ns.cert.Get("RSAPublicKey"))
+	g.AddTriple(keyTerm, ns.cert.Get("modulus"), NewLiteralWithDatatype(fmt.Sprintf("%x", priv.N), NewResource("http://www.w3.org/2001/XMLSchema#hexBinary")))
+	g.AddTriple(keyTerm, ns.cert.Get("exponent"), NewLiteral(fmt.Sprintf("%d", priv.E)))
+	return g, priv, nil
+}
+
+func NewRSAcert(uri string, name string, priv *rsa.PrivateKey) (*tls.Certificate, error) {
+	template := x509.Certificate{
+		SerialNumber: new(big.Int).SetInt64(0),
+		Subject: pkix.Name{
+			CommonName:   name,
+			Organization: []string{"WebID"},
+			Country:      []string{"US"},
+		},
+		// MaxPathLen: -1,
+		NotBefore: notBefore,
+		NotAfter:  notAfter,
+
+		BasicConstraintsValid: true,
+		// KeyUsage:    x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
+		// ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
+	}
+	rawValues := []asn1.RawValue{
+		{Class: 0, Tag: 16, IsCompound: true, Bytes: []byte(uri)},
+	}
+	values, err := asn1.Marshal(rawValues)
+	if err != nil {
+		return nil, err
+	}
+	template.ExtraExtensions = []pkix.Extension{{Id: subjectAltName, Value: values}}
+
+	keyPEM := bytes.NewBuffer(nil)
+	err = pem.Encode(keyPEM, &pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(priv)})
+	if err != nil {
+		return nil, err
+	}
+
+	certPEM := bytes.NewBuffer(nil)
+	derBytes, err := x509.CreateCertificate(rand.Reader, &template, &template, &priv.PublicKey, priv)
+	if err != nil {
+		return nil, err
+	}
+	err = pem.Encode(certPEM, &pem.Block{Type: "CERTIFICATE", Bytes: derBytes})
+	if err != nil {
+		return nil, err
+	}
+
+	cert, err := tls.X509KeyPair(certPEM.Bytes(), keyPEM.Bytes())
+	if err != nil {
+		return nil, err
+	}
+
+	return &cert, nil
 }
