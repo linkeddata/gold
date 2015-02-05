@@ -1,6 +1,7 @@
 package gold
 
 var (
+	// Skins contains a list of skins that get server instead of RDF
 	Skins = map[string]string{
 		"tabulator": `<!DOCTYPE html>
 <html id="docHTML">

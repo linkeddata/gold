@@ -31,8 +31,8 @@ func TestSerializeJSONLD(t *testing.T) {
 	g := NewGraph("https://test.org/")
 	g.AddTriple(NewResource("a"), NewResource("b"), NewResource("c"))
 	assert.Equal(t, 1, g.Len())
-	toJson, _ := g.Serialize("application/ld+json")
-	assert.Equal(t, `[{"@id":"a","b":[{"@id":"c"}]}]`, toJson)
+	toJSON, _ := g.Serialize("application/ld+json")
+	assert.Equal(t, `[{"@id":"a","b":[{"@id":"c"}]}]`, toJSON)
 }
 
 func TestGraphPatch(t *testing.T) {

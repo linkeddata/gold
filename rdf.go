@@ -17,12 +17,15 @@ var (
 	}
 )
 
+// NS is a generic namespace type
 type NS string
 
+// NewNS is used to set a new namespace
 func NewNS(base string) (ns NS) {
 	return NS(base)
 }
 
+// Get is used to return the prefix for a namespace
 func (ns NS) Get(name string) (term Term) {
 	return NewResource(string(ns) + name)
 }

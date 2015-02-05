@@ -27,6 +27,7 @@ func pkeyTypeNE(pkey interface{}) (t, n, e string) {
 	return
 }
 
+// WebIDTLSAuth - performs WebID-TLS authentication
 func WebIDTLSAuth(tls *tls.ConnectionState) (uri string, err error) {
 	claim := ""
 	uri = ""

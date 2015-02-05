@@ -23,14 +23,14 @@ import (
 	"fmt"
 )
 
-// A Triple contains a subject, a predicate and an object term.
+// Triple contains a subject, a predicate and an object term.
 type Triple struct {
 	Subject   Term
 	Predicate Term
 	Object    Term
 }
 
-// Function NewTriple returns a new triple with the given subject, predicate and object.
+// NewTriple returns a new triple with the given subject, predicate and object.
 func NewTriple(subject Term, predicate Term, object Term) (triple *Triple) {
 	return &Triple{
 		Subject:   subject,
@@ -39,27 +39,27 @@ func NewTriple(subject Term, predicate Term, object Term) (triple *Triple) {
 	}
 }
 
-// Method String returns the NTriples representation of this triple.
+// String returns the NTriples representation of this triple.
 func (triple Triple) String() (str string) {
-	subj_str := "nil"
+	subjStr := "nil"
 	if triple.Subject != nil {
-		subj_str = triple.Subject.String()
+		subjStr = triple.Subject.String()
 	}
 
-	pred_str := "nil"
+	predStr := "nil"
 	if triple.Predicate != nil {
-		pred_str = triple.Predicate.String()
+		predStr = triple.Predicate.String()
 	}
 
-	obj_str := "nil"
+	objStr := "nil"
 	if triple.Object != nil {
-		obj_str = triple.Object.String()
+		objStr = triple.Object.String()
 	}
 
-	return fmt.Sprintf("%s %s %s .", subj_str, pred_str, obj_str)
+	return fmt.Sprintf("%s %s %s .", subjStr, predStr, objStr)
 }
 
-// Method Equal returns this triple is equivalent to the argument.
+// Equal returns this triple is equivalent to the argument.
 func (triple Triple) Equal(other *Triple) bool {
 	return triple.Subject.Equal(other.Subject) &&
 		triple.Predicate.Equal(other.Predicate) &&

@@ -11,10 +11,12 @@ var (
 	s = NewSecureCookie()
 )
 
+// NewSecureCookie creates a new cookie
 func NewSecureCookie() *securecookie.SecureCookie {
 	return securecookie.New(securecookie.GenerateRandomKey(64), securecookie.GenerateRandomKey(32))
 }
 
+// SetCookie sets a cookie during the HTTP response
 func SetCookie(w http.ResponseWriter, user string) {
 	DebugLog("Cookie", "Setting new cookie for "+user)
 	value := map[string]string{
@@ -33,6 +35,7 @@ func SetCookie(w http.ResponseWriter, user string) {
 	}
 }
 
+// ReadCookie reads a cookie from the request
 func ReadCookie(w http.ResponseWriter, r *httpRequest) (user string) {
 	user = ""
 	cookie, err := r.Cookie("Session")
@@ -42,16 +45,15 @@ func ReadCookie(w http.ResponseWriter, r *httpRequest) (user string) {
 			user = value["user"]
 			DebugLog("Cookie", "The value of User is "+user)
 			return
-		} else {
-			DebugLog("Cookie", "Error decoding cookie: "+err.Error())
 		}
-	} else {
-		DebugLog("Cookie", "Error reading cookie: "+err.Error())
+		DebugLog("Cookie", "Error decoding cookie: "+err.Error())
 	}
+	DebugLog("Cookie", "Error reading cookie: "+err.Error())
 
 	return
 }
 
+// DeleteCookie deletes an existing cookie
 func DeleteCookie(w http.ResponseWriter, user string) {
 	cookie := &http.Cookie{
 		Name:   "Session",

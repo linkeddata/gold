@@ -5,16 +5,18 @@ import (
 	"strings"
 )
 
+// WAC WebAccessControl object
 type WAC struct {
 	req  *httpRequest
 	srv  *Server
 	user string
 }
 
+// NewWAC creates a new WAC object
 func NewWAC(req *httpRequest, srv *Server, user string) *WAC {
 	if len(req.Header.Get("On-Behalf-Of")) > 0 {
 		delegator := debrack(req.Header.Get("On-Behalf-Of"))
-		if VerifyDelegator(delegator, user) {
+		if verifyDelegator(delegator, user) {
 			DebugLog("WAC", "Request User ID (delegation): "+user)
 			user = delegator
 		}
@@ -37,16 +39,16 @@ func (acl *WAC) allow(mode string, path string) bool {
 			return false
 		}
 
-		DebugLog("WAC", "Checking "+accessType+" <"+mode+"> to "+p.Uri+" for WebID: "+acl.user)
+		DebugLog("WAC", "Checking "+accessType+" <"+mode+"> to "+p.URI+" for WebID: "+acl.user)
 		DebugLog("WAC", "Looking for policies in "+p.AclFile)
 
-		aclGraph := NewGraph(p.AclUri)
+		aclGraph := NewGraph(p.AclURI)
 		aclGraph.ReadFile(p.AclFile)
 		if aclGraph.Len() > 0 {
 			DebugLog("WAC", "Found policies in "+p.AclFile)
 			// TODO make it more elegant instead of duplicating code
 			for _, i := range aclGraph.All(nil, ns.acl.Get("mode"), ns.acl.Get("Control")) {
-				for range aclGraph.All(i.Subject, ns.acl.Get(accessType), NewResource(p.Uri)) {
+				for range aclGraph.All(i.Subject, ns.acl.Get(accessType), NewResource(p.URI)) {
 					for range aclGraph.All(i.Subject, ns.acl.Get("owner"), NewResource(acl.user)) {
 						DebugLog("WAC", mode+" access allowed (as owner) for: "+acl.user)
 						return true
@@ -61,15 +63,15 @@ func (acl *WAC) allow(mode string, path string) bool {
 						if t.Object.Equal(ns.foaf.Get("Agent")) {
 							DebugLog("WAC", mode+" access allowed as FOAF Agent")
 							return true
-						} else {
-							groupURI := debrack(t.Object.String())
-							groupGraph := NewGraph(groupURI)
-							groupGraph.LoadURI(groupURI)
-							if groupGraph.Len() > 0 && groupGraph.One(t.Object, ns.rdf.Get("type"), ns.foaf.Get("Group")) != nil {
-								for range groupGraph.All(t.Object, ns.foaf.Get("member"), NewResource(acl.user)) {
-									DebugLog("WAC", acl.user+" listed as a member of the group "+groupURI)
-									return true
-								}
+						}
+
+						groupURI := debrack(t.Object.String())
+						groupGraph := NewGraph(groupURI)
+						groupGraph.LoadURI(groupURI)
+						if groupGraph.Len() > 0 && groupGraph.One(t.Object, ns.rdf.Get("type"), ns.foaf.Get("Group")) != nil {
+							for range groupGraph.All(t.Object, ns.foaf.Get("member"), NewResource(acl.user)) {
+								DebugLog("WAC", acl.user+" listed as a member of the group "+groupURI)
+								return true
 							}
 						}
 					}
@@ -78,7 +80,7 @@ func (acl *WAC) allow(mode string, path string) bool {
 			for _, i := range aclGraph.All(nil, ns.acl.Get("mode"), ns.acl.Get(mode)) {
 				DebugLog("WAC", "Found "+accessType+" policy for <"+mode+">")
 
-				for range aclGraph.All(i.Subject, ns.acl.Get(accessType), NewResource(p.Uri)) {
+				for range aclGraph.All(i.Subject, ns.acl.Get(accessType), NewResource(p.URI)) {
 					origins := aclGraph.All(i.Subject, ns.acl.Get("origin"), nil)
 					if len(origin) > 0 && len(origins) > 0 {
 						DebugLog("WAC", "Origin set to: "+brack(origin))
@@ -108,15 +110,14 @@ func (acl *WAC) allow(mode string, path string) bool {
 						if t.Object.Equal(ns.foaf.Get("Agent")) {
 							DebugLog("WAC", mode+" access allowed as FOAF Agent")
 							return true
-						} else {
-							groupURI := debrack(t.Object.String())
-							groupGraph := NewGraph(groupURI)
-							groupGraph.LoadURI(groupURI)
-							if groupGraph.Len() > 0 && groupGraph.One(t.Object, ns.rdf.Get("type"), ns.foaf.Get("Group")) != nil {
-								for range groupGraph.All(t.Object, ns.foaf.Get("member"), NewResource(acl.user)) {
-									DebugLog("WAC", acl.user+" listed as a member of the group "+groupURI)
-									return true
-								}
+						}
+						groupURI := debrack(t.Object.String())
+						groupGraph := NewGraph(groupURI)
+						groupGraph.LoadURI(groupURI)
+						if groupGraph.Len() > 0 && groupGraph.One(t.Object, ns.rdf.Get("type"), ns.foaf.Get("Group")) != nil {
+							for range groupGraph.All(t.Object, ns.foaf.Get("member"), NewResource(acl.user)) {
+								DebugLog("WAC", acl.user+" listed as a member of the group "+groupURI)
+								return true
 							}
 						}
 					}
@@ -154,19 +155,22 @@ func (acl *WAC) allow(mode string, path string) bool {
 	return true
 }
 
+// AllowRead checks if the Read access is allowed
 func (acl *WAC) AllowRead(path string) bool {
 	return acl.allow("Read", path)
 }
 
+// AllowWrite checks if the Read access is allowed
 func (acl *WAC) AllowWrite(path string) bool {
 	return acl.allow("Write", path)
 }
 
+// AllowAppend checks if the Read access is allowed
 func (acl *WAC) AllowAppend(path string) bool {
 	return acl.allow("Append", path)
 }
 
-func VerifyDelegator(delegator string, delegatee string) bool {
+func verifyDelegator(delegator string, delegatee string) bool {
 	g := NewGraph(delegator)
 	err := g.LoadURI(delegator)
 	if err != nil {

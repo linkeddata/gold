@@ -1,8 +1,7 @@
+// Package gold implements several LD standards
 // Copyright 2011 The Go Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
-
-// HTTP Content-Type Autonegotiation.
 //
 // The functions in this package implement the behaviour specified in
 // http://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html
@@ -20,7 +19,7 @@ import (
 	"strings"
 )
 
-// Structure to represent a clause in an HTTP Accept Header.
+// Accept structure is used to represent a clause in an HTTP Accept Header.
 type Accept struct {
 	Type, SubType string
 	Q             float32
@@ -54,7 +53,7 @@ func (accept acceptSorter) Swap(i, j int) {
 	accept[i], accept[j] = accept[j], accept[i]
 }
 
-// A sorted list of clauses from an Accept header.
+// AcceptList is a sorted list of clauses from an Accept header.
 type AcceptList []Accept
 
 // Negotiate the most appropriate contentType given the list of alternatives.

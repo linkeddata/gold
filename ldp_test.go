@@ -16,14 +16,14 @@ func TestLinkHeaderParser(t *testing.T) {
 
 	l = ParseLinkHeader("<http://www.w3.org/ns/ldp#Container>; rel='type'")
 	assert.NotEmpty(t, l.headers)
-	assert.True(t, l.MatchUri("http://www.w3.org/ns/ldp#Container"))
-	assert.False(t, l.MatchUri("http://www.w3.org/ns/ldp#Resource"))
+	assert.True(t, l.MatchURI("http://www.w3.org/ns/ldp#Container"))
+	assert.False(t, l.MatchURI("http://www.w3.org/ns/ldp#Resource"))
 	assert.Equal(t, "http://www.w3.org/ns/ldp#Container", l.MatchRel("type"))
 
 	l = ParseLinkHeader("<http://www.w3.org/ns/ldp#Container>; rel=\"type\", <http://www.w3.org/ns/ldp#Resource>; rel=\"type\"")
 	assert.NotEmpty(t, l.headers)
-	assert.True(t, l.MatchUri("http://www.w3.org/ns/ldp#Container"))
-	assert.True(t, l.MatchUri("http://www.w3.org/ns/ldp#Resource"))
+	assert.True(t, l.MatchURI("http://www.w3.org/ns/ldp#Container"))
+	assert.True(t, l.MatchURI("http://www.w3.org/ns/ldp#Resource"))
 }
 
 func TestPreferHeaderParser(t *testing.T) {
@@ -96,7 +96,7 @@ func BenchmarkNewUUID(b *testing.B) {
 	e := 0
 	for i := 0; i < b.N; i++ {
 		if _, err := newUUID(); err != nil {
-			e += 1
+			e++
 		}
 	}
 	if e > 0 {

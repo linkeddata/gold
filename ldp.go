@@ -21,7 +21,8 @@ type linkheader struct {
 	rel string
 }
 
-type linkheaders struct {
+// Linkheaders holds the list of Link headers
+type Linkheaders struct {
 	headers []*linkheader
 }
 
@@ -29,12 +30,15 @@ type preferheader struct {
 	omit    []string
 	include []string
 }
-type preferheaders struct {
+
+// Preferheaders holds the list of Prefer headers
+type Preferheaders struct {
 	headers []*preferheader
 }
 
-func ParsePreferHeader(header string) *preferheaders {
-	ret := new(preferheaders)
+// ParsePreferHeader parses the LDP specific Prefer header
+func ParsePreferHeader(header string) *Preferheaders {
+	ret := new(Preferheaders)
 
 	for _, v := range strings.Split(header, ",") {
 		item := new(preferheader)
@@ -66,7 +70,8 @@ func ParsePreferHeader(header string) *preferheaders {
 	return ret
 }
 
-func (p *preferheaders) Omits() []string {
+// Omits returns the types of resources to omit when listing an LDPC
+func (p *Preferheaders) Omits() []string {
 	var ret []string
 	for _, v := range p.headers {
 		for _, u := range v.omit {
@@ -76,7 +81,8 @@ func (p *preferheaders) Omits() []string {
 	return ret
 }
 
-func (p *preferheaders) Includes() []string {
+// Includes returns the types of resources to include when listing an LDPC
+func (p *Preferheaders) Includes() []string {
 	var ret []string
 	for _, v := range p.headers {
 		for _, u := range v.include {
@@ -86,9 +92,9 @@ func (p *preferheaders) Includes() []string {
 	return ret
 }
 
-// parse Link header
-func ParseLinkHeader(header string) *linkheaders {
-	ret := new(linkheaders)
+// ParseLinkHeader is a generic Link header parser
+func ParseLinkHeader(header string) *Linkheaders {
+	ret := new(Linkheaders)
 
 	for _, v := range strings.Split(header, ", ") {
 		item := new(linkheader)
@@ -115,7 +121,8 @@ func ParseLinkHeader(header string) *linkheaders {
 	return ret
 }
 
-func (l *linkheaders) MatchRel(rel string) string {
+// MatchRel attempts to match a Link header based on the rel value
+func (l *Linkheaders) MatchRel(rel string) string {
 	for _, v := range l.headers {
 		if v.rel == rel {
 			return v.uri
@@ -124,7 +131,8 @@ func (l *linkheaders) MatchRel(rel string) string {
 	return ""
 }
 
-func (l *linkheaders) MatchUri(uri string) bool {
+// MatchURI attempts to match a Link header based on the href value
+func (l *Linkheaders) MatchURI(uri string) bool {
 	for _, v := range l.headers {
 		if v.uri == uri {
 			return true
@@ -144,6 +152,7 @@ func newUUID() (string, error) {
 	return hex.EncodeToString(uuid), nil
 }
 
+// NewETag generates ETag
 func NewETag(path string) (string, error) {
 	var (
 		hash []byte

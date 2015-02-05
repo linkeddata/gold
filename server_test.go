@@ -16,7 +16,7 @@ import (
 )
 
 var (
-	handler = NewServer(GetServerRoot(), false)
+	handler = NewServer(getServerRoot(), false)
 )
 
 func TestMKCOL(t *testing.T) {
@@ -125,64 +125,64 @@ func TestHTMLIndex(t *testing.T) {
 
 func TestPathInfo(t *testing.T) {
 	path := testServer.URL + "/_test/"
-	sroot := GetServerRoot()
+	sroot := getServerRoot()
 
 	p, err := handler.pathInfo("")
 	assert.NotNil(t, err)
 
 	p, err = handler.pathInfo(testServer.URL + "/")
 	assert.Nil(t, err)
-	assert.Equal(t, testServer.URL+"/", p.Uri)
+	assert.Equal(t, testServer.URL+"/", p.URI)
 	assert.Equal(t, testServer.URL, p.Base)
 	assert.Equal(t, "", p.Path)
 	assert.Equal(t, sroot, p.File)
-	assert.Equal(t, testServer.URL+"/"+ACLSuffix, p.AclUri)
+	assert.Equal(t, testServer.URL+"/"+ACLSuffix, p.AclURI)
 	assert.Equal(t, sroot+ACLSuffix, p.AclFile)
-	assert.Equal(t, testServer.URL+"/"+METASuffix, p.MetaUri)
+	assert.Equal(t, testServer.URL+"/"+METASuffix, p.MetaURI)
 	assert.Equal(t, sroot+METASuffix, p.MetaFile)
 
 	p, err = handler.pathInfo(path)
 	assert.Nil(t, err)
-	assert.Equal(t, path, p.Uri)
+	assert.Equal(t, path, p.URI)
 	assert.Equal(t, testServer.URL, p.Base)
 	assert.Equal(t, "_test/", p.Path)
 	assert.Equal(t, sroot+"_test/", p.File)
-	assert.Equal(t, path+ACLSuffix, p.AclUri)
+	assert.Equal(t, path+ACLSuffix, p.AclURI)
 	assert.Equal(t, sroot+"_test/"+ACLSuffix, p.AclFile)
-	assert.Equal(t, path+METASuffix, p.MetaUri)
+	assert.Equal(t, path+METASuffix, p.MetaURI)
 	assert.Equal(t, sroot+"_test/"+METASuffix, p.MetaFile)
 
 	p, err = handler.pathInfo(path + "abc")
 	assert.Nil(t, err)
-	assert.Equal(t, path+"abc", p.Uri)
+	assert.Equal(t, path+"abc", p.URI)
 	assert.Equal(t, testServer.URL, p.Base)
 	assert.Equal(t, "_test/abc", p.Path)
 	assert.Equal(t, sroot+"_test/abc", p.File)
-	assert.Equal(t, path+"abc"+ACLSuffix, p.AclUri)
+	assert.Equal(t, path+"abc"+ACLSuffix, p.AclURI)
 	assert.Equal(t, sroot+"_test/abc"+ACLSuffix, p.AclFile)
-	assert.Equal(t, path+"abc"+METASuffix, p.MetaUri)
+	assert.Equal(t, path+"abc"+METASuffix, p.MetaURI)
 	assert.Equal(t, sroot+"_test/abc"+METASuffix, p.MetaFile)
 
 	p, err = handler.pathInfo(path + ACLSuffix)
 	assert.Nil(t, err)
-	assert.Equal(t, path+ACLSuffix, p.Uri)
+	assert.Equal(t, path+ACLSuffix, p.URI)
 	assert.Equal(t, testServer.URL, p.Base)
 	assert.Equal(t, "_test/"+ACLSuffix, p.Path)
 	assert.Equal(t, sroot+"_test/"+ACLSuffix, p.File)
-	assert.Equal(t, path+ACLSuffix, p.AclUri)
+	assert.Equal(t, path+ACLSuffix, p.AclURI)
 	assert.Equal(t, sroot+"_test/"+ACLSuffix, p.AclFile)
-	assert.Equal(t, path+ACLSuffix, p.MetaUri)
+	assert.Equal(t, path+ACLSuffix, p.MetaURI)
 	assert.Equal(t, sroot+"_test/"+ACLSuffix, p.MetaFile)
 
 	p, err = handler.pathInfo(path + METASuffix)
 	assert.Nil(t, err)
-	assert.Equal(t, path+METASuffix, p.Uri)
+	assert.Equal(t, path+METASuffix, p.URI)
 	assert.Equal(t, testServer.URL, p.Base)
 	assert.Equal(t, "_test/"+METASuffix, p.Path)
 	assert.Equal(t, sroot+"_test/"+METASuffix, p.File)
-	assert.Equal(t, path+METASuffix+ACLSuffix, p.AclUri)
+	assert.Equal(t, path+METASuffix+ACLSuffix, p.AclURI)
 	assert.Equal(t, sroot+"_test/"+METASuffix+ACLSuffix, p.AclFile)
-	assert.Equal(t, path+METASuffix, p.MetaUri)
+	assert.Equal(t, path+METASuffix, p.MetaURI)
 	assert.Equal(t, sroot+"_test/"+METASuffix, p.MetaFile)
 }
 
@@ -484,64 +484,64 @@ func TestLDPPreferEmptyHeader(t *testing.T) {
 // 	assert.NoError(t, err)
 // 	response, err := httpClient.Do(request)
 // 	assert.NoError(t, err)
-// 	assert.True(t, ParseLinkHeader(strings.Join(response.Header["Link"], ", ")).MatchUri("http://www.w3.org/ns/ldp#Resource"))
-// 	assert.True(t, ParseLinkHeader(strings.Join(response.Header["Link"], ", ")).MatchUri("http://www.w3.org/ns/ldp#BasicContainer"))
+// 	assert.True(t, ParseLinkHeader(strings.Join(response.Header["Link"], ", ")).MatchURI("http://www.w3.org/ns/ldp#Resource"))
+// 	assert.True(t, ParseLinkHeader(strings.Join(response.Header["Link"], ", ")).MatchURI("http://www.w3.org/ns/ldp#BasicContainer"))
 
 // 	request, err = http.NewRequest("HEAD", testServer.URL+"/_test/abc", nil)
 // 	assert.NoError(t, err)
 // 	response, err = httpClient.Do(request)
 // 	assert.NoError(t, err)
-// 	assert.True(t, ParseLinkHeader(strings.Join(response.Header["Link"], ", ")).MatchUri("http://www.w3.org/ns/ldp#Resource"))
-// 	assert.False(t, ParseLinkHeader(strings.Join(response.Header["Link"], ", ")).MatchUri("http://www.w3.org/ns/ldp#BasicContainer"))
+// 	assert.True(t, ParseLinkHeader(strings.Join(response.Header["Link"], ", ")).MatchURI("http://www.w3.org/ns/ldp#Resource"))
+// 	assert.False(t, ParseLinkHeader(strings.Join(response.Header["Link"], ", ")).MatchURI("http://www.w3.org/ns/ldp#BasicContainer"))
 
 // 	request, err = http.NewRequest("OPTIONS", testServer.URL+"/_test/", nil)
 // 	assert.NoError(t, err)
 // 	response, err = httpClient.Do(request)
 // 	assert.NoError(t, err)
-// 	assert.True(t, ParseLinkHeader(strings.Join(response.Header["Link"], ", ")).MatchUri("http://www.w3.org/ns/ldp#Resource"))
-// 	assert.True(t, ParseLinkHeader(strings.Join(response.Header["Link"], ", ")).MatchUri("http://www.w3.org/ns/ldp#BasicContainer"))
+// 	assert.True(t, ParseLinkHeader(strings.Join(response.Header["Link"], ", ")).MatchURI("http://www.w3.org/ns/ldp#Resource"))
+// 	assert.True(t, ParseLinkHeader(strings.Join(response.Header["Link"], ", ")).MatchURI("http://www.w3.org/ns/ldp#BasicContainer"))
 
 // 	request, err = http.NewRequest("OPTIONS", testServer.URL+"/_test/abc", nil)
 // 	assert.NoError(t, err)
 // 	response, err = httpClient.Do(request)
 // 	assert.NoError(t, err)
-// 	assert.True(t, ParseLinkHeader(strings.Join(response.Header["Link"], ", ")).MatchUri("http://www.w3.org/ns/ldp#Resource"))
-// 	assert.False(t, ParseLinkHeader(strings.Join(response.Header["Link"], ", ")).MatchUri("http://www.w3.org/ns/ldp#BasicContainer"))
+// 	assert.True(t, ParseLinkHeader(strings.Join(response.Header["Link"], ", ")).MatchURI("http://www.w3.org/ns/ldp#Resource"))
+// 	assert.False(t, ParseLinkHeader(strings.Join(response.Header["Link"], ", ")).MatchURI("http://www.w3.org/ns/ldp#BasicContainer"))
 
 // 	request, err = http.NewRequest("GET", testServer.URL+"/_test/", nil)
 // 	assert.NoError(t, err)
 // 	response, err = httpClient.Do(request)
 // 	assert.NoError(t, err)
-// 	assert.True(t, ParseLinkHeader(strings.Join(response.Header["Link"], ", ")).MatchUri("http://www.w3.org/ns/ldp#Resource"))
-// 	assert.True(t, ParseLinkHeader(strings.Join(response.Header["Link"], ", ")).MatchUri("http://www.w3.org/ns/ldp#BasicContainer"))
+// 	assert.True(t, ParseLinkHeader(strings.Join(response.Header["Link"], ", ")).MatchURI("http://www.w3.org/ns/ldp#Resource"))
+// 	assert.True(t, ParseLinkHeader(strings.Join(response.Header["Link"], ", ")).MatchURI("http://www.w3.org/ns/ldp#BasicContainer"))
 
 // 	request, err = http.NewRequest("GET", testServer.URL+"/_test/abc", nil)
 // 	assert.NoError(t, err)
 // 	response, err = httpClient.Do(request)
 // 	assert.NoError(t, err)
-// 	assert.True(t, ParseLinkHeader(strings.Join(response.Header["Link"], ", ")).MatchUri("http://www.w3.org/ns/ldp#Resource"))
-// 	assert.False(t, ParseLinkHeader(strings.Join(response.Header["Link"], ", ")).MatchUri("http://www.w3.org/ns/ldp#BasicContainer"))
+// 	assert.True(t, ParseLinkHeader(strings.Join(response.Header["Link"], ", ")).MatchURI("http://www.w3.org/ns/ldp#Resource"))
+// 	assert.False(t, ParseLinkHeader(strings.Join(response.Header["Link"], ", ")).MatchURI("http://www.w3.org/ns/ldp#BasicContainer"))
 
 // 	request, err = http.NewRequest("PUT", testServer.URL+"/_test/abc", nil)
 // 	assert.NoError(t, err)
 // 	response, err = httpClient.Do(request)
 // 	assert.NoError(t, err)
-// 	assert.True(t, ParseLinkHeader(strings.Join(response.Header["Link"], ", ")).MatchUri("http://www.w3.org/ns/ldp#Resource"))
-// 	assert.False(t, ParseLinkHeader(strings.Join(response.Header["Link"], ", ")).MatchUri("http://www.w3.org/ns/ldp#BasicContainer"))
+// 	assert.True(t, ParseLinkHeader(strings.Join(response.Header["Link"], ", ")).MatchURI("http://www.w3.org/ns/ldp#Resource"))
+// 	assert.False(t, ParseLinkHeader(strings.Join(response.Header["Link"], ", ")).MatchURI("http://www.w3.org/ns/ldp#BasicContainer"))
 
 // 	request, err = http.NewRequest("POST", testServer.URL+"/_test/abc", nil)
 // 	assert.NoError(t, err)
 // 	response, err = httpClient.Do(request)
 // 	assert.NoError(t, err)
-// 	assert.True(t, ParseLinkHeader(strings.Join(response.Header["Link"], ", ")).MatchUri("http://www.w3.org/ns/ldp#Resource"))
-// 	assert.False(t, ParseLinkHeader(strings.Join(response.Header["Link"], ", ")).MatchUri("http://www.w3.org/ns/ldp#BasicContainer"))
+// 	assert.True(t, ParseLinkHeader(strings.Join(response.Header["Link"], ", ")).MatchURI("http://www.w3.org/ns/ldp#Resource"))
+// 	assert.False(t, ParseLinkHeader(strings.Join(response.Header["Link"], ", ")).MatchURI("http://www.w3.org/ns/ldp#BasicContainer"))
 
 // 	request, err = http.NewRequest("POST", testServer.URL+"/_test/", nil)
 // 	assert.NoError(t, err)
 // 	response, err = httpClient.Do(request)
 // 	assert.NoError(t, err)
-// 	assert.True(t, ParseLinkHeader(strings.Join(response.Header["Link"], ", ")).MatchUri("http://www.w3.org/ns/ldp#Resource"))
-// 	assert.False(t, ParseLinkHeader(strings.Join(response.Header["Link"], ", ")).MatchUri("http://www.w3.org/ns/ldp#BasicContainer"))
+// 	assert.True(t, ParseLinkHeader(strings.Join(response.Header["Link"], ", ")).MatchURI("http://www.w3.org/ns/ldp#Resource"))
+// 	assert.False(t, ParseLinkHeader(strings.Join(response.Header["Link"], ", ")).MatchURI("http://www.w3.org/ns/ldp#BasicContainer"))
 // 	newLDPR := response.Header.Get("Location")
 
 // 	request, err = http.NewRequest("DELETE", newLDPR, nil)
@@ -958,7 +958,7 @@ func BenchmarkPUT(b *testing.B) {
 		for i := 0; i < b.N; i++ {
 			x := r.Put("/_bench/test", "text/turtle", "<d> <e> <f> .")
 			if x.StatusCode != 201 {
-				e += 1
+				e++
 			}
 		}
 	})
@@ -974,7 +974,7 @@ func BenchmarkPUTNew(b *testing.B) {
 		for i := 0; i < b.N; i++ {
 			x := r.Put(fmt.Sprintf("/_bench/test%d", i), "text/turtle", "<d> <e> <f> .")
 			if x.StatusCode != 201 {
-				e += 1
+				e++
 			}
 		}
 	})
@@ -991,7 +991,7 @@ func BenchmarkPATCH(b *testing.B) {
 			request, _ := http.NewRequest("PATCH", "/_bench/test", strings.NewReader(`{"a":{"b":[{"type":"literal","value":"`+fmt.Sprintf("%d", b.N)+`"}]}}`))
 			request.Header.Add("Content-Type", "application/json")
 			if r := r.Do(request); r.StatusCode != 200 {
-				e += 1
+				e++
 			}
 		}
 	})
@@ -1008,7 +1008,7 @@ func BenchmarkGETjson(b *testing.B) {
 			request, _ := http.NewRequest("GET", "/_bench/test", nil)
 			request.Header.Add("Content-Type", "application/json")
 			if r := r.Do(request); r.StatusCode != 200 {
-				e += 1
+				e++
 			}
 		}
 	})
@@ -1025,7 +1025,7 @@ func BenchmarkGETturtle(b *testing.B) {
 			request, _ := http.NewRequest("GET", "/_bench/test", nil)
 			request.Header.Add("Content-Type", "text/turtle")
 			if r := r.Do(request); r.StatusCode != 200 {
-				e += 1
+				e++
 			}
 		}
 	})
@@ -1043,7 +1043,7 @@ func BenchmarkGETxml(b *testing.B) {
 			request.Header.Add("Accept", "application/rdf+xml")
 			if r := r.Do(request); r.StatusCode != 200 {
 				fmt.Println(r.StatusCode)
-				e += 1
+				e++
 			}
 		}
 	})

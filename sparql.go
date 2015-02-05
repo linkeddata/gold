@@ -8,6 +8,7 @@ import (
 	"text/scanner"
 )
 
+// SPARQLQuery contains a verb, the body of the query and the graph
 type SPARQLQuery struct {
 	verb string
 	body string
@@ -15,18 +16,21 @@ type SPARQLQuery struct {
 	graph AnyGraph
 }
 
+// SPARQL contains the base URI and a list of queries
 type SPARQL struct {
-	baseUri string
+	baseURI string
 	queries []SPARQLQuery
 }
 
-func NewSPARQL(baseUri string) *SPARQL {
+// NewSPARQL creates a new SPARQL object
+func NewSPARQL(baseURI string) *SPARQL {
 	return &SPARQL{
-		baseUri: baseUri,
+		baseURI: baseURI,
 		queries: []SPARQLQuery{},
 	}
 }
 
+// Parse parses a SPARQL query from the reader
 func (sparql *SPARQL) Parse(src io.Reader) error {
 	b, _ := ioutil.ReadAll(src)
 	s := new(scanner.Scanner).Init(bytes.NewReader(b))
@@ -50,14 +54,14 @@ func (sparql *SPARQL) Parse(src io.Reader) error {
 			if level == 0 {
 				start = s.Position.Offset
 			}
-			level += 1
+			level++
 
 		case 125: // }
-			level -= 1
+			level--
 			if level == 0 {
 				query := SPARQLQuery{
 					body:  string(b[start+1 : s.Position.Offset]),
-					graph: NewGraph(sparql.baseUri),
+					graph: NewGraph(sparql.baseURI),
 					verb:  verb,
 				}
 				query.graph.Parse(strings.NewReader(query.body), "text/turtle")
@@ -74,6 +78,7 @@ func (sparql *SPARQL) Parse(src io.Reader) error {
 	return nil
 }
 
+// SPARQLUpdate is used to update a graph from a SPARQL query
 func (g *Graph) SPARQLUpdate(sparql *SPARQL) {
 	for _, query := range sparql.queries {
 		switch query.verb {

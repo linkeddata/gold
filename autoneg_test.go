@@ -26,13 +26,13 @@ func TestNegotiatePicturesOfWebPages(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	content_type, err := al.Negotiate("text/html", "image/png")
+	contentType, err := al.Negotiate("text/html", "image/png")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if content_type != "image/png" {
-		t.Errorf("got %s expected image/png", content_type)
+	if contentType != "image/png" {
+		t.Errorf("got %s expected image/png", contentType)
 	}
 }
 
@@ -42,13 +42,13 @@ func TestNegotiateFirstMatch(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	content_type, err := al.Negotiate("text/html", "text/plain", "text/n3")
+	contentType, err := al.Negotiate("text/html", "text/plain", "text/n3")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if content_type != "text/html" {
-		t.Errorf("got %s expected text/html", content_type)
+	if contentType != "text/html" {
+		t.Errorf("got %s expected text/html", contentType)
 	}
 }
 
@@ -58,13 +58,13 @@ func TestNegotiateSecondMatch(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	content_type, err := al.Negotiate("text/n3", "text/plain")
+	contentType, err := al.Negotiate("text/n3", "text/plain")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if content_type != "text/plain" {
-		t.Errorf("got %s expected text/plain", content_type)
+	if contentType != "text/plain" {
+		t.Errorf("got %s expected text/plain", contentType)
 	}
 }
 
@@ -74,13 +74,13 @@ func TestNegotiateWildcardMatch(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	content_type, err := al.Negotiate("text/n3", "application/rdf+xml")
+	contentType, err := al.Negotiate("text/n3", "application/rdf+xml")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if content_type != "text/n3" {
-		t.Errorf("got %s expected text/n3", content_type)
+	if contentType != "text/n3" {
+		t.Errorf("got %s expected text/n3", contentType)
 	}
 }
 
