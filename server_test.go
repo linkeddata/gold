@@ -16,7 +16,7 @@ import (
 )
 
 var (
-	handler = NewServer(getServerRoot(), false)
+	handler = NewServer(GetServerRoot(), false)
 )
 
 func TestMKCOL(t *testing.T) {
@@ -125,7 +125,7 @@ func TestHTMLIndex(t *testing.T) {
 
 func TestPathInfo(t *testing.T) {
 	path := testServer.URL + "/_test/"
-	sroot := getServerRoot()
+	sroot := GetServerRoot()
 
 	p, err := handler.pathInfo("")
 	assert.NotNil(t, err)

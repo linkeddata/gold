@@ -25,6 +25,8 @@ const (
 	METASuffix = ",meta"
 	// ACLSuffix is the generic name for the acl corresponding to a given resource
 	ACLSuffix = ",acl"
+	// SystemSuffix is the generic name for the system-reserved namespace (e.g. APIs)
+	SystemPrefix = ",system"
 )
 
 var (
@@ -62,6 +64,7 @@ type ldpath struct {
 	URI      string
 	Base     string
 	Path     string
+	Root     string
 	File     string
 	FileType string
 	AclURI   string
@@ -78,7 +81,8 @@ func (e *errorString) Error() string {
 	return e.s
 }
 
-func getServerRoot() string {
+// GetServerRoot returns the root patch where the server is running
+func GetServerRoot() string {
 	serverRoot, err := os.Getwd()
 	if err != nil {
 		DebugLog("Server", "Error starting server:"+err.Error())
@@ -118,6 +122,7 @@ func (s *Server) pathInfo(path string) (ldpath, error) {
 	if root == "." {
 		root = ""
 	}
+	res.Root = root
 
 	// Add missing trailing slashes for dirs
 	res.FileType, err = magic.TypeByFile(root + p.Path)
@@ -169,6 +174,7 @@ func (s *Server) pathInfo(path string) (ldpath, error) {
 			host = p.Host
 		}
 
+		res.Root = host
 		res.File = host + "/" + res.File
 		res.AclFile = host + "/" + res.AclFile
 		res.MetaFile = host + "/" + res.MetaFile
@@ -296,20 +302,21 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 	r = new(response)
 	var err error
 
-	resource, _ := s.pathInfo(req.BaseURI())
-	DebugLog("Server", "Resource URI: "+resource.URI)
-	DebugLog("Server", "Resource Path: "+resource.File)
-
 	DebugLog("Server", "------ New "+req.Method+" request from "+req.RemoteAddr+" ------")
+
+	resource, _ := s.pathInfo(req.BaseURI())
 
 	user := req.Auth(w)
 	w.Header().Set("User", user)
 	acl := NewWAC(req, s, user)
 
 	// Intercept API requests
-	if strings.HasPrefix(resource.Path, ",system/") {
-		r = HandleSystem(w, req)
+	if strings.HasPrefix(resource.Path, SystemPrefix) {
+		return HandleSystem(w, req, resource)
 	}
+
+	DebugLog("Server", "Resource URI: "+resource.URI)
+	DebugLog("Server", "Resource Path: "+resource.File)
 
 	dataMime := req.Header.Get(HCType)
 	dataMime = strings.Split(dataMime, ";")[0]
@@ -413,7 +420,7 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 		stat, err := os.Stat(resource.File)
 		if err != nil {
 			DebugLog("Server", "Got a stat error: "+err.Error())
-			r.respond(500, err.Error())
+			r.respond(404, Skins["404"])
 		} else if stat.IsDir() {
 			w.Header().Add("Link", brack("http://www.w3.org/ns/ldp#BasicContainer")+"; rel=\"type\"")
 		}
@@ -431,7 +438,7 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 		defer unlock()
 
 		if os.IsNotExist(err) {
-			return r.respond(404, err)
+			return r.respond(404, Skins["404"])
 		}
 		etag, err = NewETag(resource.File)
 		if err != nil {
