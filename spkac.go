@@ -14,6 +14,7 @@ import (
 	"encoding/base64"
 	"encoding/pem"
 	"errors"
+	"fmt"
 	"math/big"
 )
 
@@ -155,9 +156,13 @@ func getPublicKeyAlgorithmFromOID(oid asn1.ObjectIdentifier) x509.PublicKeyAlgor
 }
 
 // ParseSPKAC returns the public key from a KEYGEN's SPKAC request
-func ParseSPKAC(derBytes []byte) (pub interface{}, err error) {
-
+func ParseSPKAC(spkacBase64 string) (pub interface{}, err error) {
 	var info spkacInfo
+	derBytes, err := base64.StdEncoding.DecodeString(spkacBase64)
+	if err != nil {
+		return nil, err
+	}
+
 	if _, err = asn1.Unmarshal(derBytes, &info); err != nil {
 		return
 	}
@@ -173,13 +178,11 @@ func ParseSPKAC(derBytes []byte) (pub interface{}, err error) {
 	}
 
 	return
-
 }
 
 // NewSPKACx509 creates a new x509 self-signed cert based on the SPKAC value
 func NewSPKACx509(uri string, name string, spkacBase64 string) ([]byte, error) {
-	spkacDerBytes, _ := base64.StdEncoding.DecodeString(spkacBase64)
-	public, err := ParseSPKAC(spkacDerBytes)
+	public, err := ParseSPKAC(spkacBase64)
 	if err != nil {
 		return nil, err
 	}
@@ -190,7 +193,7 @@ func NewSPKACx509(uri string, name string, spkacBase64 string) ([]byte, error) {
 	}
 
 	template := x509.Certificate{
-		SerialNumber: new(big.Int).SetInt64(0),
+		SerialNumber: new(big.Int).SetInt64(42),
 		Subject: pkix.Name{
 			CommonName:   name,
 			Organization: []string{"WebID"},
@@ -200,18 +203,20 @@ func NewSPKACx509(uri string, name string, spkacBase64 string) ([]byte, error) {
 		NotAfter:  notAfter,
 
 		BasicConstraintsValid: true,
-		// KeyUsage:    x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
-		// ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
+		KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
 	}
+	// add WebID in the subjectAltName field
 	rawValues := []asn1.RawValue{
-		{Class: 0, Tag: 16, IsCompound: true, Bytes: []byte(uri)},
+		{Class: 0, Tag: 16, IsCompound: true, Bytes: []byte("URI: " + uri)},
 	}
 	values, err := asn1.Marshal(rawValues)
 	if err != nil {
 		return nil, err
 	}
-
 	template.ExtraExtensions = []pkix.Extension{{Id: subjectAltName, Value: values}}
+	ext := fmt.Sprintf("%+v", template.ExtraExtensions)
+	DebugLog("System", ext)
 
 	certDerBytes, err := x509.CreateCertificate(rand.Reader, &template, &template, public, priv)
 
@@ -221,7 +226,7 @@ func NewSPKACx509(uri string, name string, spkacBase64 string) ([]byte, error) {
 // NewRSAcert creates a new RSA x509 self-signed certificate
 func NewRSAcert(uri string, name string, priv *rsa.PrivateKey) (*tls.Certificate, error) {
 	template := x509.Certificate{
-		SerialNumber: new(big.Int).SetInt64(0),
+		SerialNumber: new(big.Int).SetInt64(42),
 		Subject: pkix.Name{
 			CommonName:   name,
 			Organization: []string{"WebID"},
@@ -236,7 +241,7 @@ func NewRSAcert(uri string, name string, priv *rsa.PrivateKey) (*tls.Certificate
 		// ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
 	}
 	rawValues := []asn1.RawValue{
-		{Class: 0, Tag: 16, IsCompound: true, Bytes: []byte(uri)},
+		{Class: 0, Tag: 16, IsCompound: true, Bytes: []byte("URI: " + uri)},
 	}
 	values, err := asn1.Marshal(rawValues)
 	if err != nil {
@@ -250,11 +255,11 @@ func NewRSAcert(uri string, name string, priv *rsa.PrivateKey) (*tls.Certificate
 		return nil, err
 	}
 
-	certPEM := bytes.NewBuffer(nil)
 	derBytes, err := x509.CreateCertificate(rand.Reader, &template, &template, &priv.PublicKey, priv)
 	if err != nil {
 		return nil, err
 	}
+	certPEM := bytes.NewBuffer(nil)
 	err = pem.Encode(certPEM, &pem.Block{Type: "CERTIFICATE", Bytes: derBytes})
 	if err != nil {
 		return nil, err
