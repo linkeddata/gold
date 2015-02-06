@@ -11,8 +11,8 @@ import (
 
 func TestAccountStatus(t *testing.T) {
 	ar := accountRequest{
-		method:      "accountStatus",
-		accountName: "deiu",
+		Method:      "accountStatus",
+		AccountName: "deiu",
 	}
 	jsonData, err := json.Marshal(ar)
 	assert.NoError(t, err)
@@ -23,6 +23,4 @@ func TestAccountStatus(t *testing.T) {
 	assert.NoError(t, err)
 	response.Body.Close()
 	assert.Equal(t, 200, response.StatusCode)
-
-	assert.Equal(t, user1, response.Header.Get("User"))
 }

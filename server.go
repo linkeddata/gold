@@ -25,7 +25,7 @@ const (
 	METASuffix = ",meta"
 	// ACLSuffix is the generic name for the acl corresponding to a given resource
 	ACLSuffix = ",acl"
-	// SystemSuffix is the generic name for the system-reserved namespace (e.g. APIs)
+	// SystemPrefix is the generic name for the system-reserved namespace (e.g. APIs)
 	SystemPrefix = ",system"
 )
 
@@ -280,7 +280,7 @@ func (r *response) respond(status int, a ...interface{}) *response {
 	return r
 }
 
-// ServeHTTP handles the requests
+// ServeHTTP handles the response
 func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	defer func() {
 		req.Body.Close()
@@ -310,9 +310,24 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 	w.Header().Set("User", user)
 	acl := NewWAC(req, s, user)
 
+	// CORS
+	w.Header().Set("Access-Control-Allow-Credentials", "true")
+	w.Header().Set("Access-Control-Expose-Headers", "User, Triples, Location, Link, Vary, Last-Modified, Content-Length")
+	w.Header().Set("Access-Control-Max-Age", "60")
+	w.Header().Set("MS-Author-Via", "DAV, SPARQL")
+
+	// TODO: WAC
+	origin := ""
+	origins := req.Header["Origin"] // all CORS requests
+	if len(origins) > 0 {
+		origin = origins[0]
+		w.Header().Set("Access-Control-Allow-Origin", origin)
+	}
+
 	// Intercept API requests
-	if strings.HasPrefix(resource.Path, SystemPrefix) {
-		return HandleSystem(w, req, resource)
+	if strings.Contains(resource.Path, SystemPrefix) && req.Method != "OPTIONS" {
+		status, payload := HandleSystem(w, req, s.vhosts, s.root, resource)
+		return r.respond(status, payload)
 	}
 
 	DebugLog("Server", "Resource URI: "+resource.URI)
@@ -337,20 +352,6 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 			DebugLog("Server", "Content type not acceptable: "+err.Error())
 			return r.respond(406, "HTTP 406 - Content type not acceptable: "+err.Error())
 		}
-	}
-
-	// CORS
-	w.Header().Set("Access-Control-Allow-Credentials", "true")
-	w.Header().Set("Access-Control-Expose-Headers", "User, Triples, Location, Link, Vary, Last-Modified, Content-Length")
-	w.Header().Set("Access-Control-Max-Age", "60")
-	w.Header().Set("MS-Author-Via", "DAV, SPARQL")
-
-	// TODO: WAC
-	origin := ""
-	origins := req.Header["Origin"] // all CORS requests
-	if len(origins) > 0 {
-		origin = origins[0]
-		w.Header().Set("Access-Control-Allow-Origin", origin)
 	}
 
 	// set ACL Link header
@@ -1099,7 +1100,7 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 		err := os.Remove(resource.File)
 		if err != nil {
 			if os.IsNotExist(err) {
-				return r.respond(404, "404 - Not found")
+				return r.respond(404, Skins["404"])
 			}
 			return r.respond(500, err)
 		}
