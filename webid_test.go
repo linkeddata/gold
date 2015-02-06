@@ -22,5 +22,5 @@ func TestNewWebIDProfileWithKeys(t *testing.T) {
 	g, k, err := NewWebIDProfileWithKeys(user1)
 	assert.NoError(t, err)
 	assert.NotNil(t, k)
-	assert.Equal(t, 4, g.Len())
+	assert.Equal(t, 8, g.Len())
 }

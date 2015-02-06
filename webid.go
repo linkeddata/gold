@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/tls"
+	"crypto/x509"
 	"encoding/asn1"
 	"fmt"
 	"strings"
@@ -14,6 +15,15 @@ import (
 const (
 	rsaBits = 2048
 )
+
+type webidAccount struct {
+	URI      string
+	Name     string
+	Email    string
+	Img      string
+	Modulus  string
+	Exponent string
+}
 
 var (
 	subjectAltName = []int{2, 5, 29, 17}
@@ -64,7 +74,11 @@ func WebIDTLSAuth(tls *tls.ConnectionState) (uri string, err error) {
 		v := asn1.RawValue{}
 		_, err = asn1.Unmarshal(x.Value, &v)
 		if err == nil {
-			claim = string(v.Bytes[2:])
+			if strings.Contains(string(v.Bytes), "URI:") {
+				claim = string(v.Bytes[7:])
+			} else {
+				claim = string(v.Bytes[2:])
+			}
 		}
 		if len(claim) == 0 {
 			continue
@@ -128,21 +142,67 @@ func WebIDTLSAuth(tls *tls.ConnectionState) (uri string, err error) {
 	return
 }
 
+func GetWebIDFromCert(cert []byte) (string, error) {
+	parsed, err := x509.ParseCertificate(cert)
+	if err != nil {
+		return "", err
+	}
+
+	for _, x := range parsed.Extensions {
+		if x.Id.Equal(subjectAltName) {
+			v := asn1.RawValue{}
+			_, err = asn1.Unmarshal(x.Value, &v)
+			if err != nil {
+				return "", err
+			}
+			return string(v.Bytes[2:]), nil
+		}
+	}
+	return "", nil
+}
+
 // NewWebIDProfileWithKeys creates a WebID profile graph and corresponding keys
 func NewWebIDProfileWithKeys(uri string) (*Graph, *rsa.PrivateKey, error) {
 	priv, err := rsa.GenerateKey(rand.Reader, rsaBits)
 	if err != nil {
 		return nil, nil, err
 	}
+	var account = webidAccount{
+		URI:      uri,
+		Modulus:  fmt.Sprintf("%x", priv.N),
+		Exponent: fmt.Sprintf("%d", priv.E),
+	}
+	g := NewWebIDProfile(account)
+	return g, priv, nil
+}
 
-	profileURI := strings.Split(uri, "#")[0]
-	userTerm := NewResource(uri)
+// NewWebIDProfile creates a WebID profile graph based on account data
+func NewWebIDProfile(account webidAccount) *Graph {
+
+	profileURI := strings.Split(account.URI, "#")[0]
+	userTerm := NewResource(account.URI)
+	profileTerm := NewResource(profileURI)
 	keyTerm := NewResource(profileURI + "#key")
 
 	g := NewGraph(profileURI)
+	g.AddTriple(profileTerm, ns.rdf.Get("type"), ns.foaf.Get("PersonalProfileDocument"))
+	g.AddTriple(profileTerm, ns.foaf.Get("maker"), userTerm)
+	g.AddTriple(profileTerm, ns.foaf.Get("primaryTopic"), userTerm)
+
+	g.AddTriple(userTerm, ns.rdf.Get("type"), ns.foaf.Get("Person"))
+	if len(account.Name) > 0 {
+		g.AddTriple(profileTerm, ns.foaf.Get("title"), NewLiteral("WebID profile of "+account.Name))
+		g.AddTriple(userTerm, ns.foaf.Get("fullname"), NewLiteral(account.Name))
+	}
+	if len(account.Email) > 0 {
+		g.AddTriple(userTerm, ns.foaf.Get("mbox"), NewResource("mailto:"+account.Email))
+	}
+	if len(account.Img) > 0 {
+		g.AddTriple(userTerm, ns.foaf.Get("img"), NewResource(account.Img))
+	}
 	g.AddTriple(userTerm, ns.cert.Get("key"), keyTerm)
 	g.AddTriple(keyTerm, ns.rdf.Get("type"), ns.cert.Get("RSAPublicKey"))
-	g.AddTriple(keyTerm, ns.cert.Get("modulus"), NewLiteralWithDatatype(fmt.Sprintf("%x", priv.N), NewResource("http://www.w3.org/2001/XMLSchema#hexBinary")))
-	g.AddTriple(keyTerm, ns.cert.Get("exponent"), NewLiteral(fmt.Sprintf("%d", priv.E)))
-	return g, priv, nil
+	g.AddTriple(keyTerm, ns.cert.Get("modulus"), NewLiteralWithDatatype(account.Modulus, NewResource("http://www.w3.org/2001/XMLSchema#hexBinary")))
+	g.AddTriple(keyTerm, ns.cert.Get("exponent"), NewLiteralWithDatatype(account.Exponent, NewResource("http://www.w3.org/2001/XMLSchema#int")))
+	return g
 }
