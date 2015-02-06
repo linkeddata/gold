@@ -65,6 +65,7 @@ func init() {
 	gold.CookieAge = *cookieT
 	gold.Debug = *debug
 	gold.Skin = *skin
+	gold.ServerPort = *bind
 }
 
 func main() {
