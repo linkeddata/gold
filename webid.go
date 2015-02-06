@@ -128,7 +128,8 @@ func WebIDTLSAuth(tls *tls.ConnectionState) (uri string, err error) {
 	return
 }
 
-func NewWebIDProfile(uri string) (*Graph, *rsa.PrivateKey, error) {
+// NewWebIDProfileWithKeys creates a WebID profile graph and corresponding keys
+func NewWebIDProfileWithKeys(uri string) (*Graph, *rsa.PrivateKey, error) {
 	priv, err := rsa.GenerateKey(rand.Reader, rsaBits)
 	if err != nil {
 		return nil, nil, err
