@@ -30,6 +30,8 @@ const (
 )
 
 var (
+	// Port on which the server runs
+	ServerPort string
 	// CookieAge contains the default validity of the cookie
 	CookieAge = 24 * time.Hour
 	// Debug (display or hide stdout logging)
@@ -304,12 +306,6 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 
 	DebugLog("Server", "------ New "+req.Method+" request from "+req.RemoteAddr+" ------")
 
-	resource, _ := s.pathInfo(req.BaseURI())
-
-	user := req.Auth(w)
-	w.Header().Set("User", user)
-	acl := NewWAC(req, s, user)
-
 	// CORS
 	w.Header().Set("Access-Control-Allow-Credentials", "true")
 	w.Header().Set("Access-Control-Expose-Headers", "User, Triples, Location, Link, Vary, Last-Modified, Content-Length")
@@ -325,11 +321,16 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 	}
 
 	// Intercept API requests
-	if strings.Contains(resource.Path, SystemPrefix) && req.Method != "OPTIONS" {
-		status, payload := HandleSystem(w, req, s.vhosts, s.root, resource)
+	if strings.Contains(req.BaseURI(), SystemPrefix) && req.Method != "OPTIONS" {
+		status, payload := HandleSystem(w, req, s)
 		return r.respond(status, payload)
 	}
 
+	user := req.Auth(w)
+	w.Header().Set("User", user)
+	acl := NewWAC(req, s, user)
+
+	resource, _ := s.pathInfo(req.BaseURI())
 	DebugLog("Server", "Resource URI: "+resource.URI)
 	DebugLog("Server", "Resource Path: "+resource.File)
 
