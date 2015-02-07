@@ -49,7 +49,6 @@ func HandleSystem(w http.ResponseWriter, req *httpRequest, s *Server) systemRetu
 }
 
 func newAccount(w http.ResponseWriter, req *httpRequest, s *Server) systemReturn {
-	//@@TODO make sure not to overwrite an existing profile
 	resource, _ := s.pathInfo(req.BaseURI())
 
 	port := ""
@@ -58,13 +57,14 @@ func newAccount(w http.ResponseWriter, req *httpRequest, s *Server) systemReturn
 	}
 
 	username := strings.ToLower(req.FormValue("username"))
-	webidPath := resource.Root + "/" + username + "/profile/"
-	webidURI := resource.Base + "/" + username + "/profile/card#me"
+	webidBase := resource.Base + "/" + username + "/"
+	webidURL := webidBase + "profile/card"
 	if s.vhosts == true {
-		webidPath = s.root + username + "." + resource.Root + "/profile/"
-		webidURI = "https://" + username + "." + resource.Root + port + "/profile/card#me"
+		webidBase = "https://" + username + "." + resource.Root + port + "/"
+		webidURL = webidBase + "profile/card"
 	}
-	webidFile := webidPath + "card"
+	webidURI := webidURL + "#me"
+	resource, _ = s.pathInfo(webidURL)
 
 	spkac := req.FormValue("spkac")
 
@@ -85,18 +85,18 @@ func newAccount(w http.ResponseWriter, req *httpRequest, s *Server) systemReturn
 		Exponent: fmt.Sprintf("%d", rsaPub.E),
 	}
 
-	DebugLog("System", "[newAccount] checking if account profile <"+webidFile+"> exists...")
-	stat, err := os.Stat(webidFile)
+	DebugLog("System", "[newAccount] checking if account profile <"+resource.File+"> exists...")
+	stat, err := os.Stat(resource.File)
 	if err != nil {
 		DebugLog("System", "Stat error: "+err.Error())
 	}
 	if stat != nil && !stat.IsDir() {
-		DebugLog("System", "Found "+webidFile)
+		DebugLog("System", "Found "+resource.File)
 		return systemReturn{Status: 406, Body: "An account with the same name already exists."}
 	}
 
 	// create a new x509 cert based on the public key
-	certName := account.Name + " [on " + username + "." + resource.Root + "]"
+	certName := account.Name + " [on " + resource.Base + "]"
 	newSpkac, err := NewSPKACx509(webidURI, certName, spkac)
 	if err != nil {
 		DebugLog("System", "[newAccount] NewSPKACx509 error: "+err.Error())
@@ -107,21 +107,19 @@ func newAccount(w http.ResponseWriter, req *httpRequest, s *Server) systemReturn
 	g := NewWebIDProfile(account)
 
 	// create account space
-	err = os.MkdirAll(_path.Dir(webidPath), 0755)
+	err = os.MkdirAll(_path.Dir(resource.File), 0755)
 	if err != nil {
 		DebugLog("Server", "[newAccount] MkdirAll error: "+err.Error())
 		return systemReturn{Status: 500, Body: err.Error()}
 	}
 
 	// open WebID profile file
-	f, err := os.OpenFile(webidFile, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
+	f, err := os.OpenFile(resource.File, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
 	if err != nil {
 		DebugLog("Server", "[newAccount] open profile error: "+err.Error())
 		return systemReturn{Status: 500, Body: err.Error()}
 	}
 	defer f.Close()
-
-	// @@@ TODO @@@ set ACLs
 
 	// write WebID profile to disk
 	err = g.WriteFile(f, "text/turtle")
@@ -130,6 +128,65 @@ func newAccount(w http.ResponseWriter, req *httpRequest, s *Server) systemReturn
 		return systemReturn{Status: 500, Body: err.Error()}
 	}
 
+	// Write ACL for the profile
+	aclTerm := NewResource(resource.AclURI + "#owner")
+	g = NewGraph(resource.AclURI)
+	g.AddTriple(aclTerm, ns.rdf.Get("type"), ns.acl.Get("Authorization"))
+	g.AddTriple(aclTerm, ns.acl.Get("accessTo"), NewResource(webidURL))
+	g.AddTriple(aclTerm, ns.acl.Get("accessTo"), NewResource(resource.AclURI))
+	g.AddTriple(aclTerm, ns.acl.Get("agent"), NewResource(webidURI))
+	g.AddTriple(aclTerm, ns.acl.Get("mode"), ns.acl.Get("Read"))
+	g.AddTriple(aclTerm, ns.acl.Get("mode"), ns.acl.Get("Write"))
+	g.AddTriple(aclTerm, ns.acl.Get("mode"), ns.acl.Get("Control"))
+	readAllTerm := NewResource(resource.AclURI + "#readall")
+	g.AddTriple(readAllTerm, ns.rdf.Get("type"), ns.acl.Get("Authorization"))
+	g.AddTriple(readAllTerm, ns.acl.Get("accessTo"), NewResource(webidURL))
+	g.AddTriple(readAllTerm, ns.acl.Get("agentClass"), ns.foaf.Get("Agent"))
+	g.AddTriple(readAllTerm, ns.acl.Get("mode"), ns.acl.Get("Read"))
+	// open profile acl file
+	f, err = os.OpenFile(resource.AclFile, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
+	if err != nil {
+		DebugLog("Server", "[newAccount] open profile acl error: "+err.Error())
+		return systemReturn{Status: 500, Body: err.Error()}
+	}
+	defer f.Close()
+
+	// write profile acl to disk
+	err = g.WriteFile(f, "text/turtle")
+	if err != nil {
+		DebugLog("Server", "[newAccount] saving profile acl error: "+err.Error())
+		return systemReturn{Status: 500, Body: err.Error()}
+	}
+
+	// Write default ACL for the whole account space
+	// No one but the user is allowed access by default
+	resource, _ = s.pathInfo(webidBase)
+	aclTerm = NewResource(resource.AclURI + "#owner")
+	g = NewGraph(resource.AclURI)
+	g.AddTriple(aclTerm, ns.rdf.Get("type"), ns.acl.Get("Authorization"))
+	g.AddTriple(aclTerm, ns.acl.Get("accessTo"), NewResource(resource.URI))
+	g.AddTriple(aclTerm, ns.acl.Get("accessTo"), NewResource(resource.AclURI))
+	g.AddTriple(aclTerm, ns.acl.Get("agent"), NewResource(webidURI))
+	g.AddTriple(aclTerm, ns.acl.Get("defaultForNew"), NewResource(resource.URI))
+	g.AddTriple(aclTerm, ns.acl.Get("mode"), ns.acl.Get("Read"))
+	g.AddTriple(aclTerm, ns.acl.Get("mode"), ns.acl.Get("Write"))
+	g.AddTriple(aclTerm, ns.acl.Get("mode"), ns.acl.Get("Control"))
+	// open account acl file
+	f, err = os.OpenFile(resource.AclFile, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
+	if err != nil {
+		DebugLog("Server", "[newAccount] open account acl error: "+err.Error())
+		return systemReturn{Status: 500, Body: err.Error()}
+	}
+	defer f.Close()
+
+	// write account acl to disk
+	err = g.WriteFile(f, "text/turtle")
+	if err != nil {
+		DebugLog("Server", "[newAccount] saving account acl error: "+err.Error())
+		return systemReturn{Status: 500, Body: err.Error()}
+	}
+
+	// Send cert to the user for installation
 	// Chrome requires direct download of certs; other browsers don't
 	ua := req.Header.Get("User-Agent")
 	if strings.Contains(ua, "Chrome") {

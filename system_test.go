@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
 	"strconv"
 	"strings"
 	"testing"
@@ -47,11 +48,9 @@ func TestNewAccount(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, 406, response.StatusCode)
 
-	request, err = http.NewRequest("DELETE", testServer.URL+"/_test/user/profile/card", nil)
+	// delete user
+	err = os.RemoveAll("_test/user/")
 	assert.NoError(t, err)
-	response, err = httpClient.Do(request)
-	assert.NoError(t, err)
-	assert.Equal(t, 200, response.StatusCode)
 
 	request, err = http.NewRequest("POST", testServer.URL+"/,system/newAccount", bytes.NewBufferString(form.Encode()))
 	request.Header.Add("Content-Type", "application/x-www-form-urlencoded")
@@ -65,29 +64,9 @@ func TestNewAccount(t *testing.T) {
 	assert.True(t, strings.Contains(string(body), "iframe"))
 	assert.Equal(t, 200, response.StatusCode)
 
-	request, err = http.NewRequest("DELETE", testServer.URL+"/_test/user/profile/card", nil)
+	// delete user
+	err = os.RemoveAll("_test/")
 	assert.NoError(t, err)
-	response, err = httpClient.Do(request)
-	assert.NoError(t, err)
-	assert.Equal(t, 200, response.StatusCode)
-
-	request, err = http.NewRequest("DELETE", testServer.URL+"/_test/user/profile/", nil)
-	assert.NoError(t, err)
-	response, err = httpClient.Do(request)
-	assert.NoError(t, err)
-	assert.Equal(t, 200, response.StatusCode)
-
-	request, err = http.NewRequest("DELETE", testServer.URL+"/_test/user/", nil)
-	assert.NoError(t, err)
-	response, err = httpClient.Do(request)
-	assert.NoError(t, err)
-	assert.Equal(t, 200, response.StatusCode)
-
-	request, err = http.NewRequest("DELETE", testServer.URL+"/_test/", nil)
-	assert.NoError(t, err)
-	response, err = httpClient.Do(request)
-	assert.NoError(t, err)
-	assert.Equal(t, 200, response.StatusCode)
 }
 
 func TestAccountStatus(t *testing.T) {
