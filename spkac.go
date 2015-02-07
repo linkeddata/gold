@@ -2,9 +2,8 @@ package gold
 
 import (
 	"bytes"
-	"crypto/dsa"
-	"crypto/ecdsa"
-	"crypto/elliptic"
+	// "crypto/ecdsa"
+	// "crypto/elliptic"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/tls"
@@ -41,34 +40,30 @@ type publicKeyInfo struct {
 	PublicKey asn1.BitString
 }
 
-type dsaAlgorithmParameters struct {
-	P, Q, G *big.Int
-}
-
 var (
-	oidNamedCurveP224 = asn1.ObjectIdentifier{1, 3, 132, 0, 33}
-	oidNamedCurveP256 = asn1.ObjectIdentifier{1, 2, 840, 10045, 3, 1, 7}
-	oidNamedCurveP384 = asn1.ObjectIdentifier{1, 3, 132, 0, 34}
-	oidNamedCurveP521 = asn1.ObjectIdentifier{1, 3, 132, 0, 35}
+	// oidNamedCurveP224 = asn1.ObjectIdentifier{1, 3, 132, 0, 33}
+	// oidNamedCurveP256 = asn1.ObjectIdentifier{1, 2, 840, 10045, 3, 1, 7}
+	// oidNamedCurveP384 = asn1.ObjectIdentifier{1, 3, 132, 0, 34}
+	// oidNamedCurveP521 = asn1.ObjectIdentifier{1, 3, 132, 0, 35}
 
-	oidPublicKeyRSA   = asn1.ObjectIdentifier{1, 2, 840, 113549, 1, 1, 1}
-	oidPublicKeyDSA   = asn1.ObjectIdentifier{1, 2, 840, 10040, 4, 1}
-	oidPublicKeyECDSA = asn1.ObjectIdentifier{1, 2, 840, 10045, 2, 1}
+	oidPublicKeyRSA = asn1.ObjectIdentifier{1, 2, 840, 113549, 1, 1, 1}
+	// oidPublicKeyDSA   = asn1.ObjectIdentifier{1, 2, 840, 10040, 4, 1}
+	// oidPublicKeyECDSA = asn1.ObjectIdentifier{1, 2, 840, 10045, 2, 1}
 )
 
-func namedCurveFromOID(oid asn1.ObjectIdentifier) elliptic.Curve {
-	switch {
-	case oid.Equal(oidNamedCurveP224):
-		return elliptic.P224()
-	case oid.Equal(oidNamedCurveP256):
-		return elliptic.P256()
-	case oid.Equal(oidNamedCurveP384):
-		return elliptic.P384()
-	case oid.Equal(oidNamedCurveP521):
-		return elliptic.P521()
-	}
-	return nil
-}
+// func namedCurveFromOID(oid asn1.ObjectIdentifier) elliptic.Curve {
+// 	switch {
+// 	case oid.Equal(oidNamedCurveP224):
+// 		return elliptic.P224()
+// 	case oid.Equal(oidNamedCurveP256):
+// 		return elliptic.P256()
+// 	case oid.Equal(oidNamedCurveP384):
+// 		return elliptic.P384()
+// 	case oid.Equal(oidNamedCurveP521):
+// 		return elliptic.P521()
+// 	}
+// 	return nil
+// }
 
 func parsePublicKey(algo x509.PublicKeyAlgorithm, keyData *publicKeyInfo) (interface{}, error) {
 	asn1Data := keyData.PublicKey.RightAlign()
@@ -92,64 +87,15 @@ func parsePublicKey(algo x509.PublicKeyAlgorithm, keyData *publicKeyInfo) (inter
 			N: p.N,
 		}
 		return pub, nil
-	case x509.DSA:
-		var p *big.Int
-		_, err := asn1.Unmarshal(asn1Data, &p)
-		if err != nil {
-			return nil, err
-		}
-		paramsData := keyData.Algorithm.Parameters.FullBytes
-		params := new(dsaAlgorithmParameters)
-		_, err = asn1.Unmarshal(paramsData, params)
-		if err != nil {
-			return nil, err
-		}
-		if p.Sign() <= 0 || params.P.Sign() <= 0 || params.Q.Sign() <= 0 || params.G.Sign() <= 0 {
-			return nil, errors.New("x509: zero or negative DSA parameter")
-		}
-		pub := &dsa.PublicKey{
-			Parameters: dsa.Parameters{
-				P: params.P,
-				Q: params.Q,
-				G: params.G,
-			},
-			Y: p,
-		}
-		return pub, nil
-	case x509.ECDSA:
-		paramsData := keyData.Algorithm.Parameters.FullBytes
-		namedCurveOID := new(asn1.ObjectIdentifier)
-		_, err := asn1.Unmarshal(paramsData, namedCurveOID)
-		if err != nil {
-			return nil, err
-		}
-		namedCurve := namedCurveFromOID(*namedCurveOID)
-		if namedCurve == nil {
-			return nil, errors.New("x509: unsupported elliptic curve")
-		}
-		x, y := elliptic.Unmarshal(namedCurve, asn1Data)
-		if x == nil {
-			return nil, errors.New("x509: failed to unmarshal elliptic curve point")
-		}
-		pub := &ecdsa.PublicKey{
-			Curve: namedCurve,
-			X:     x,
-			Y:     y,
-		}
-		return pub, nil
 	default:
+		// DSA and EC not supported everywhere
 		return nil, nil
 	}
 }
 
 func getPublicKeyAlgorithmFromOID(oid asn1.ObjectIdentifier) x509.PublicKeyAlgorithm {
-	switch {
-	case oid.Equal(oidPublicKeyRSA):
+	if oid.Equal(oidPublicKeyRSA) {
 		return x509.RSA
-	case oid.Equal(oidPublicKeyDSA):
-		return x509.DSA
-	case oid.Equal(oidPublicKeyECDSA):
-		return x509.ECDSA
 	}
 	return x509.UnknownPublicKeyAlgorithm
 }
