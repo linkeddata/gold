@@ -24,5 +24,5 @@ func TestCreateCertificateFromSPKAC(t *testing.T) {
 
 	webid, err := GetWebIDFromCert(newSpkac)
 	assert.NoError(t, err)
-	assert.Equal(t, "URI: "+uri, webid)
+	assert.Equal(t, uri, webid)
 }
