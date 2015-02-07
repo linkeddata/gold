@@ -100,12 +100,14 @@ func WebIDTLSAuth(tls *tls.ConnectionState) (uri string, err error) {
 			return
 		}
 
+		DebugLog("WebID-TLS", "Fetching profile information...")
 		g := NewGraph(claim)
 		err = g.LoadURI(claim)
 		if err != nil {
-			DebugLog("WebID-TLS", err.Error())
+			DebugLog("WebID-TLS", "Error loading profile: "+err.Error())
 			return
 		}
+		DebugLog("WebID-TLS", "Found "+fmt.Sprintf("%+v", g.Len())+" triples")
 
 		for _, keyT := range g.All(NewResource(claim), ns.cert.Get("key"), nil) {
 			DebugLog("WebID-TLS", "Found a public key in the profile.")
