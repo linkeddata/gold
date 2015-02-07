@@ -47,16 +47,21 @@ func HandleSystem(w http.ResponseWriter, req *httpRequest, s *Server) (int, stri
 func newAccount(w http.ResponseWriter, req *httpRequest, s *Server) (int, string) {
 	resource, _ := s.pathInfo(req.BaseURI())
 
-	username := strings.ToLower(req.FormValue("username"))
-	webidPath := s.root + username + "." + resource.Root + "/profile/"
-	webidFile := webidPath + "card"
 	port := ""
 	if ServerPort != ":443" || ServerPort != ":80" {
 		port = ServerPort
 	}
-	webidURI := "https://" + username + "." + resource.Root + port + "/profile/card#me"
 
-	spkac := req.FormValue("SPKAC")
+	username := strings.ToLower(req.FormValue("username"))
+	webidPath := resource.Root + "/" + username + "/profile/"
+	webidURI := resource.Base + "/" + username + "/profile/card#me"
+	if s.vhosts == true {
+		webidPath = s.root + username + "." + resource.Root + "/profile/"
+		webidURI = "https://" + username + "." + resource.Root + port + "/profile/card#me"
+	}
+	webidFile := webidPath + "card"
+
+	spkac := req.FormValue("spkac")
 
 	account := webidAccount{
 		URI:   webidURI,
@@ -101,6 +106,8 @@ func newAccount(w http.ResponseWriter, req *httpRequest, s *Server) (int, string
 	}
 	defer f.Close()
 
+	// @@@ TODO @@@ set ACLs
+
 	// write WebID profile to disk
 	err = g.WriteFile(f, "text/turtle")
 	if err != nil {
@@ -109,7 +116,6 @@ func newAccount(w http.ResponseWriter, req *httpRequest, s *Server) (int, string
 	}
 
 	cert := base64.StdEncoding.EncodeToString(newSpkac)
-	DebugLog("System", cert)
 
 	// Chrome access direct download of certs; other browsers don't
 	ua := req.Header.Get("User-Agent")
