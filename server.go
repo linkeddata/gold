@@ -477,6 +477,7 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 						w.Header().Set(HCType, contentType)
 						urlStr := FileManagerURI + resource.Obj.Scheme + "/" + resource.Obj.Host + "/" + resource.Obj.Path
 						http.Redirect(w, req.Request, urlStr, 303)
+						return
 					}
 				}
 			} else {
@@ -686,7 +687,6 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 
 		if !maybeRDF && len(magicType) > 0 {
 			w.Header().Set(HCType, magicType)
-			w.WriteHeader(status)
 
 			if status == 200 {
 				f, err := os.Open(resource.File)
@@ -698,6 +698,8 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 					}()
 					io.Copy(w, f)
 				}
+			} else {
+				w.WriteHeader(status)
 			}
 			return
 		}
