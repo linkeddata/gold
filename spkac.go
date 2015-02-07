@@ -6,6 +6,7 @@ import (
 	// "crypto/elliptic"
 	"crypto/rand"
 	"crypto/rsa"
+	"crypto/sha1"
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
@@ -131,6 +132,13 @@ func NewSPKACx509(uri string, name string, spkacBase64 string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	pubKey := public.(*rsa.PublicKey)
+	rsaPub, err := x509.MarshalPKIXPublicKey(pubKey)
+	if err != nil {
+		return nil, err
+	}
+	h := sha1.New()
+	pubSha1 := h.Sum(rsaPub)[:20]
 
 	priv, err := rsa.GenerateKey(rand.Reader, 1024)
 	if err != nil {
@@ -146,6 +154,8 @@ func NewSPKACx509(uri string, name string, spkacBase64 string) ([]byte, error) {
 		},
 		NotBefore: notBefore,
 		NotAfter:  notAfter,
+
+		SubjectKeyId: pubSha1,
 
 		BasicConstraintsValid: true,
 	}
