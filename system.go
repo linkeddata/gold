@@ -37,14 +37,14 @@ func HandleSystem(w http.ResponseWriter, req *httpRequest, s *Server) (int, stri
 			status, payload := accountStatus(w, req, s)
 			return status, payload
 		}
-	} else if strings.Contains(req.BaseURI(), "spkac") {
-		status, payload := spkacNew(w, req, s)
+	} else if strings.Contains(req.BaseURI(), "newAccount") {
+		status, payload := newAccount(w, req, s)
 		return status, payload
 	}
 	return 200, ""
 }
 
-func spkacNew(w http.ResponseWriter, req *httpRequest, s *Server) (int, string) {
+func newAccount(w http.ResponseWriter, req *httpRequest, s *Server) (int, string) {
 	resource, _ := s.pathInfo(req.BaseURI())
 
 	username := strings.ToLower(req.FormValue("username"))
@@ -115,8 +115,9 @@ func spkacNew(w http.ResponseWriter, req *httpRequest, s *Server) (int, string) 
 	ua := req.Header.Get("User-Agent")
 	if strings.Contains(ua, "Chrome") {
 		w.Header().Set(HCType, "application/x-x509-user-cert; charset=utf-8")
+	} else {
+		cert = `<iframe width="0" height="0" style="display: none;" src="data:application/x-x509-user-cert;base64,` + cert + `"></iframe>`
 	}
-	cert = `<iframe width="0" height="0" style="display: none;" src="data:application/x-x509-user-cert;base64,` + cert + `"></iframe>`
 
 	return 200, cert
 }
@@ -170,7 +171,7 @@ func accountStatus(w http.ResponseWriter, req *httpRequest, s *Server) (int, str
 	res := statusResponse{
 		Method:  "accountStatus",
 		Status:  status,
-		Formuri: resource.Base + "/" + SystemPrefix + "/spkac",
+		Formuri: resource.Base + "/" + SystemPrefix + "/newAccount",
 		Response: accountResponse{
 			AccountName: accName,
 			Available:   isAvailable,
