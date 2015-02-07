@@ -12,6 +12,12 @@ import (
 	"strings"
 )
 
+type systemReturn struct {
+	Status int
+	Body   string
+	Bytes  []byte
+}
+
 type accountRequest struct {
 	Method      string
 	AccountName string
@@ -30,21 +36,19 @@ type statusResponse struct {
 }
 
 // HandleSystem is a router for system specific APIs
-func HandleSystem(w http.ResponseWriter, req *httpRequest, s *Server) (int, string) {
+func HandleSystem(w http.ResponseWriter, req *httpRequest, s *Server) systemReturn {
 	if strings.Contains(req.BaseURI(), "accountStatus") {
 		// unsupported yet when server is running on one host
 		if s.vhosts == true {
-			status, payload := accountStatus(w, req, s)
-			return status, payload
+			return accountStatus(w, req, s)
 		}
 	} else if strings.Contains(req.BaseURI(), "newAccount") {
-		status, payload := newAccount(w, req, s)
-		return status, payload
+		return newAccount(w, req, s)
 	}
-	return 200, ""
+	return systemReturn{Status: 200}
 }
 
-func newAccount(w http.ResponseWriter, req *httpRequest, s *Server) (int, string) {
+func newAccount(w http.ResponseWriter, req *httpRequest, s *Server) systemReturn {
 	//@@TODO make sure not to overwrite an existing profile
 	resource, _ := s.pathInfo(req.BaseURI())
 
@@ -64,11 +68,21 @@ func newAccount(w http.ResponseWriter, req *httpRequest, s *Server) (int, string
 
 	spkac := req.FormValue("spkac")
 
+	// get public key from spkac
+	pubKey, err := ParseSPKAC(spkac)
+	if err != nil {
+		DebugLog("System", "[newAccount] ParseSPKAC error: "+err.Error())
+		return systemReturn{Status: 500, Body: err.Error()}
+	}
+	rsaPub := pubKey.(*rsa.PublicKey)
+
 	account := webidAccount{
-		URI:   webidURI,
-		Name:  req.FormValue("name"),
-		Email: req.FormValue("email"),
-		Img:   req.FormValue("img"),
+		URI:      webidURI,
+		Name:     req.FormValue("name"),
+		Email:    req.FormValue("email"),
+		Img:      req.FormValue("img"),
+		Modulus:  fmt.Sprintf("%x", rsaPub.N),
+		Exponent: fmt.Sprintf("%d", rsaPub.E),
 	}
 
 	DebugLog("System", "[newAccount] checking if account profile <"+webidFile+"> exists...")
@@ -78,7 +92,7 @@ func newAccount(w http.ResponseWriter, req *httpRequest, s *Server) (int, string
 	}
 	if stat != nil && !stat.IsDir() {
 		DebugLog("System", "Found "+webidFile)
-		return 406, "An account with the same name already exists."
+		return systemReturn{Status: 406, Body: "An account with the same name already exists."}
 	}
 
 	// create a new x509 cert based on the public key
@@ -86,34 +100,24 @@ func newAccount(w http.ResponseWriter, req *httpRequest, s *Server) (int, string
 	newSpkac, err := NewSPKACx509(webidURI, certName, spkac)
 	if err != nil {
 		DebugLog("System", "[newAccount] NewSPKACx509 error: "+err.Error())
-		return 500, err.Error()
+		return systemReturn{Status: 500, Body: err.Error()}
 	}
 
-	// get public key from spkac
-	pubKey, err := ParseSPKAC(spkac)
-	if err != nil {
-		DebugLog("System", "[newAccount] ParseSPKAC error: "+err.Error())
-		return 500, err.Error()
-	}
-	rsaPub := pubKey.(*rsa.PublicKey)
-	account.Modulus = fmt.Sprintf("%x", rsaPub.N)
-	account.Exponent = fmt.Sprintf("%d", rsaPub.E)
-
-	// Get WebID profile graph for this account
+	// Generate WebID profile graph for this account
 	g := NewWebIDProfile(account)
 
 	// create account space
 	err = os.MkdirAll(_path.Dir(webidPath), 0755)
 	if err != nil {
 		DebugLog("Server", "[newAccount] MkdirAll error: "+err.Error())
-		return 500, err.Error()
+		return systemReturn{Status: 500, Body: err.Error()}
 	}
 
 	// open WebID profile file
 	f, err := os.OpenFile(webidFile, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
 	if err != nil {
 		DebugLog("Server", "[newAccount] open profile error: "+err.Error())
-		return 500, err.Error()
+		return systemReturn{Status: 500, Body: err.Error()}
 	}
 	defer f.Close()
 
@@ -123,20 +127,19 @@ func newAccount(w http.ResponseWriter, req *httpRequest, s *Server) (int, string
 	err = g.WriteFile(f, "text/turtle")
 	if err != nil {
 		DebugLog("Server", "[newAccount] saving profile error: "+err.Error())
-		return 500, err.Error()
+		return systemReturn{Status: 500, Body: err.Error()}
 	}
 
-	cert := base64.StdEncoding.EncodeToString(newSpkac)
-
-	// Chrome access direct download of certs; other browsers don't
+	// Chrome requires direct download of certs; other browsers don't
 	ua := req.Header.Get("User-Agent")
 	if strings.Contains(ua, "Chrome") {
 		w.Header().Set(HCType, "application/x-x509-user-cert; charset=utf-8")
-	} else {
-		cert = `<iframe width="0" height="0" style="display: none;" src="data:application/x-x509-user-cert;base64,` + cert + `"></iframe>`
+		return systemReturn{Status: 200, Bytes: newSpkac}
 	}
+	// Prefer loading cert in iframe, to access onLoad events in the browser for the iframe
+	body := `<iframe width="0" height="0" style="display: none;" src="data:application/x-x509-user-cert;base64,` + base64.StdEncoding.EncodeToString(newSpkac) + `"></iframe>`
 
-	return 200, cert
+	return systemReturn{Status: 200, Body: body}
 }
 
 // accountStatus implements a basic API to check whether a user account exists on the server
@@ -150,23 +153,23 @@ func newAccount(w http.ResponseWriter, req *httpRequest, s *Server) (int, string
 //             available:   true
 //            }
 // }
-func accountStatus(w http.ResponseWriter, req *httpRequest, s *Server) (int, string) {
+func accountStatus(w http.ResponseWriter, req *httpRequest, s *Server) systemReturn {
 	resource, _ := s.pathInfo(req.BaseURI())
 
 	data, err := ioutil.ReadAll(req.Body)
 	if err != nil {
 		DebugLog("System", "[accountStatus] read body error: "+err.Error())
-		return 500, err.Error()
+		return systemReturn{Status: 500, Body: err.Error()}
 	}
 	if len(data) == 0 {
 		DebugLog("System", "[accountStatus] empty request for accountStatus API")
-		return 500, "Empty request for accountStatus API"
+		return systemReturn{Status: 500, Body: "Empty request for accountStatus API"}
 	}
 	var accReq accountRequest
 	err = json.Unmarshal(data, &accReq)
 	if err != nil {
 		DebugLog("System", "[accountStatus] unmarshal error: "+err.Error())
-		return 500, err.Error()
+		return systemReturn{Status: 500, Body: err.Error()}
 	}
 	accReq.AccountName = strings.ToLower(accReq.AccountName)
 
@@ -198,5 +201,5 @@ func accountStatus(w http.ResponseWriter, req *httpRequest, s *Server) (int, str
 	if err != nil {
 		DebugLog("System", "[accountStatus] marshal error: "+err.Error())
 	}
-	return 200, string(jsonData)
+	return systemReturn{Status: 200, Body: string(jsonData)}
 }
