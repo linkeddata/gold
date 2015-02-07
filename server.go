@@ -2,6 +2,7 @@ package gold
 
 import (
 	"bufio"
+	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -322,8 +323,13 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 
 	// Intercept API requests
 	if strings.Contains(req.BaseURI(), SystemPrefix) && req.Method != "OPTIONS" {
-		status, payload := HandleSystem(w, req, s)
-		return r.respond(status, payload)
+		resp := HandleSystem(w, req, s)
+		if resp.Bytes != nil {
+			// copy raw bytes
+			io.Copy(w, bytes.NewReader(resp.Bytes))
+			return
+		}
+		return r.respond(resp.Status, resp.Body)
 	}
 
 	user := req.Auth(w)
