@@ -35,6 +35,14 @@ func TestNewAccount(t *testing.T) {
 	assert.False(t, strings.Contains(string(body), "iframe"))
 	assert.Equal(t, 200, response.StatusCode)
 
+	request, err = http.NewRequest("POST", testServer.URL+"/,system/newAccount", bytes.NewBufferString(form.Encode()))
+	request.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+	request.Header.Add("Content-Length", strconv.Itoa(len(form.Encode())))
+	assert.NoError(t, err)
+	response, err = httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.Equal(t, 406, response.StatusCode)
+
 	request, err = http.NewRequest("DELETE", testServer.URL+"/_test/user/profile/card", nil)
 	assert.NoError(t, err)
 	response, err = httpClient.Do(request)

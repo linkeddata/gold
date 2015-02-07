@@ -45,6 +45,7 @@ func HandleSystem(w http.ResponseWriter, req *httpRequest, s *Server) (int, stri
 }
 
 func newAccount(w http.ResponseWriter, req *httpRequest, s *Server) (int, string) {
+	//@@TODO make sure not to overwrite an existing profile
 	resource, _ := s.pathInfo(req.BaseURI())
 
 	port := ""
@@ -70,18 +71,28 @@ func newAccount(w http.ResponseWriter, req *httpRequest, s *Server) (int, string
 		Img:   req.FormValue("img"),
 	}
 
+	DebugLog("System", "[newAccount] checking if account profile <"+webidFile+"> exists...")
+	stat, err := os.Stat(webidFile)
+	if err != nil {
+		DebugLog("System", "Stat error: "+err.Error())
+	}
+	if stat != nil && !stat.IsDir() {
+		DebugLog("System", "Found "+webidFile)
+		return 406, "An account with the same name already exists."
+	}
+
 	// create a new x509 cert based on the public key
 	certName := account.Name + " [on " + username + "." + resource.Root + "]"
 	newSpkac, err := NewSPKACx509(webidURI, certName, spkac)
 	if err != nil {
-		DebugLog("System", "SPKAC NewSPKACx509 error: "+err.Error())
+		DebugLog("System", "[newAccount] NewSPKACx509 error: "+err.Error())
 		return 500, err.Error()
 	}
 
 	// get public key from spkac
 	pubKey, err := ParseSPKAC(spkac)
 	if err != nil {
-		DebugLog("System", "SPKAC parse error: "+err.Error())
+		DebugLog("System", "[newAccount] ParseSPKAC error: "+err.Error())
 		return 500, err.Error()
 	}
 	rsaPub := pubKey.(*rsa.PublicKey)
@@ -94,14 +105,14 @@ func newAccount(w http.ResponseWriter, req *httpRequest, s *Server) (int, string
 	// create account space
 	err = os.MkdirAll(_path.Dir(webidPath), 0755)
 	if err != nil {
-		DebugLog("Server", "SPKAC MkdirAll error: "+err.Error())
+		DebugLog("Server", "[newAccount] MkdirAll error: "+err.Error())
 		return 500, err.Error()
 	}
 
 	// open WebID profile file
 	f, err := os.OpenFile(webidFile, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
 	if err != nil {
-		DebugLog("Server", "SPKAC os.OpenFile error: "+err.Error())
+		DebugLog("Server", "[newAccount] open profile error: "+err.Error())
 		return 500, err.Error()
 	}
 	defer f.Close()
@@ -111,7 +122,7 @@ func newAccount(w http.ResponseWriter, req *httpRequest, s *Server) (int, string
 	// write WebID profile to disk
 	err = g.WriteFile(f, "text/turtle")
 	if err != nil {
-		DebugLog("Server", "SPKAC saving profile error: "+err.Error())
+		DebugLog("Server", "[newAccount] saving profile error: "+err.Error())
 		return 500, err.Error()
 	}
 
@@ -144,17 +155,17 @@ func accountStatus(w http.ResponseWriter, req *httpRequest, s *Server) (int, str
 
 	data, err := ioutil.ReadAll(req.Body)
 	if err != nil {
-		DebugLog("System", "Read body error: "+err.Error())
+		DebugLog("System", "[accountStatus] read body error: "+err.Error())
 		return 500, err.Error()
 	}
 	if len(data) == 0 {
-		DebugLog("System", "Empty request for accountStatus API")
+		DebugLog("System", "[accountStatus] empty request for accountStatus API")
 		return 500, "Empty request for accountStatus API"
 	}
 	var accReq accountRequest
 	err = json.Unmarshal(data, &accReq)
 	if err != nil {
-		DebugLog("System", "Unmarshal error: "+err.Error())
+		DebugLog("System", "[accountStatus] unmarshal error: "+err.Error())
 		return 500, err.Error()
 	}
 	accReq.AccountName = strings.ToLower(accReq.AccountName)
@@ -164,13 +175,13 @@ func accountStatus(w http.ResponseWriter, req *httpRequest, s *Server) (int, str
 	accName := accReq.AccountName
 	isAvailable := true
 
-	DebugLog("System", "Checking if account <"+accReq.AccountName+"> exists...")
+	DebugLog("System", "[accountStatus] checking if account <"+accReq.AccountName+"> exists...")
 	stat, err := os.Stat(s.root + accName + "." + resource.Root)
 	if err != nil {
 		DebugLog("System", "Stat error: "+err.Error())
 	}
 	if stat != nil && stat.IsDir() {
-		DebugLog("System", "Found "+s.root+accName+"."+resource.Root)
+		DebugLog("System", "[accountStatus] found "+s.root+accName+"."+resource.Root)
 		isAvailable = false
 	}
 
@@ -185,7 +196,7 @@ func accountStatus(w http.ResponseWriter, req *httpRequest, s *Server) (int, str
 	}
 	jsonData, err := json.Marshal(res)
 	if err != nil {
-		DebugLog("System", "Marshal error: "+err.Error())
+		DebugLog("System", "[accountStatus] marshal error: "+err.Error())
 	}
 	return 200, string(jsonData)
 }
