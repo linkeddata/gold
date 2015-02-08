@@ -52,7 +52,8 @@ func newAccount(w http.ResponseWriter, req *httpRequest, s *Server) systemReturn
 	resource, _ := s.pathInfo(req.BaseURI())
 
 	port := ""
-	if ServerPort != ":443" || ServerPort != ":80" {
+	if ServerPort != ":443" {
+		DebugLog("System", "Found different port value: "+ServerPort)
 		port = ServerPort
 	}
 
