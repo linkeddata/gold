@@ -667,6 +667,18 @@ func TestHEAD(t *testing.T) {
 	})
 }
 
+func TestGetDefaultCType(t *testing.T) {
+	testflight.WithServer(handler, func(r *testflight.Requester) {
+		request, _ := http.NewRequest("GET", "/_test/abc", nil)
+		response := r.Do(request)
+		assert.NotEmpty(t, response.Body)
+		assert.Equal(t, 200, response.StatusCode)
+		assert.Contains(t, "text/turtle", response.RawResponse.Header.Get("Content-Type"))
+		assert.Equal(t, "2", response.RawResponse.Header.Get("Triples"))
+		assert.NotEmpty(t, response.RawResponse.Header.Get("Content-Length"))
+	})
+}
+
 func TestIfMatch(t *testing.T) {
 	testflight.WithServer(handler, func(r *testflight.Requester) {
 		request, _ := http.NewRequest("HEAD", "/_test/abc", nil)
@@ -759,7 +771,7 @@ func TestGetJsonLd(t *testing.T) {
 		d := r.Url("/_test/d")
 		e := r.Url("/_test/e")
 		f := r.Url("/_test/f")
-		assert.Equal(t, response.Body, fmt.Sprintf(`[{"@id":"http://%s","http://%s":[{"@id":"http://%s"}]}]`, d, e, f))
+		assert.Equal(t, fmt.Sprintf(`[{"@id":"http://%s","http://%s":[{"@id":"http://%s"}]}]`, d, e, f), response.Body)
 
 		request, _ = http.NewRequest("GET", "/_test/", nil)
 		request.Header.Add("Accept", "application/ld+json")
