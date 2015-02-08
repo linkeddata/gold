@@ -82,9 +82,6 @@ func main() {
 			serverRoot = serverRoot + "/" + *root
 		}
 	}
-	if !strings.HasSuffix(serverRoot, "/") {
-		serverRoot += "/"
-	}
 
 	if *debug {
 		println("[Server] ---- Starting server ----")
