@@ -305,7 +305,7 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 	r = new(response)
 	var err error
 
-	DebugLog("Server", "------ New "+req.Method+" request from "+req.RemoteAddr+" ------")
+	DebugLog("Server", "\n------ New "+req.Method+" request from "+req.RemoteAddr+" ------")
 
 	// CORS
 	w.Header().Set("Access-Control-Allow-Credentials", "true")
@@ -343,12 +343,13 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 	dataMime := req.Header.Get(HCType)
 	dataMime = strings.Split(dataMime, ";")[0]
 	dataHasParser := len(mimeParser[dataMime]) > 0
-	if len(dataMime) > 0 && dataMime != "multipart/form-data" && !dataHasParser && req.Method != "PUT" {
-		DebugLog("Server", "Request contains unsupported Media Type:"+dataMime)
-		return r.respond(415, "HTTP 415 - Unsupported Media Type:", dataMime)
+	if len(dataMime) > 0 {
+		DebugLog("Server", "Content-Type: "+dataMime)
+		if dataMime != "multipart/form-data" && !dataHasParser && req.Method != "PUT" {
+			DebugLog("Server", "Request contains unsupported Media Type:"+dataMime)
+			return r.respond(415, "HTTP 415 - Unsupported Media Type:", dataMime)
+		}
 	}
-
-	DebugLog("Server", "Content-Type: "+dataMime)
 
 	// Content Negotiation
 	contentType := "text/turtle"
@@ -356,8 +357,8 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 	if len(acceptList) > 0 && acceptList[0].SubType != "*" {
 		contentType, err = acceptList.Negotiate(serializerMimes...)
 		if err != nil {
-			DebugLog("Server", "Content type not acceptable: "+err.Error())
-			return r.respond(406, "HTTP 406 - Content type not acceptable: "+err.Error())
+			DebugLog("Server", "Accept type not acceptable: "+err.Error())
+			return r.respond(406, "HTTP 406 - Accept type not acceptable: "+err.Error())
 		}
 	}
 
@@ -644,6 +645,7 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 			status = 200
 
 			if req.Method == "GET" && strings.Contains(contentType, "text/html") {
+				// delete ETag to force load the skin
 				w.Header().Del("ETag")
 				w.Header().Set("Link", "<"+resource.MetaURI+">; rel=meta, <"+resource.AclURI+">; rel=acl")
 				if maybeRDF {
@@ -662,6 +664,8 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 					io.Copy(w, f)
 				}
 				return
+			} else if !maybeRDF && !strings.Contains(contentType, "text/html") {
+				maybeRDF = true
 			}
 		}
 
