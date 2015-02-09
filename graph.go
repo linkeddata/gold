@@ -68,6 +68,10 @@ func init() {
 	mimeSerializer["application/ld+json"] = "internal"
 	mimeSerializer["text/html"] = "internal"
 	for mime := range mimeSerializer {
+		switch mime {
+		case "application/xhtml+xml":
+			continue
+		}
 		serializerMimes = append(serializerMimes, mime)
 	}
 }

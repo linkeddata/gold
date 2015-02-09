@@ -679,6 +679,17 @@ func TestGetDefaultCType(t *testing.T) {
 	})
 }
 
+func TestFailGetXHTMLXMLCType(t *testing.T) {
+	testflight.WithServer(handler, func(r *testflight.Requester) {
+		request, _ := http.NewRequest("GET", "/_test/abc", nil)
+		request.Header.Add("Accept", "text/xml,application/xml,application/xhtml+xml,text/html;q=0.5,text/plain,image/png,/;q=0.1,application/rdf+xml,text/n3,text/turtle")
+		response := r.Do(request)
+		assert.NotEmpty(t, response.Body)
+		assert.Equal(t, 200, response.StatusCode)
+		assert.NotContains(t, "application/xhtml+xml", response.RawResponse.Header.Get("Content-Type"))
+	})
+}
+
 func TestIfMatch(t *testing.T) {
 	testflight.WithServer(handler, func(r *testflight.Requester) {
 		request, _ := http.NewRequest("HEAD", "/_test/abc", nil)
