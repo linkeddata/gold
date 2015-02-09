@@ -345,7 +345,7 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 	dataHasParser := len(mimeParser[dataMime]) > 0
 	if len(dataMime) > 0 {
 		DebugLog("Server", "Content-Type: "+dataMime)
-		if dataMime != "multipart/form-data" && !dataHasParser && req.Method != "PUT" {
+		if dataMime != "multipart/form-data" && !dataHasParser && req.Method != "PUT" && req.Method != "HEAD" && req.Method != "OPTIONS" {
 			DebugLog("Server", "Request contains unsupported Media Type:"+dataMime)
 			return r.respond(415, "HTTP 415 - Unsupported Media Type:", dataMime)
 		}
