@@ -667,7 +667,46 @@ func TestHEAD(t *testing.T) {
 	})
 }
 
-func TestGetDefaultCType(t *testing.T) {
+func TestHEADUnsupportedMediaType(t *testing.T) {
+	testflight.WithServer(handler, func(r *testflight.Requester) {
+		request, _ := http.NewRequest("HEAD", "/_test/", nil)
+		request.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+		response := r.Do(request)
+		assert.Empty(t, response.Body)
+		assert.Equal(t, 200, response.StatusCode)
+	})
+}
+
+func TestOPTIONSUnsupportedMediaType(t *testing.T) {
+	testflight.WithServer(handler, func(r *testflight.Requester) {
+		request, _ := http.NewRequest("OPTIONS", "/_test/", nil)
+		request.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+		response := r.Do(request)
+		assert.Equal(t, 200, response.StatusCode)
+	})
+}
+
+func TestGetUnsupportedMediaType(t *testing.T) {
+	testflight.WithServer(handler, func(r *testflight.Requester) {
+		request, _ := http.NewRequest("GET", "/_test/", nil)
+		request.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+		response := r.Do(request)
+		assert.NotEmpty(t, response.Body)
+		assert.Equal(t, 415, response.StatusCode)
+	})
+}
+
+func TestAcceptHeaderWildcard(t *testing.T) {
+	testflight.WithServer(handler, func(r *testflight.Requester) {
+		request, _ := http.NewRequest("GET", "/_test/", nil)
+		request.Header.Add("Accept", "*/*")
+		response := r.Do(request)
+		assert.NotEmpty(t, response.Body)
+		assert.Equal(t, 200, response.StatusCode)
+	})
+}
+
+func TestCTypeServeDefault(t *testing.T) {
 	testflight.WithServer(handler, func(r *testflight.Requester) {
 		request, _ := http.NewRequest("GET", "/_test/abc", nil)
 		response := r.Do(request)
@@ -679,7 +718,7 @@ func TestGetDefaultCType(t *testing.T) {
 	})
 }
 
-func TestFailGetXHTMLXMLCType(t *testing.T) {
+func TestCTypeFailForXHTMLXML(t *testing.T) {
 	testflight.WithServer(handler, func(r *testflight.Requester) {
 		request, _ := http.NewRequest("GET", "/_test/abc", nil)
 		request.Header.Add("Accept", "text/xml,application/xml,application/xhtml+xml,text/html;q=0.5,text/plain,image/png,/;q=0.1,application/rdf+xml,text/n3,text/turtle")
