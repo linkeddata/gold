@@ -31,7 +31,8 @@ type accountResponse struct {
 type statusResponse struct {
 	Method   string          `json:"method"`
 	Status   string          `json:"status"`
-	Formuri  string          `json:"formuri"`
+	FormURL  string          `json:"formURL"`
+	LoginURL string          `json:"loginURL"`
 	Response accountResponse `json:"response"`
 }
 
@@ -247,9 +248,10 @@ func accountStatus(w http.ResponseWriter, req *httpRequest, s *Server) systemRet
 	}
 
 	res := statusResponse{
-		Method:  "accountStatus",
-		Status:  status,
-		Formuri: resource.Base + "/" + SystemPrefix + "/newAccount",
+		Method:   "accountStatus",
+		Status:   status,
+		FormURL:  resource.Base + "/" + SystemPrefix + "/newAccount",
+		LoginURL: resource.Base,
 		Response: accountResponse{
 			AccountName: accName,
 			Available:   isAvailable,

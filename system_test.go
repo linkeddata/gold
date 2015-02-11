@@ -91,6 +91,6 @@ func TestAccountStatus(t *testing.T) {
 	assert.NoError(t, err)
 	body, _ := ioutil.ReadAll(response.Body)
 	response.Body.Close()
-	assert.Equal(t, `{"method":"accountStatus","status":"success","formuri":"`+testServer1.URL+`/,system/newAccount","response":{"accountName":"deiu","available":true}}`, string(body))
+	assert.Equal(t, `{"method":"accountStatus","status":"success","formURL":"`+testServer1.URL+`/,system/newAccount","loginURL":"`+testServer1.URL+`","response":{"accountName":"deiu","available":true}}`, string(body))
 	assert.Equal(t, 200, response.StatusCode)
 }
