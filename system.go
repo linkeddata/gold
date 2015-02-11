@@ -97,7 +97,7 @@ func newAccount(w http.ResponseWriter, req *httpRequest, s *Server) systemReturn
 	}
 
 	// create a new x509 cert based on the public key
-	certName := account.Name + " [on " + resource.Base + "]"
+	certName := account.Name + " [on " + resource.Obj.Host + "]"
 	newSpkac, err := NewSPKACx509(webidURI, certName, spkac)
 	if err != nil {
 		DebugLog("System", "[newAccount] NewSPKACx509 error: "+err.Error())
