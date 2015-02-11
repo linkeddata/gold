@@ -235,6 +235,7 @@ func accountStatus(w http.ResponseWriter, req *httpRequest, s *Server) systemRet
 	w.Header().Set(HCType, "application/json")
 	status := "success"
 	accName := accReq.AccountName
+	accURL := resource.Obj.Scheme + "://" + accName + "." + resource.Obj.Host + "/"
 	isAvailable := true
 
 	DebugLog("System", "[accountStatus] checking if account <"+accReq.AccountName+"> exists...")
@@ -253,7 +254,7 @@ func accountStatus(w http.ResponseWriter, req *httpRequest, s *Server) systemRet
 		FormURL:  resource.Base + "/" + SystemPrefix + "/newAccount",
 		LoginURL: resource.Base,
 		Response: accountResponse{
-			AccountName: accName,
+			AccountName: accURL,
 			Available:   isAvailable,
 		},
 	}
