@@ -100,10 +100,16 @@ func main() {
 		return
 	}
 
+	var (
+		srv  *http.Server
+		ltcp net.Listener
+		ltls net.Listener
+	)
+
 	if bind == nil || len(*bind) == 0 {
 		err = fcgi.Serve(nil, handler)
 	} else {
-		srv := &http.Server{Addr: *bind, Handler: handler}
+		srv = &http.Server{Addr: *bind, Handler: handler}
 		tlsConfig.Certificates = make([]tls.Certificate, 1)
 		if len(*tlsCert) == 0 && len(*tlsKey) == 0 {
 			tlsConfig.Certificates[0], err = tls.X509KeyPair(tlsTestCert, tlsTestKey)
@@ -111,11 +117,11 @@ func main() {
 			tlsConfig.Certificates[0], err = tls.LoadX509KeyPair(*tlsCert, *tlsKey)
 		}
 		if err == nil {
-			conn, err := net.Listen("tcp", *bind)
-			if err == nil {
-				tlsListener := tls.NewListener(conn, tlsConfig)
-				err = srv.Serve(tlsListener)
-			}
+			ltcp, err = net.Listen("tcp", *bind)
+		}
+		if err == nil {
+			ltls = tls.NewListener(ltcp, tlsConfig)
+			err = srv.Serve(ltls)
 		}
 	}
 	if err != nil {
