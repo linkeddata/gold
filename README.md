@@ -44,6 +44,7 @@ Use the `go get` command to install the server and the securecookie library:
     go get github.com/linkeddata/gold/server
     go get github.com/linkeddata/gojsonld
     go get github.com/gorilla/securecookie
+    go get github.com/elazarl/goproxy
     
 Optionally, you can install some extra dependencies used by the tests:
 
