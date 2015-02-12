@@ -22,7 +22,7 @@ func TestCreateCertificateFromSPKAC(t *testing.T) {
 	newSpkac, err := NewSPKACx509(uri, name, spkacRSABase64)
 	assert.NoError(t, err)
 
-	webid, err := GetWebIDFromCert(newSpkac)
+	webid, err := WebIDFromCert(newSpkac)
 	assert.NoError(t, err)
 	assert.Equal(t, uri, webid)
 }
