@@ -338,7 +338,7 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 	// Intercept API requests
 	if strings.Contains(req.BaseURI(), SystemPrefix) && req.Method != "OPTIONS" {
 		resp := HandleSystem(w, req, s)
-		if resp.Bytes != nil {
+		if resp.Bytes != nil && len(resp.Bytes) > 0 {
 			// copy raw bytes
 			io.Copy(w, bytes.NewReader(resp.Bytes))
 			return
