@@ -42,9 +42,7 @@ type statusResponse struct {
 func HandleSystem(w http.ResponseWriter, req *httpRequest, s *Server) SystemReturn {
 	if strings.Contains(req.BaseURI(), "accountStatus") {
 		// unsupported yet when server is running on one host
-		if s.vhosts == true {
-			return accountStatus(w, req, s)
-		}
+		return accountStatus(w, req, s)
 	} else if strings.Contains(req.BaseURI(), "newAccount") {
 		return newAccount(w, req, s)
 	}
@@ -54,24 +52,23 @@ func HandleSystem(w http.ResponseWriter, req *httpRequest, s *Server) SystemRetu
 func newAccount(w http.ResponseWriter, req *httpRequest, s *Server) SystemReturn {
 	resource, _ := s.pathInfo(req.BaseURI())
 	host, port, _ := net.SplitHostPort(req.Host)
+	if len(host) == 0 {
+		host = req.Host
+	}
 	if len(port) > 0 {
 		port = ":" + port
 	}
 
 	username := strings.ToLower(req.FormValue("username"))
-	accountRoot := resource.Root + username
 	accountBase := resource.Base + "/" + username + "/"
-	webidURL := accountBase + "profile/card"
+	accountRoot := resource.Root + username
 	if s.vhosts == true {
 		accountBase = "https://" + username + "." + host + port + "/"
-		webidURL = accountBase + "profile/card"
+		accountRoot = s.root + username + "." + host + port
 	}
+	webidURL := accountBase + "profile/card"
 	webidURI := webidURL + "#me"
-	// reset the resource object with the new URL
 	resource, _ = s.pathInfo(webidURL)
-	if s.vhosts == true {
-		accountRoot = resource.Root
-	}
 
 	spkac := req.FormValue("spkac")
 	var newSpkac []byte
@@ -239,6 +236,13 @@ func newAccount(w http.ResponseWriter, req *httpRequest, s *Server) SystemReturn
 // }
 func accountStatus(w http.ResponseWriter, req *httpRequest, s *Server) SystemReturn {
 	resource, _ := s.pathInfo(req.BaseURI())
+	host, port, _ := net.SplitHostPort(req.Host)
+	if len(host) == 0 {
+		host = req.Host
+	}
+	if len(port) > 0 {
+		port = ":" + port
+	}
 
 	data, err := ioutil.ReadAll(req.Body)
 	if err != nil {
@@ -260,11 +264,15 @@ func accountStatus(w http.ResponseWriter, req *httpRequest, s *Server) SystemRet
 	w.Header().Set(HCType, "application/json")
 	status := "success"
 	accName := accReq.AccountName
-	accURL := resource.Obj.Scheme + "://" + accName + "." + resource.Obj.Host + "/"
+	accURL := resource.Base + "/" + accName + "/"
+	if s.vhosts {
+		accURL = resource.Obj.Scheme + "://" + accName + "." + host + port + "/"
+	}
 	isAvailable := true
+	resource, _ = s.pathInfo(accURL)
 
 	DebugLog("System", "[accountStatus] checking if account <"+accReq.AccountName+"> exists...")
-	stat, err := os.Stat(s.root + accName + "." + resource.Root)
+	stat, err := os.Stat(resource.File)
 	if err != nil {
 		DebugLog("System", "Stat error: "+err.Error())
 	}
@@ -276,8 +284,8 @@ func accountStatus(w http.ResponseWriter, req *httpRequest, s *Server) SystemRet
 	res := statusResponse{
 		Method:   "accountStatus",
 		Status:   status,
-		FormURL:  resource.Base + "/" + SystemPrefix + "/newAccount",
-		LoginURL: resource.Base,
+		FormURL:  resource.Obj.Scheme + "://" + req.Host + "/" + SystemPrefix + "/newAccount",
+		LoginURL: accURL,
 		Response: accountResponse{
 			AccountName: accURL,
 			Available:   isAvailable,
