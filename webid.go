@@ -144,7 +144,8 @@ func WebIDTLSAuth(tls *tls.ConnectionState) (uri string, err error) {
 	return
 }
 
-func GetWebIDFromCert(cert []byte) (string, error) {
+// WebIDFromCert returns subjectAltName string from x509 []byte
+func WebIDFromCert(cert []byte) (string, error) {
 	parsed, err := x509.ParseCertificate(cert)
 	if err != nil {
 		return "", err

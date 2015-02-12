@@ -31,8 +31,6 @@ const (
 )
 
 var (
-	// Port on which the server runs
-	ServerPort string
 	// CookieAge contains the default validity of the cookie
 	CookieAge = 24 * time.Hour
 	// Debug (display or hide stdout logging)
@@ -43,7 +41,7 @@ var (
 	Skin = "tabulator"
 	// FileManagerURI points to the skin/app for browsing the data space
 	FileManagerURI = "http://linkeddata.github.io/warp/#list/"
-	// Provide CORS proxy at this path (empty to disable)
+	// ProxyPath provides CORS proxy (empty to disable)
 	ProxyPath = "/proxy"
 
 	// Streaming (stream data or not)
