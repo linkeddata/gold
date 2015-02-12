@@ -9,15 +9,17 @@ import (
 	"golang.org/x/net/websocket"
 )
 
+// Handles each websocket connection
 func websocketHandler(ws *websocket.Conn) {
-	// echo server
 	log.Println(io.Copy(ws, ws))
 }
 
+// Converts an HTTP request to a websocket server
 func websocketServe(w http.ResponseWriter, req *http.Request) {
 	websocket.Handler(websocketHandler).ServeHTTP(w, req)
 }
 
+// Checks whether an HTTP request looks like websocket
 func websocketUpgrade(r *http.Request) bool {
 	if r == nil {
 		return false
