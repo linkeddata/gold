@@ -915,6 +915,7 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 					}
 				}
 				w.Header().Set("Location", resource.URI)
+				onUpdateURI(resource.URI)
 				return r.respond(201)
 			}
 			resource, err = s.pathInfo(resource.Base + "/" + resource.Path)
@@ -971,6 +972,7 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 						}
 					}
 				}
+				onUpdateURI(resource.URI)
 				return r.respond(201)
 			}
 		} else {
@@ -1024,6 +1026,7 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 				}
 			}
 
+			onUpdateURI(resource.URI)
 			if isNew {
 				return r.respond(201)
 			}
@@ -1064,6 +1067,7 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 			// LDP header
 			w.Header().Add("Link", brack("http://www.w3.org/ns/ldp#Resource")+"; rel=\"type\"")
 
+			onUpdateURI(resource.URI)
 			return r.respond(201)
 		}
 		err := os.MkdirAll(_path.Dir(resource.File), 0755)
@@ -1105,11 +1109,13 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 
 		if err != nil {
 			return r.respond(500, err)
-		} else if isNew {
-			return r.respond(201)
-		} else {
-			return r.respond(200)
 		}
+
+		onUpdateURI(resource.URI)
+		if isNew {
+			return r.respond(201)
+		}
+		return r.respond(200)
 
 	case "DELETE":
 		unlock := lock(resource.Path)
@@ -1132,6 +1138,7 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 		if err == nil {
 			return r.respond(409, err)
 		}
+		onDeleteURI(resource.URI)
 		return
 
 	case "MKCOL":
@@ -1155,6 +1162,7 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 				return r.respond(409, err)
 			}
 		}
+		onUpdateURI(resource.URI)
 		return r.respond(201)
 
 	default:
