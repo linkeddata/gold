@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"os"
 	_path "path"
@@ -51,11 +52,9 @@ func HandleSystem(w http.ResponseWriter, req *httpRequest, s *Server) systemRetu
 
 func newAccount(w http.ResponseWriter, req *httpRequest, s *Server) systemReturn {
 	resource, _ := s.pathInfo(req.BaseURI())
-
-	port := ""
-	if ServerPort != ":443" {
-		DebugLog("System", "Found different port value: "+ServerPort)
-		port = ServerPort
+	_, port, _ := net.SplitHostPort(req.Host)
+	if len(port) > 0 {
+		port = ":" + port
 	}
 
 	username := strings.ToLower(req.FormValue("username"))
