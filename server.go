@@ -43,6 +43,9 @@ var (
 	Skin = "tabulator"
 	// FileManagerURI points to the skin/app for browsing the data space
 	FileManagerURI = "http://linkeddata.github.io/warp/#list/"
+	// Provide CORS proxy at this path (empty to disable)
+	ProxyPath = "/proxy"
+
 	// Streaming (stream data or not)
 	Streaming = false // experimental
 
@@ -285,10 +288,21 @@ func (r *response) respond(status int, a ...interface{}) *response {
 
 // ServeHTTP handles the response
 func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	if ProxyPath != "" && ProxyPath == req.URL.Path {
+		uri, err := url.Parse(req.FormValue("uri"))
+		if err != nil {
+			DebugLog(req.RequestURI, err.Error())
+		}
+		req.URL = uri
+		req.Host = uri.Host
+		req.RequestURI = uri.RequestURI()
+		proxy.ServeHTTP(w, req)
+		return
+	}
+
 	defer func() {
 		req.Body.Close()
 	}()
-
 	r := s.handle(w, &httpRequest{req})
 	for key := range r.headers {
 		w.Header().Set(key, r.headers.Get(key))
