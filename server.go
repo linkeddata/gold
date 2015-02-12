@@ -169,9 +169,12 @@ func (s *Server) pathInfo(path string) (ldpath, error) {
 	}
 
 	if s.vhosts {
-		host, _, _ := net.SplitHostPort(p.Host)
+		host, port, _ := net.SplitHostPort(p.Host)
 		if len(host) == 0 {
 			host = p.Host
+		}
+		if len(port) > 0 {
+			host = host + ":" + port
 		}
 
 		res.Root = s.root + host
