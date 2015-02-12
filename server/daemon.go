@@ -81,6 +81,9 @@ func main() {
 		} else {
 			serverRoot = serverRoot + "/" + *root
 		}
+		if !strings.HasSuffix(*root, "/") {
+			serverRoot += "/"
+		}
 	}
 
 	if *debug {
