@@ -124,20 +124,20 @@ func (s *Server) pathInfo(path string) (ldpath, error) {
 
 	res.Root = s.root
 
-	// Add missing trailing slashes for dirs
-	res.FileType, err = magic.TypeByFile(res.Root + p.Path)
-	if err == nil {
-		if res.FileType == "inode/directory" && !strings.HasSuffix(p.Path, "/") {
-			p.Path += "/"
-		}
-	}
-
 	if strings.HasPrefix(p.Path, "/") && len(p.Path) > 0 {
 		p.Path = strings.TrimLeft(p.Path, "/")
 	} else if len(p.Path) == 0 {
 		p.Path += "/"
 	}
 
+	// Add missing trailing slashes for dirs
+	res.FileType, err = magic.TypeByFile(res.Root + p.Path)
+	if err == nil {
+		// add missing slash for dirs unless we're dealing with root
+		if res.FileType == "inode/directory" && !strings.HasSuffix(p.Path, "/") && len(p.Path) > 1 {
+			p.Path += "/"
+		}
+	}
 	// hack: url.EncodeQuery() uses + instead of %20 to encode whitespaces in the path
 	//p.Path = strings.Replace(p.Path, " ", "%20", -1)
 
