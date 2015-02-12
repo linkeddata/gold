@@ -74,15 +74,17 @@ func main() {
 		os.Exit(1)
 	}
 
-	if *root != "." {
-		if strings.HasPrefix(*root, serverRoot) || strings.HasPrefix(*root, "/") {
-			serverRoot = *root
-		} else {
-			serverRoot = serverRoot + "/" + *root
-		}
-		if !strings.HasSuffix(*root, "/") {
-			serverRoot += "/"
-		}
+	if *root == "." {
+		*root = ""
+	}
+
+	if strings.HasPrefix(*root, serverRoot) || strings.HasPrefix(*root, "/") {
+		serverRoot = *root
+	} else {
+		serverRoot = serverRoot + "/" + *root
+	}
+	if !strings.HasSuffix(*root, "/") {
+		serverRoot += "/"
 	}
 
 	if *debug {

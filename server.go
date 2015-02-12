@@ -122,14 +122,10 @@ func (s *Server) pathInfo(path string) (ldpath, error) {
 		return res, err
 	}
 
-	root := s.root
-	if root == "." {
-		root = ""
-	}
-	res.Root = root
+	res.Root = s.root
 
 	// Add missing trailing slashes for dirs
-	res.FileType, err = magic.TypeByFile(root + p.Path)
+	res.FileType, err = magic.TypeByFile(res.Root + p.Path)
 	if err == nil {
 		if res.FileType == "inode/directory" && !strings.HasSuffix(p.Path, "/") {
 			p.Path += "/"
@@ -178,19 +174,14 @@ func (s *Server) pathInfo(path string) (ldpath, error) {
 			host = p.Host
 		}
 
-		res.Root = host
-		res.File = host + "/" + res.File
-		res.AclFile = host + "/" + res.AclFile
-		res.MetaFile = host + "/" + res.MetaFile
-	}
-
-	if len(root) > 0 {
-		if !strings.HasSuffix(root, "/") {
-			root = root + "/"
-		}
-		res.File = root + res.File
-		res.AclFile = root + res.AclFile
-		res.MetaFile = root + res.MetaFile
+		res.Root = s.root + host
+		res.File = res.Root + "/" + res.File
+		res.AclFile = res.Root + "/" + res.AclFile
+		res.MetaFile = res.Root + "/" + res.MetaFile
+	} else if len(s.root) > 0 {
+		res.File = s.root + res.File
+		res.AclFile = s.root + res.AclFile
+		res.MetaFile = s.root + res.MetaFile
 	}
 
 	return res, nil
@@ -333,6 +324,11 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 		w.Header().Set("Access-Control-Allow-Origin", origin)
 	}
 
+	// Authenticate request
+	user := req.Auth(w)
+	w.Header().Set("User", user)
+	acl := NewWAC(req, s, user)
+
 	// Intercept API requests
 	if strings.Contains(req.BaseURI(), SystemPrefix) && req.Method != "OPTIONS" {
 		resp := HandleSystem(w, req, s)
@@ -343,10 +339,6 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 		}
 		return r.respond(resp.Status, resp.Body)
 	}
-
-	user := req.Auth(w)
-	w.Header().Set("User", user)
-	acl := NewWAC(req, s, user)
 
 	resource, _ := s.pathInfo(req.BaseURI())
 	DebugLog("Server", "Resource URI: "+resource.URI)
