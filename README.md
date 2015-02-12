@@ -39,12 +39,9 @@ Setup Go + dependencies:
 
     mkdir ~/go; export GOPATH=~/go
 
-Use the `go get` command to install the server and the securecookie library:
+Use the `go get` command to install the server and all the dependencies:
 
-    go get github.com/linkeddata/gold/server
-    go get github.com/linkeddata/gojsonld
-    go get github.com/gorilla/securecookie
-    go get github.com/elazarl/goproxy
+    go get github.com/linkeddata/gold/
     
 Optionally, you can install some extra dependencies used by the tests:
 
@@ -53,15 +50,16 @@ Optionally, you can install some extra dependencies used by the tests:
 
 Run the server:
 
-    $GOPATH/bin/server -bind=":8888" -root="/home/user/data/" -debug
+    cd ~/go/src/github.com/linkeddata/gold/server && go install
+    ~/go/bin/server -bind=":8888" -root="/home/user/data/" -debug
     
 Alternatively, you can compile and run it from the source dir in one command:
     
-    go run $GOPATH/src/github.com/linkeddata/gold/server/daemon.go -bind=":8888" -root="/home/user/data/" -debug
+    go run ~/go/src/github.com/linkeddata/gold/server/daemon.go -bind=":8888" -root="/home/user/data/" -debug
 
 To see a list of avialable options:
 
-    $GOPATH/bin/server -help
+    ~/go/bin/server -help
 
 ## License
 
