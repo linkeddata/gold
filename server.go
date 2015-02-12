@@ -291,6 +291,10 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		proxy.ServeHTTP(w, req)
 		return
 	}
+	if websocketUpgrade(req) {
+		websocketServe(w, req)
+		return
+	}
 
 	defer func() {
 		req.Body.Close()
