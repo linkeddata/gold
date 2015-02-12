@@ -156,7 +156,7 @@ func TestAccountStatusWithoutVhosts(t *testing.T) {
 	assert.NoError(t, err)
 	body, _ := ioutil.ReadAll(response.Body)
 	response.Body.Close()
-	assert.Equal(t, `{"method":"accountStatus","status":"success","formURL":"`+testServer1.URL+`/,system/newAccount","loginURL":"`+testServer1.URL+`/user/","response":{"accountName":"`+testServer1.URL+`/user/","available":true}}`, string(body))
+	assert.Equal(t, `{"method":"accountStatus","status":"success","formURL":"`+testServer1.URL+`/,system/newAccount","loginURL":"`+testServer1.URL+`/user/","response":{"accountURL":"`+testServer1.URL+`/user/","available":true}}`, string(body))
 	assert.Equal(t, 200, response.StatusCode)
 }
 
@@ -182,6 +182,6 @@ func TestAccountStatusWithVhosts(t *testing.T) {
 	assert.NoError(t, err)
 	body, _ := ioutil.ReadAll(response.Body)
 	response.Body.Close()
-	assert.Equal(t, `{"method":"accountStatus","status":"success","formURL":"`+testServer1.URL+`/,system/newAccount","loginURL":"https://user.`+strings.TrimLeft(testServer1.URL, "https://")+`/","response":{"accountName":"https://user.`+strings.TrimLeft(testServer1.URL, "https://")+`/","available":true}}`, string(body))
+	assert.Equal(t, `{"method":"accountStatus","status":"success","formURL":"`+testServer1.URL+`/,system/newAccount","loginURL":"https://user.`+strings.TrimLeft(testServer1.URL, "https://")+`/","response":{"accountURL":"https://user.`+strings.TrimLeft(testServer1.URL, "https://")+`/","available":true}}`, string(body))
 	assert.Equal(t, 200, response.StatusCode)
 }

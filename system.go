@@ -26,8 +26,8 @@ type accountRequest struct {
 }
 
 type accountResponse struct {
-	AccountName string `json:"accountName"`
-	Available   bool   `json:"available"`
+	AccountURL string `json:"accountURL"`
+	Available  bool   `json:"available"`
 }
 
 type statusResponse struct {
@@ -228,9 +228,10 @@ func newAccount(w http.ResponseWriter, req *httpRequest, s *Server) SystemReturn
 // {
 //	method:   "accountStatus",
 //  status:   "success",
-//  formuri:  "http://example.org/api/spkac",
+//  formURL:  "https://example.org/,system/spkac",
+//  loginURL: "https://example.org/,login/",
 //  response: {
-//             accountName: "user",
+//             accountURL: "user",
 //             available:   true
 //            }
 // }
@@ -287,8 +288,8 @@ func accountStatus(w http.ResponseWriter, req *httpRequest, s *Server) SystemRet
 		FormURL:  resource.Obj.Scheme + "://" + req.Host + "/" + SystemPrefix + "/newAccount",
 		LoginURL: accURL,
 		Response: accountResponse{
-			AccountName: accURL,
-			Available:   isAvailable,
+			AccountURL: accURL,
+			Available:  isAvailable,
 		},
 	}
 	jsonData, err := json.Marshal(res)
