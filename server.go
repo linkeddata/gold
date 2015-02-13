@@ -320,9 +320,15 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 		// overwrite ACL Link header
 		w.Header().Set("Link", brack(resource.AclURI)+"; rel=\"acl\", "+brack(resource.MetaURI)+"; rel=\"meta\"")
 
-		// set LDP Link headers
+		// check if resource exists and set LDP Link headers
 		stat, err := os.Stat(resource.File)
 		if err != nil {
+			if s.Config.Vhosts && resource.Base == strings.TrimRight(req.BaseURI(), "/") && contentType == "text/html" {
+				w.Header().Set(HCType, contentType)
+				urlStr := s.Config.SignUpURL + "?endpointUrl=" + url.QueryEscape(resource.Obj.Scheme+"/"+resource.Obj.Host+"/"+SystemPrefix+"/accountStatus")
+				http.Redirect(w, req.Request, urlStr, 303)
+				return
+			}
 			s.debug.Println("Server", "Got a stat error: "+err.Error())
 			r.respond(404, Skins["404"])
 		} else if stat.IsDir() {

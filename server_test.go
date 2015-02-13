@@ -1,11 +1,13 @@
 package gold
 
 import (
+	"crypto/tls"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"mime/multipart"
 	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
@@ -59,6 +61,39 @@ func TestSkin(t *testing.T) {
 		assert.Contains(t, response.RawResponse.Header.Get("Content-Type"), "text/html")
 		assert.Contains(t, response.Body, "<html")
 	})
+}
+
+func TestRedirectSignUpWithVhosts(t *testing.T) {
+	// test vhosts
+	testServer1 := httptest.NewUnstartedServer(handler1)
+	testServer1.TLS = new(tls.Config)
+	testServer1.TLS.ClientAuth = tls.RequestClientCert
+	testServer1.TLS.NextProtos = []string{"http/1.1"}
+	testServer1.StartTLS()
+
+	request, err := http.NewRequest("GET", testServer1.URL, nil)
+	assert.NoError(t, err)
+	request.Header.Add("Accept", "text/html")
+	response, err := user1h.Do(request)
+	assert.NoError(t, err)
+	body, _ := ioutil.ReadAll(response.Body)
+	response.Body.Close()
+	assert.Contains(t, string(body), "Signup Widget")
+	assert.Equal(t, 200, response.StatusCode)
+
+	request, err = http.NewRequest("GET", testServer1.URL+"/dir/", nil)
+	assert.NoError(t, err)
+	request.Header.Add("Accept", "text/html")
+	response, err = user1h.Do(request)
+	assert.NoError(t, err)
+	assert.Equal(t, 404, response.StatusCode)
+
+	request, err = http.NewRequest("GET", testServer1.URL+"/file", nil)
+	assert.NoError(t, err)
+	request.Header.Add("Accept", "text/html")
+	response, err = user1h.Do(request)
+	assert.NoError(t, err)
+	assert.Equal(t, 404, response.StatusCode)
 }
 
 func TestWebContent(t *testing.T) {

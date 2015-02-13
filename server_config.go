@@ -21,16 +21,20 @@ type ServerConfig struct {
 	// DirSkin points to the skin/app for browsing the data space
 	DirSkin string
 
+	//SignUpURL points to the skin/app used for creating new accounts
+	SignUpURL string
+
 	Root   string
 	Vhosts bool
 }
 
 func NewServerConfig() *ServerConfig {
 	return &ServerConfig{
-		DataSkin: "tabulator",
-		DirIndex: []string{"index.html", "index.htm"},
-		DirSkin:  "http://linkeddata.github.io/warp/#list/",
-		Root:     serverDefaultRoot(),
+		DataSkin:  "tabulator",
+		DirIndex:  []string{"index.html", "index.htm"},
+		DirSkin:   "http://linkeddata.github.io/warp/#list/",
+		SignUpURL: "http://linkeddata.github.io/signup/",
+		Root:      serverDefaultRoot(),
 	}
 }
 
