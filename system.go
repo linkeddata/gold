@@ -45,6 +45,8 @@ func HandleSystem(w http.ResponseWriter, req *httpRequest, s *Server) SystemRetu
 		return accountStatus(w, req, s)
 	} else if strings.Contains(req.BaseURI(), "newAccount") {
 		return newAccount(w, req, s)
+	} else if strings.Contains(req.BaseURI(), "newCert") {
+		return newCert(w, req, s)
 	}
 	return SystemReturn{Status: 200}
 }
@@ -221,6 +223,35 @@ func newAccount(w http.ResponseWriter, req *httpRequest, s *Server) SystemReturn
 	}
 
 	return SystemReturn{Status: 200, Body: "", Bytes: newSpkac}
+}
+
+func newCert(w http.ResponseWriter, req *httpRequest, s *Server) SystemReturn {
+	resource, _ := s.pathInfo(req.BaseURI())
+
+	name := req.FormValue("name")
+	webidURI := req.FormValue("webid")
+	spkac := req.FormValue("spkac")
+
+	if len(webidURI) > 0 && len(spkac) > 0 {
+		// create a new x509 cert based on the SPKAC public key
+		certName := name + " [on " + resource.Obj.Host + "]"
+		newSpkac, err := NewSPKACx509(webidURI, certName, spkac)
+		if err != nil {
+			s.debug.Println("[newAccount] NewSPKACx509 error: " + err.Error())
+			return SystemReturn{Status: 500, Body: err.Error()}
+		}
+
+		ua := req.Header.Get("User-Agent")
+		if strings.Contains(ua, "Chrome") {
+			w.Header().Set(HCType, "application/x-x509-user-cert; charset=utf-8")
+			return SystemReturn{Status: 200, Bytes: newSpkac}
+		}
+		// Prefer loading cert in iframe, to access onLoad events in the browser for the iframe
+		body := `<iframe width="0" height="0" style="display: none;" src="data:application/x-x509-user-cert;base64,` + base64.StdEncoding.EncodeToString(newSpkac) + `"></iframe>`
+
+		return SystemReturn{Status: 200, Body: body}
+	}
+	return SystemReturn{Status: 500, Body: "Your request could not be processed. Either no WebID or no SPKAC value was provided."}
 }
 
 // accountStatus implements a basic API to check whether a user account exists on the server
