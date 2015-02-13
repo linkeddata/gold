@@ -63,20 +63,6 @@ func (e *errorString) Error() string {
 	return e.s
 }
 
-// GetServerRoot returns the root patch where the server is running
-func GetServerRoot() string {
-	serverRoot, err := os.Getwd()
-	if err != nil {
-		// DebugLog("Server", "Error starting server:"+err.Error())
-		os.Exit(1)
-	}
-
-	if !strings.HasSuffix(serverRoot, "/") {
-		serverRoot += "/"
-	}
-	return serverRoot
-}
-
 type httpRequest struct {
 	*http.Request
 	*Server

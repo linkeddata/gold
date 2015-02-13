@@ -15,6 +15,11 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+var (
+	config  = NewServerConfig()
+	handler = NewServer(config)
+)
+
 func TestMKCOL(t *testing.T) {
 	testflight.WithServer(handler, func(r *testflight.Requester) {
 		request, _ := http.NewRequest("MKCOL", "/_test", nil)

@@ -3,6 +3,9 @@ package gold
 import (
 	"encoding/json"
 	"io/ioutil"
+	"log"
+	"os"
+	"strings"
 )
 
 type ServerConfig struct {
@@ -27,6 +30,7 @@ func NewServerConfig() *ServerConfig {
 		DataSkin: "tabulator",
 		DirIndex: []string{"index.html", "index.htm"},
 		DirSkin:  "http://linkeddata.github.io/warp/#list/",
+		Root:     serverDefaultRoot(),
 	}
 }
 
@@ -36,4 +40,16 @@ func (c *ServerConfig) LoadJSONFile(filename string) error {
 		return err
 	}
 	return json.Unmarshal(b, &c)
+}
+
+func serverDefaultRoot() string {
+	serverRoot, err := os.Getwd()
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	if !strings.HasSuffix(serverRoot, "/") {
+		serverRoot += "/"
+	}
+	return serverRoot
 }

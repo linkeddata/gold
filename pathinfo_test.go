@@ -8,7 +8,7 @@ import (
 
 func TestPathInfo(t *testing.T) {
 	path := testServer.URL + "/_test/"
-	sroot := GetServerRoot()
+	sroot := serverDefaultRoot()
 
 	p, err := handler.pathInfo("")
 	assert.NotNil(t, err)

@@ -23,12 +23,12 @@ var (
 
 func init() {
 	config1 = NewServerConfig()
-	config1.Root = GetServerRoot() + "_test/"
+	config1.Root += "_test/"
 	config1.Vhosts = true
 	handler1 = NewServer(config1)
 
 	config2 = NewServerConfig()
-	config2.Root = GetServerRoot() + "_test/"
+	config2.Root += "_test/"
 	config2.Vhosts = false
 	handler2 = NewServer(config2)
 }
