@@ -124,6 +124,17 @@ func (s *Server) pathInfo(path string) (ldpath, error) {
 	}
 
 	res.Root = s.root
+	// include host and port if running in vhosts mode
+	if s.vhosts {
+		host, port, _ := net.SplitHostPort(p.Host)
+		if len(host) == 0 {
+			host = p.Host
+		}
+		if len(port) > 0 {
+			host = host + ":" + port
+		}
+		res.Root = s.root + host + "/"
+	}
 
 	if strings.HasPrefix(p.Path, "/") && len(p.Path) > 0 {
 		p.Path = strings.TrimLeft(p.Path, "/")
@@ -170,15 +181,6 @@ func (s *Server) pathInfo(path string) (ldpath, error) {
 	}
 
 	if s.vhosts {
-		host, port, _ := net.SplitHostPort(p.Host)
-		if len(host) == 0 {
-			host = p.Host
-		}
-		if len(port) > 0 {
-			host = host + ":" + port
-		}
-
-		res.Root = s.root + host
 		res.File = res.Root + "/" + res.File
 		res.AclFile = res.Root + "/" + res.AclFile
 		res.MetaFile = res.Root + "/" + res.MetaFile
