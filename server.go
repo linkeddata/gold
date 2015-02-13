@@ -201,7 +201,7 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 	r = new(response)
 	var err error
 
-	s.debug.Println("Server", "\n------ New "+req.Method+" request from "+req.RemoteAddr+" ------")
+	s.debug.Println("\n------ New " + req.Method + " request from " + req.RemoteAddr + " ------")
 
 	// CORS
 	w.Header().Set("Access-Control-Allow-Credentials", "true")
@@ -237,16 +237,16 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 	}
 
 	resource, _ := s.pathInfo(req.BaseURI())
-	s.debug.Println("Server", "Resource URI: "+resource.URI)
-	s.debug.Println("Server", "Resource Path: "+resource.File)
+	s.debug.Println("Resource URI: " + resource.URI)
+	s.debug.Println("Resource Path: " + resource.File)
 
 	dataMime := req.Header.Get(HCType)
 	dataMime = strings.Split(dataMime, ";")[0]
 	dataHasParser := len(mimeParser[dataMime]) > 0
 	if len(dataMime) > 0 {
-		s.debug.Println("Server", "Content-Type: "+dataMime)
+		s.debug.Println("Content-Type: " + dataMime)
 		if dataMime != "multipart/form-data" && !dataHasParser && req.Method != "PUT" && req.Method != "HEAD" && req.Method != "OPTIONS" {
-			s.debug.Println("Server", "Request contains unsupported Media Type:"+dataMime)
+			s.debug.Println("Request contains unsupported Media Type:" + dataMime)
 			return r.respond(415, "HTTP 415 - Unsupported Media Type:", dataMime)
 		}
 	}
@@ -257,7 +257,7 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 	if len(acceptList) > 0 && acceptList[0].SubType != "*" {
 		contentType, err = acceptList.Negotiate(serializerMimes...)
 		if err != nil {
-			s.debug.Println("Server", "Accept type not acceptable: "+err.Error())
+			s.debug.Println("Accept type not acceptable: " + err.Error())
 			return r.respond(406, "HTTP 406 - Accept type not acceptable: "+err.Error())
 		}
 	}
@@ -334,7 +334,7 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 				http.Redirect(w, req.Request, urlStr, 303)
 				return
 			}
-			s.debug.Println("Server", "Got a stat error: "+err.Error())
+			s.debug.Println("Got a stat error: " + err.Error())
 			r.respond(404, Skins["404"])
 		} else if stat.IsDir() {
 			w.Header().Add("Link", brack("http://www.w3.org/ns/ldp#BasicContainer")+"; rel=\"type\"")
@@ -504,7 +504,7 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 											// Open an input file, exit on error.
 											fd, err := os.Open(f.File)
 											if err != nil {
-												s.debug.Println("Server", "GET find mime type error:"+err.Error())
+												s.debug.Println("GET find mime type error:" + err.Error())
 											}
 											defer fd.Close()
 
@@ -527,7 +527,7 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 											}
 											// log potential errors
 											if err := scanner.Err(); err != nil {
-												s.debug.Println("Server", "GET scan err: "+scanner.Err().Error())
+												s.debug.Println("GET scan err: " + scanner.Err().Error())
 											}
 										}
 									}
@@ -564,7 +564,7 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 				if err == nil {
 					defer func() {
 						if err := f.Close(); err != nil {
-							s.debug.Println("Server", "GET os.Open err: "+err.Error())
+							s.debug.Println("GET os.Open err: " + err.Error())
 						}
 					}()
 					io.Copy(w, f)
@@ -609,7 +609,7 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 				if err == nil {
 					defer func() {
 						if err := f.Close(); err != nil {
-							s.debug.Println("Server", "GET f.Close err:"+err.Error())
+							s.debug.Println("GET f.Close err:" + err.Error())
 						}
 					}()
 					io.Copy(w, f)
@@ -694,14 +694,14 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 
 			f, err := os.OpenFile(resource.File, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
 			if err != nil {
-				s.debug.Println("Server", "PATCH os.OpenFile err: "+err.Error())
+				s.debug.Println("PATCH os.OpenFile err: " + err.Error())
 				return r.respond(500, err)
 			}
 			defer f.Close()
 
 			err = g.WriteFile(f, "text/turtle")
 			if err != nil {
-				s.debug.Println("Server", "PATCH g.WriteFile err: "+err.Error())
+				s.debug.Println("PATCH g.WriteFile err: " + err.Error())
 			}
 			w.Header().Set("Triples", fmt.Sprintf("%d", g.Len()))
 
@@ -736,7 +736,7 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 
 			uuid, err := newUUID()
 			if err != nil {
-				s.debug.Println("Server", "POST LDP UUID err: "+err.Error())
+				s.debug.Println("POST LDP UUID err: " + err.Error())
 				return r.respond(500, err)
 			}
 			uuid = uuid[:6]
@@ -755,7 +755,7 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 				// TODO check if resource exists already and respond with 409
 				st, _ := os.Stat(resource.File + slug)
 				if st != nil {
-					s.debug.Println("Server", "POST LDP - A resource with the same name already exists: "+resource.Path+slug)
+					s.debug.Println("POST LDP - A resource with the same name already exists: " + resource.Path + slug)
 					return r.respond(409, "409 - Conflict! A resource with the same name already exists.")
 				}
 			} else {
@@ -769,7 +769,7 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 				}
 				resource, err = s.pathInfo(resource.Base + "/" + resource.Path)
 				if err != nil {
-					s.debug.Println("Server", "POST LDPC s.pathInfo err: "+err.Error())
+					s.debug.Println("POST LDPC s.pathInfo err: " + err.Error())
 					return r.respond(500, err)
 				}
 
@@ -780,10 +780,10 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 
 				err = os.MkdirAll(resource.File, 0755)
 				if err != nil {
-					s.debug.Println("Server", "POST LDPC os.MkdirAll err: "+err.Error())
+					s.debug.Println("POST LDPC os.MkdirAll err: " + err.Error())
 					return r.respond(500, err)
 				}
-				s.debug.Println("Server", "Created dir "+resource.File)
+				s.debug.Println("Created dir " + resource.File)
 
 				//Replace the subject with the dir path instead of the meta file path
 				if dataHasParser {
@@ -797,14 +797,14 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 
 					f, err := os.OpenFile(resource.MetaFile, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
 					if err != nil {
-						s.debug.Println("Server", "POST LDPC os.OpenFile err: "+err.Error())
+						s.debug.Println("POST LDPC os.OpenFile err: " + err.Error())
 						return r.respond(500, err)
 					}
 					defer f.Close()
 
 					if g.Len() > 0 {
 						if err = g.WriteFile(f, ""); err != nil {
-							s.debug.Println("Server", "POST LDPC g.WriteFile err: "+err.Error())
+							s.debug.Println("POST LDPC g.WriteFile err: " + err.Error())
 							return r.respond(500, err)
 						}
 					}
@@ -815,7 +815,7 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 			}
 			resource, err = s.pathInfo(resource.Base + "/" + resource.Path)
 			if err != nil {
-				s.debug.Println("Server", "POST LDPR s.pathInfo err: "+err.Error())
+				s.debug.Println("POST LDPR s.pathInfo err: " + err.Error())
 				return r.respond(500, err)
 			}
 			w.Header().Set("Location", resource.URI)
@@ -828,16 +828,16 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 		if stat == nil {
 			err = os.MkdirAll(_path.Dir(resource.File), 0755)
 			if err != nil {
-				s.debug.Println("Server", "POST MkdirAll err: "+err.Error())
+				s.debug.Println("POST MkdirAll err: " + err.Error())
 				return r.respond(500, err)
 			}
-			s.debug.Println("Server", "Created resource "+_path.Dir(resource.File))
+			s.debug.Println("Created resource " + _path.Dir(resource.File))
 		}
 
 		if dataMime == "multipart/form-data" {
 			err := req.ParseMultipartForm(100000)
 			if err != nil {
-				s.debug.Println("Server", "POST parse multipart data err: "+err.Error())
+				s.debug.Println("POST parse multipart data err: " + err.Error())
 			} else {
 				m := req.MultipartForm
 				for elt := range m.File {
@@ -846,7 +846,7 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 						file, err := files[i].Open()
 						defer file.Close()
 						if err != nil {
-							s.debug.Println("Server", "POST multipart/form f.Open err: "+err.Error())
+							s.debug.Println("POST multipart/form f.Open err: " + err.Error())
 							return r.respond(500, err)
 						}
 						newFile := ""
@@ -858,11 +858,11 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 						dst, err := os.Create(newFile)
 						defer dst.Close()
 						if err != nil {
-							s.debug.Println("Server", "POST multipart/form os.Create err: "+err.Error())
+							s.debug.Println("POST multipart/form os.Create err: " + err.Error())
 							return r.respond(500, err)
 						}
 						if _, err := io.Copy(dst, file); err != nil {
-							s.debug.Println("Server", "POST multipart/form io.Copy err: "+err.Error())
+							s.debug.Println("POST multipart/form io.Copy err: " + err.Error())
 							return r.respond(500, err)
 						}
 					}
@@ -894,29 +894,29 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 				}
 				f, err := os.OpenFile(resource.File, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
 				if err != nil {
-					s.debug.Println("Server", "POST os.OpenFile err: "+err.Error())
+					s.debug.Println("POST os.OpenFile err: " + err.Error())
 					return r.respond(500, err.Error())
 				}
 				defer f.Close()
 				if g.Len() > 0 {
 					err = g.WriteFile(f, "text/turtle")
 					if err != nil {
-						s.debug.Println("Server", "POST g.WriteFile err: "+err.Error())
+						s.debug.Println("POST g.WriteFile err: " + err.Error())
 					} else {
-						s.debug.Println("Server", "Wrote resource file: "+resource.File)
+						s.debug.Println("Wrote resource file: " + resource.File)
 					}
 				}
 				w.Header().Set("Triples", fmt.Sprintf("%d", g.Len()))
 			} else {
 				f, err := os.OpenFile(resource.File, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
 				if err != nil {
-					s.debug.Println("Server", "POST os.OpenFile err: "+err.Error())
+					s.debug.Println("POST os.OpenFile err: " + err.Error())
 					return r.respond(500, err.Error())
 				}
 				defer f.Close()
 				_, err = io.Copy(f, req.Body)
 				if err != nil {
-					s.debug.Println("Server", "POST os.OpenFile err: "+err.Error())
+					s.debug.Println("POST os.OpenFile err: " + err.Error())
 					return r.respond(500, err.Error())
 				}
 			}
@@ -953,7 +953,7 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 		if len(link) > 0 && link == "http://www.w3.org/ns/ldp#BasicContainer" {
 			err := os.MkdirAll(resource.File, 0755)
 			if err != nil {
-				s.debug.Println("Server", "PUT MkdirAll err: "+err.Error())
+				s.debug.Println("PUT MkdirAll err: " + err.Error())
 				return r.respond(500, err)
 			}
 			// refresh resource and set the right headers
@@ -967,7 +967,7 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 		}
 		err := os.MkdirAll(_path.Dir(resource.File), 0755)
 		if err != nil {
-			s.debug.Println("Server", "PUT MkdirAll err: "+err.Error())
+			s.debug.Println("PUT MkdirAll err: " + err.Error())
 			return r.respond(500, err)
 		}
 
@@ -979,7 +979,7 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 
 		f, err := os.OpenFile(resource.File, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
 		if err != nil {
-			s.debug.Println("Server", "PUT os.OpenFile err: "+err.Error())
+			s.debug.Println("PUT os.OpenFile err: " + err.Error())
 			if stat.IsDir() {
 				w.Header().Add("Link", brack(resource.URI)+"; rel=\"describedby\"")
 				return r.respond(406, "406 - Cannot use PUT on a directory.")
@@ -993,13 +993,13 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 			g.Parse(req.Body, dataMime)
 			err = g.WriteFile(f, "text/turtle")
 			if err != nil {
-				s.debug.Println("Server", "PUT g.WriteFile err: "+err.Error())
+				s.debug.Println("PUT g.WriteFile err: " + err.Error())
 			}
 			w.Header().Set("Triples", fmt.Sprintf("%d", g.Len()))
 		}
 		_, err = io.Copy(f, req.Body)
 		if err != nil {
-			s.debug.Println("Server", "PUT io.Copy err: "+err.Error())
+			s.debug.Println("PUT io.Copy err: " + err.Error())
 		}
 
 		if err != nil {
