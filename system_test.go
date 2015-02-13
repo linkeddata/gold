@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -87,7 +88,6 @@ func TestNewAccountWithVhosts(t *testing.T) {
 	// delete user
 	err = os.RemoveAll("_test/")
 	assert.NoError(t, err)
-
 }
 
 func TestNewCertWithSPKAC(t *testing.T) {
@@ -248,10 +248,44 @@ func TestAccountStatusWithVhosts(t *testing.T) {
 
 	request, err := http.NewRequest("POST", testServer1.URL+"/,system/accountStatus", bytes.NewReader(jsonData))
 	assert.NoError(t, err)
-	response, err := user1h.Do(request)
+	response, err := httpClient.Do(request)
 	assert.NoError(t, err)
 	body, _ := ioutil.ReadAll(response.Body)
 	response.Body.Close()
 	assert.Equal(t, `{"method":"accountStatus","status":"success","formURL":"`+testServer1.URL+`/,system/newAccount","loginURL":"https://user.`+strings.TrimLeft(testServer1.URL, "https://")+`/","response":{"accountURL":"https://user.`+strings.TrimLeft(testServer1.URL, "https://")+`/","available":true}}`, string(body))
 	assert.Equal(t, 200, response.StatusCode)
+}
+
+func TestAccountInfo(t *testing.T) {
+	err := os.MkdirAll("_test/user", 0755)
+	assert.NoError(t, err)
+
+	sizeLocal, err := DiskUsage("_test/")
+	assert.NoError(t, err)
+
+	testServer1 := httptest.NewUnstartedServer(handler2)
+	testServer1.TLS = new(tls.Config)
+	testServer1.TLS.ClientAuth = tls.RequestClientCert
+	testServer1.TLS.NextProtos = []string{"http/1.1"}
+	testServer1.StartTLS()
+
+	request, err := http.NewRequest("GET", testServer1.URL+"/,system/accountInfo", nil)
+	assert.NoError(t, err)
+	response, err := httpClient.Do(request)
+	assert.NoError(t, err)
+	body, _ := ioutil.ReadAll(response.Body)
+	response.Body.Close()
+
+	err = os.RemoveAll("_test/")
+	assert.NoError(t, err)
+
+	assert.Equal(t, 200, response.StatusCode)
+	assert.NotEmpty(t, body)
+
+	dataLocal := accountInformation{
+		DiskUsed:  fmt.Sprintf("%d", sizeLocal),
+		DiskLimit: fmt.Sprintf("%d", config2.DiskLimit),
+	}
+	jsonData, err := json.Marshal(dataLocal)
+	assert.Equal(t, body, jsonData)
 }

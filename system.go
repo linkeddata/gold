@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	_path "path"
+	"path/filepath"
 	"strings"
 )
 
@@ -38,6 +39,11 @@ type statusResponse struct {
 	Response accountResponse `json:"response"`
 }
 
+type accountInformation struct {
+	DiskUsed  string
+	DiskLimit string
+}
+
 // HandleSystem is a router for system specific APIs
 func HandleSystem(w http.ResponseWriter, req *httpRequest, s *Server) SystemReturn {
 	if strings.Contains(req.BaseURI(), "accountStatus") {
@@ -47,6 +53,8 @@ func HandleSystem(w http.ResponseWriter, req *httpRequest, s *Server) SystemRetu
 		return newAccount(w, req, s)
 	} else if strings.Contains(req.BaseURI(), "newCert") {
 		return newCert(w, req, s)
+	} else if strings.Contains(req.BaseURI(), "accountInfo") {
+		return accountInfo(w, req, s)
 	}
 	return SystemReturn{Status: 200}
 }
@@ -79,7 +87,7 @@ func newAccount(w http.ResponseWriter, req *httpRequest, s *Server) SystemReturn
 		// get public key from spkac
 		pubKey, err := ParseSPKAC(spkac)
 		if err != nil {
-			s.debug.Println("[newAccount] ParseSPKAC error: " + err.Error())
+			s.debug.Println("ParseSPKAC error: " + err.Error())
 			return SystemReturn{Status: 500, Body: err.Error()}
 		}
 		rsaPub := pubKey.(*rsa.PublicKey)
@@ -93,7 +101,7 @@ func newAccount(w http.ResponseWriter, req *httpRequest, s *Server) SystemReturn
 			Exponent: fmt.Sprintf("%d", rsaPub.E),
 		}
 
-		s.debug.Println("[newAccount] checking if account profile <" + resource.File + "> exists...")
+		s.debug.Println("Checking if account profile <" + resource.File + "> exists...")
 		stat, err := os.Stat(resource.File)
 		if err != nil {
 			s.debug.Println("Stat error: " + err.Error())
@@ -107,7 +115,7 @@ func newAccount(w http.ResponseWriter, req *httpRequest, s *Server) SystemReturn
 		certName := account.Name + " [on " + resource.Obj.Host + "]"
 		newSpkac, err = NewSPKACx509(webidURI, certName, spkac)
 		if err != nil {
-			s.debug.Println("[newAccount] NewSPKACx509 error: " + err.Error())
+			s.debug.Println("NewSPKACx509 error: " + err.Error())
 			return SystemReturn{Status: 500, Body: err.Error()}
 		}
 
@@ -117,14 +125,14 @@ func newAccount(w http.ResponseWriter, req *httpRequest, s *Server) SystemReturn
 		// create account space
 		err = os.MkdirAll(_path.Dir(resource.File), 0755)
 		if err != nil {
-			s.debug.Println("[newAccount] MkdirAll error: " + err.Error())
+			s.debug.Println("MkdirAll error: " + err.Error())
 			return SystemReturn{Status: 500, Body: err.Error()}
 		}
 
 		// open WebID profile file
 		f, err := os.OpenFile(resource.File, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
 		if err != nil {
-			s.debug.Println("[newAccount] open profile error: " + err.Error())
+			s.debug.Println("Open profile error: " + err.Error())
 			return SystemReturn{Status: 500, Body: err.Error()}
 		}
 		defer f.Close()
@@ -132,7 +140,7 @@ func newAccount(w http.ResponseWriter, req *httpRequest, s *Server) SystemReturn
 		// write WebID profile to disk
 		err = g.WriteFile(f, "text/turtle")
 		if err != nil {
-			s.debug.Println("[newAccount] saving profile error: " + err.Error())
+			s.debug.Println("Saving profile error: " + err.Error())
 			return SystemReturn{Status: 500, Body: err.Error()}
 		}
 
@@ -154,7 +162,7 @@ func newAccount(w http.ResponseWriter, req *httpRequest, s *Server) SystemReturn
 		// open profile acl file
 		f, err = os.OpenFile(resource.AclFile, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
 		if err != nil {
-			s.debug.Println("[newAccount] open profile acl error: " + err.Error())
+			s.debug.Println("Open profile acl error: " + err.Error())
 			return SystemReturn{Status: 500, Body: err.Error()}
 		}
 		defer f.Close()
@@ -162,7 +170,7 @@ func newAccount(w http.ResponseWriter, req *httpRequest, s *Server) SystemReturn
 		// write profile acl to disk
 		err = g.WriteFile(f, "text/turtle")
 		if err != nil {
-			s.debug.Println("[newAccount] saving profile acl error: " + err.Error())
+			s.debug.Println("Saving profile acl error: " + err.Error())
 			return SystemReturn{Status: 500, Body: err.Error()}
 		}
 	} else {
@@ -196,7 +204,7 @@ func newAccount(w http.ResponseWriter, req *httpRequest, s *Server) SystemReturn
 	// open account acl file
 	f, err := os.OpenFile(resource.AclFile, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
 	if err != nil {
-		s.debug.Println("[newAccount] create account acl error: " + err.Error())
+		s.debug.Println("Create account acl error: " + err.Error())
 		return SystemReturn{Status: 500, Body: err.Error()}
 	}
 	defer f.Close()
@@ -204,7 +212,7 @@ func newAccount(w http.ResponseWriter, req *httpRequest, s *Server) SystemReturn
 	// write account acl to disk
 	err = g.WriteFile(f, "text/turtle")
 	if err != nil {
-		s.debug.Println("[newAccount] saving account acl error: " + err.Error())
+		s.debug.Println("Saving account acl error: " + err.Error())
 		return SystemReturn{Status: 500, Body: err.Error()}
 	}
 
@@ -237,7 +245,7 @@ func newCert(w http.ResponseWriter, req *httpRequest, s *Server) SystemReturn {
 		certName := name + " [on " + resource.Obj.Host + "]"
 		newSpkac, err := NewSPKACx509(webidURI, certName, spkac)
 		if err != nil {
-			s.debug.Println("[newAccount] NewSPKACx509 error: " + err.Error())
+			s.debug.Println("NewSPKACx509 error: " + err.Error())
 			return SystemReturn{Status: 500, Body: err.Error()}
 		}
 
@@ -266,6 +274,7 @@ func newCert(w http.ResponseWriter, req *httpRequest, s *Server) SystemReturn {
 //             available:   true
 //            }
 // }
+// @@TODO treat exceptions
 func accountStatus(w http.ResponseWriter, req *httpRequest, s *Server) SystemReturn {
 	resource, _ := s.pathInfo(req.BaseURI())
 	host, port, _ := net.SplitHostPort(req.Host)
@@ -278,17 +287,17 @@ func accountStatus(w http.ResponseWriter, req *httpRequest, s *Server) SystemRet
 
 	data, err := ioutil.ReadAll(req.Body)
 	if err != nil {
-		s.debug.Println("[accountStatus] read body error: " + err.Error())
+		s.debug.Println("Read body error: " + err.Error())
 		return SystemReturn{Status: 500, Body: err.Error()}
 	}
 	if len(data) == 0 {
-		s.debug.Println("[accountStatus] empty request for accountStatus API")
+		s.debug.Println("Empty request for accountStatus API")
 		return SystemReturn{Status: 500, Body: "Empty request for accountStatus API"}
 	}
 	var accReq accountRequest
 	err = json.Unmarshal(data, &accReq)
 	if err != nil {
-		s.debug.Println("[accountStatus] unmarshal error: " + err.Error())
+		s.debug.Println("Unmarshal error: " + err.Error())
 		return SystemReturn{Status: 500, Body: err.Error()}
 	}
 	accReq.AccountName = strings.ToLower(accReq.AccountName)
@@ -303,13 +312,13 @@ func accountStatus(w http.ResponseWriter, req *httpRequest, s *Server) SystemRet
 	isAvailable := true
 	resource, _ = s.pathInfo(accURL)
 
-	s.debug.Println("[accountStatus] checking if account <" + accReq.AccountName + "> exists...")
+	s.debug.Println("Checking if account <" + accReq.AccountName + "> exists...")
 	stat, err := os.Stat(resource.File)
 	if err != nil {
 		s.debug.Println("Stat error: " + err.Error())
 	}
 	if stat != nil && stat.IsDir() {
-		s.debug.Println("[accountStatus] found " + s.Config.Root + accName + "." + resource.Root)
+		s.debug.Println("Found " + s.Config.Root + accName + "." + resource.Root)
 		isAvailable = false
 	}
 
@@ -325,7 +334,38 @@ func accountStatus(w http.ResponseWriter, req *httpRequest, s *Server) SystemRet
 	}
 	jsonData, err := json.Marshal(res)
 	if err != nil {
-		s.debug.Println("[accountStatus] marshal error: " + err.Error())
+		s.debug.Println("Marshal error: " + err.Error())
 	}
 	return SystemReturn{Status: 200, Body: string(jsonData)}
+}
+
+func accountInfo(w http.ResponseWriter, req *httpRequest, s *Server) SystemReturn {
+	resource, _ := s.pathInfo(req.BaseURI())
+	totalSize, err := DiskUsage(resource.Root)
+	if err != nil {
+		return SystemReturn{Status: 500, Body: err.Error()}
+	}
+
+	data := accountInformation{
+		DiskUsed:  fmt.Sprintf("%d", totalSize),
+		DiskLimit: fmt.Sprintf("%d", s.Config.DiskLimit),
+	}
+	jsonData, err := json.Marshal(data)
+	if err != nil {
+		s.debug.Println("Marshal error: " + err.Error())
+	}
+	return SystemReturn{Status: 200, Body: string(jsonData)}
+}
+
+// DiskUsage returns the total size occupied by dir and contents
+func DiskUsage(dirPath string) (int64, error) {
+	var totalSize int64
+	walkpath := func(path string, f os.FileInfo, err error) error {
+		if err == nil && f != nil {
+			totalSize += f.Size()
+		}
+		return err
+	}
+	err := filepath.Walk(dirPath, walkpath)
+	return totalSize, err
 }
