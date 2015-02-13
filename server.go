@@ -207,7 +207,10 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 	w.Header().Set("Access-Control-Allow-Credentials", "true")
 	w.Header().Set("Access-Control-Expose-Headers", "User, Triples, Location, Link, Vary, Last-Modified, Content-Length")
 	w.Header().Set("Access-Control-Max-Age", "60")
+
+	// RWW
 	w.Header().Set("MS-Author-Via", "DAV, SPARQL")
+	w.Header().Set("Updates-Via", "wss://"+req.Host+"/")
 
 	// TODO: WAC
 	origin := ""
