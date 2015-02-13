@@ -42,7 +42,9 @@ var (
 	magic *magicmime.Magic
 
 	methodsAll = []string{
-		"GET", "PUT", "POST", "OPTIONS", "HEAD", "MKCOL", "DELETE", "PATCH",
+		"OPTIONS", "HEAD", "GET",
+		"PATCH", "POST", "PUT", "MKCOL", "DELETE",
+		"COPY", "MOVE", "LOCK", "UNLOCK",
 	}
 )
 
