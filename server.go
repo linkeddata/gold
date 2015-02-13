@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/presbrey/magicmime"
+	"golang.org/x/net/webdav"
 )
 
 const (
@@ -253,6 +254,7 @@ type Server struct {
 
 	root   string
 	vhosts bool
+	webdav *webdav.Handler
 }
 
 // NewServer is used to create a new Server instance
@@ -260,6 +262,10 @@ func NewServer(root string, vhosts bool) (s *Server) {
 	s = new(Server)
 	s.root = root
 	s.vhosts = vhosts
+	s.webdav = &webdav.Handler{
+		FileSystem: webdav.Dir(s.root),
+		LockSystem: webdav.NewMemLS(),
+	}
 	DebugLog("Server", "---- Server started ----")
 	DebugLog("Server", "Waiting for connections...")
 	return
@@ -1164,6 +1170,9 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 		}
 		onUpdateURI(resource.URI)
 		return r.respond(201)
+
+	case "COPY", "MOVE", "LOCK", "UNLOCK":
+		s.webdav.ServeHTTP(w, req.Request)
 
 	default:
 		return r.respond(405, "405 - Method Not Allowed:", req.Method)
