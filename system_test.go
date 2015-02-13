@@ -16,8 +16,24 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+var (
+	config1, config2   *ServerConfig
+	handler1, handler2 *Server
+)
+
+func init() {
+	config1 = NewServerConfig()
+	config1.Root = GetServerRoot() + "_test/"
+	config1.Vhosts = true
+	handler1 = NewServer(config1)
+
+	config2 = NewServerConfig()
+	config2.Root = GetServerRoot() + "_test/"
+	config2.Vhosts = false
+	handler2 = NewServer(config2)
+}
+
 func TestNewAccountWithoutVhosts(t *testing.T) {
-	handler1 := NewServer(GetServerRoot()+"_test/", true)
 	testServer1 := httptest.NewUnstartedServer(handler1)
 	testServer1.TLS = new(tls.Config)
 	testServer1.TLS.ClientAuth = tls.RequestClientCert
@@ -47,7 +63,6 @@ func TestNewAccountWithoutVhosts(t *testing.T) {
 }
 
 func TestNewAccountWithVhosts(t *testing.T) {
-	handler1 := NewServer(GetServerRoot()+"_test/", true)
 	testServer1 := httptest.NewUnstartedServer(handler1)
 	testServer1.TLS = new(tls.Config)
 	testServer1.TLS.ClientAuth = tls.RequestClientCert
@@ -75,7 +90,6 @@ func TestNewAccountWithVhosts(t *testing.T) {
 }
 
 func TestNewAccountWithSPKAC(t *testing.T) {
-	handler1 := NewServer(GetServerRoot()+"_test/", true)
 	testServer1 := httptest.NewUnstartedServer(handler1)
 	testServer1.TLS = new(tls.Config)
 	testServer1.TLS.ClientAuth = tls.RequestClientCert
@@ -136,8 +150,7 @@ func TestNewAccountWithSPKAC(t *testing.T) {
 
 func TestAccountStatusWithoutVhosts(t *testing.T) {
 	// test vhosts
-	handler1 := NewServer(GetServerRoot()+"/_test/", false)
-	testServer1 := httptest.NewUnstartedServer(handler1)
+	testServer1 := httptest.NewUnstartedServer(handler2)
 	testServer1.TLS = new(tls.Config)
 	testServer1.TLS.ClientAuth = tls.RequestClientCert
 	testServer1.TLS.NextProtos = []string{"http/1.1"}
@@ -162,7 +175,6 @@ func TestAccountStatusWithoutVhosts(t *testing.T) {
 
 func TestAccountStatusWithVhosts(t *testing.T) {
 	// test vhosts
-	handler1 := NewServer(GetServerRoot()+"/_test/", true)
 	testServer1 := httptest.NewUnstartedServer(handler1)
 	testServer1.TLS = new(tls.Config)
 	testServer1.TLS.ClientAuth = tls.RequestClientCert

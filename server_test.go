@@ -16,8 +16,14 @@ import (
 )
 
 var (
-	handler = NewServer(GetServerRoot(), false)
+	config  = NewServerConfig()
+	handler *Server
 )
+
+func init() {
+	config.Root = GetServerRoot()
+	handler = NewServer(config)
+}
 
 func TestMKCOL(t *testing.T) {
 	testflight.WithServer(handler, func(r *testflight.Requester) {

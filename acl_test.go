@@ -23,10 +23,11 @@ var (
 	user1g, user2g *Graph
 	user1k, user2k *rsa.PrivateKey
 	user1h, user2h *http.Client
-	testServer     = httptest.NewUnstartedServer(handler)
+	testServer     *httptest.Server
 )
 
 func init() {
+	testServer = httptest.NewUnstartedServer(handler)
 	testServer.TLS = new(tls.Config)
 	testServer.TLS.ClientAuth = tls.RequestClientCert
 	testServer.TLS.NextProtos = []string{"http/1.1"}
