@@ -181,9 +181,9 @@ func (s *Server) pathInfo(path string) (ldpath, error) {
 	}
 
 	if s.vhosts {
-		res.File = res.Root + "/" + res.File
-		res.AclFile = res.Root + "/" + res.AclFile
-		res.MetaFile = res.Root + "/" + res.MetaFile
+		res.File = res.Root + res.File
+		res.AclFile = res.Root + res.AclFile
+		res.MetaFile = res.Root + res.MetaFile
 	} else if len(s.root) > 0 {
 		res.File = s.root + res.File
 		res.AclFile = s.root + res.AclFile
