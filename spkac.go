@@ -42,29 +42,8 @@ type publicKeyInfo struct {
 }
 
 var (
-	// oidNamedCurveP224 = asn1.ObjectIdentifier{1, 3, 132, 0, 33}
-	// oidNamedCurveP256 = asn1.ObjectIdentifier{1, 2, 840, 10045, 3, 1, 7}
-	// oidNamedCurveP384 = asn1.ObjectIdentifier{1, 3, 132, 0, 34}
-	// oidNamedCurveP521 = asn1.ObjectIdentifier{1, 3, 132, 0, 35}
-
 	oidPublicKeyRSA = asn1.ObjectIdentifier{1, 2, 840, 113549, 1, 1, 1}
-	// oidPublicKeyDSA   = asn1.ObjectIdentifier{1, 2, 840, 10040, 4, 1}
-	// oidPublicKeyECDSA = asn1.ObjectIdentifier{1, 2, 840, 10045, 2, 1}
 )
-
-// func namedCurveFromOID(oid asn1.ObjectIdentifier) elliptic.Curve {
-// 	switch {
-// 	case oid.Equal(oidNamedCurveP224):
-// 		return elliptic.P224()
-// 	case oid.Equal(oidNamedCurveP256):
-// 		return elliptic.P256()
-// 	case oid.Equal(oidNamedCurveP384):
-// 		return elliptic.P384()
-// 	case oid.Equal(oidNamedCurveP521):
-// 		return elliptic.P521()
-// 	}
-// 	return nil
-// }
 
 func parsePublicKey(algo x509.PublicKeyAlgorithm, keyData *publicKeyInfo) (interface{}, error) {
 	asn1Data := keyData.PublicKey.RightAlign()
@@ -183,13 +162,12 @@ func NewRSAcert(uri string, name string, priv *rsa.PrivateKey) (*tls.Certificate
 			Organization: []string{"WebID"},
 			// Country:      []string{"US"},
 		},
-		// MaxPathLen: -1,
 		NotBefore: notBefore,
 		NotAfter:  notAfter,
 
 		BasicConstraintsValid: true,
-		// KeyUsage:    x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
-		// ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
+		KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
 	}
 	rawValues := []asn1.RawValue{
 		{Class: 2, Tag: 6, Bytes: []byte(uri)},
