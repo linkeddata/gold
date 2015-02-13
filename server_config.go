@@ -24,6 +24,9 @@ type ServerConfig struct {
 	//SignUpURL points to the skin/app used for creating new accounts
 	SignUpURL string
 
+	//DiskLimit is the maximum total disk (in bytes) to be allocated to a given user
+	DiskLimit int
+
 	Root   string
 	Vhosts bool
 }
@@ -34,6 +37,7 @@ func NewServerConfig() *ServerConfig {
 		DirIndex:  []string{"index.html", "index.htm"},
 		DirSkin:   "http://linkeddata.github.io/warp/#list/",
 		SignUpURL: "http://linkeddata.github.io/signup/",
+		DiskLimit: 100000000, // 100MB
 		Root:      serverDefaultRoot(),
 	}
 }
