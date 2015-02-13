@@ -14,13 +14,13 @@ func (req *httpRequest) Auth(w http.ResponseWriter) string {
 			remoteAddr := net.ParseIP(host)
 			user = "dns:" + remoteAddr.String()
 		} else {
-			DebugLog("Auth", "WebID-TLS authentication successful for User: "+user)
+			req.Server.debug.Println("WebID-TLS authentication successful for User: " + user)
 			// start session
 			SetCookie(w, user)
 		}
 	} else {
-		DebugLog("Auth", "Cookie authentication successful for User: "+user)
+		req.Server.debug.Println("Cookie authentication successful for User: " + user)
 	}
-	DebugLog("Auth", "Request User: "+user)
+	req.Server.debug.Println("Request User: " + user)
 	return user
 }

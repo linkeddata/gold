@@ -63,8 +63,6 @@ LMEOXuCrAMT/nApK629bgSlTU6P9PZd+05yRbHt4Ds1S
 func init() {
 	flag.Parse()
 	gold.CookieAge = *cookieT
-	gold.Debug = *debug
-	gold.Skin = *skin
 }
 
 func main() {
@@ -87,14 +85,11 @@ func main() {
 		serverRoot += "/"
 	}
 
-	if *debug {
-		println("[Server] ---- Starting server ----")
-		println("[Server] Setting root to", serverRoot)
-		println("[Server] Listening on port", *bind)
-		println("[Server] Using vhosts?", *vhosts)
-	}
-
-	handler := gold.NewServer(serverRoot, *vhosts)
+	config := gold.NewServerConfig()
+	config.Debug = *debug
+	config.Root = serverRoot
+	config.Vhosts = *vhosts
+	handler := gold.NewServer(config)
 
 	if len(*insec) > 0 {
 		err = http.ListenAndServe(*insec, handler)

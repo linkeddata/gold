@@ -352,7 +352,6 @@ func (g *Graph) LoadURI(uri string) (err error) {
 	q.Header.Set("Accept", "text/turtle,text/n3,application/rdf+xml")
 	r, err := httpClient.Do(q)
 	if err != nil {
-		DebugLog("Graph", "LoadURI httpClient error: "+err.Error())
 		return
 	}
 	if r != nil {

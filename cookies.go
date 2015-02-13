@@ -8,6 +8,9 @@ import (
 )
 
 var (
+	// CookieAge contains the default validity of the cookie
+	CookieAge = 24 * time.Hour
+
 	s = NewSecureCookie()
 )
 
@@ -17,22 +20,22 @@ func NewSecureCookie() *securecookie.SecureCookie {
 }
 
 // SetCookie sets a cookie during the HTTP response
-func SetCookie(w http.ResponseWriter, user string) {
-	DebugLog("Cookie", "Setting new cookie for "+user)
+func SetCookie(w http.ResponseWriter, user string) error {
 	value := map[string]string{
 		"user": user,
 	}
-	if encoded, err := s.Encode("Session", value); err == nil {
-		cookie := &http.Cookie{
-			Expires: time.Now().Add(CookieAge),
-			Name:    "Session",
-			Path:    "/",
-			Value:   encoded,
-		}
-		http.SetCookie(w, cookie)
-	} else {
-		DebugLog("Cookie", "Error encoding cookie: "+err.Error())
+	encoded, err := s.Encode("Session", value)
+	if err != nil {
+		return err
 	}
+	cookie := &http.Cookie{
+		Expires: time.Now().Add(CookieAge),
+		Name:    "Session",
+		Path:    "/",
+		Value:   encoded,
+	}
+	http.SetCookie(w, cookie)
+	return nil
 }
 
 // ReadCookie reads a cookie from the request
@@ -43,12 +46,12 @@ func ReadCookie(w http.ResponseWriter, r *httpRequest) (user string) {
 		value := make(map[string]string)
 		if err = s.Decode("Session", cookie.Value, &value); err == nil {
 			user = value["user"]
-			DebugLog("Cookie", "The value of User is "+user)
+			r.Server.debug.Println("The value of User is " + user)
 			return
 		}
-		DebugLog("Cookie", "Error decoding cookie: "+err.Error())
+		r.Server.debug.Println("Error decoding cookie: " + err.Error())
 	}
-	DebugLog("Cookie", "Error reading cookie: "+err.Error())
+	r.Server.debug.Println("Error reading cookie: " + err.Error())
 
 	return
 }

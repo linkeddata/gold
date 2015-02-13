@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"net"
 	"net/http"
 	"net/url"
@@ -13,7 +14,6 @@ import (
 	_path "path"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/presbrey/magicmime"
 	"golang.org/x/net/webdav"
@@ -33,25 +33,17 @@ const (
 )
 
 var (
-	// CookieAge contains the default validity of the cookie
-	CookieAge = 24 * time.Hour
-	// Debug (display or hide stdout logging)
-	Debug = false
-	// DirIndex contains the default index file name
-	DirIndex = []string{"index.html", "index.htm"}
-	// Skin sets the default skin for viewing RDF resources
-	Skin = "tabulator"
-	// FileManagerURI points to the skin/app for browsing the data space
-	FileManagerURI = "http://linkeddata.github.io/warp/#list/"
-
 	// Streaming (stream data or not)
 	Streaming = false // experimental
+
+	debugFlags  = log.Flags() | log.Lshortfile
+	debugPrefix = "[debug] "
+
+	magic *magicmime.Magic
 
 	methodsAll = []string{
 		"GET", "PUT", "POST", "OPTIONS", "HEAD", "MKCOL", "DELETE", "PATCH",
 	}
-
-	magic *magicmime.Magic
 )
 
 func init() {
@@ -75,7 +67,7 @@ func (e *errorString) Error() string {
 func GetServerRoot() string {
 	serverRoot, err := os.Getwd()
 	if err != nil {
-		DebugLog("Server", "Error starting server:"+err.Error())
+		// DebugLog("Server", "Error starting server:"+err.Error())
 		os.Exit(1)
 	}
 
@@ -85,14 +77,10 @@ func GetServerRoot() string {
 	return serverRoot
 }
 
-// DebugLog is used to write log messages to stdout
-func DebugLog(location string, msg string) {
-	if Debug {
-		println("["+location+"]", msg)
-	}
+type httpRequest struct {
+	*http.Request
+	*Server
 }
-
-type httpRequest struct{ *http.Request }
 
 func (req httpRequest) BaseURI() string {
 	scheme := "http"
@@ -153,23 +141,30 @@ func (req httpRequest) ifNoneMatch(etag string) bool {
 type Server struct {
 	http.Handler
 
+	Config *ServerConfig
+	debug  *log.Logger
 	root   string
 	vhosts bool
 	webdav *webdav.Handler
 }
 
 // NewServer is used to create a new Server instance
-func NewServer(root string, vhosts bool) (s *Server) {
-	s = new(Server)
-	s.root = root
-	s.vhosts = vhosts
+func NewServer(config *ServerConfig) *Server {
+	s := &Server{Config: config}
+	if config.Debug {
+		s.debug = log.New(os.Stderr, debugPrefix, debugFlags)
+	} else {
+		s.debug = log.New(ioutil.Discard, "", 0)
+	}
+	s.root = config.Root
+	s.vhosts = config.Vhosts
 	s.webdav = &webdav.Handler{
 		FileSystem: webdav.Dir(s.root),
 		LockSystem: webdav.NewMemLS(),
 	}
-	DebugLog("Server", "---- Server started ----")
-	DebugLog("Server", "Waiting for connections...")
-	return
+	s.debug.Println("---- starting server ----")
+	s.debug.Printf("config: %#v\n", s.Config)
+	return s
 }
 
 type response struct {
@@ -190,7 +185,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	if ProxyPath != "" && strings.Contains(req.URL.Path, ProxyPath) {
 		uri, err := url.Parse(req.FormValue("uri"))
 		if err != nil {
-			DebugLog(req.RequestURI, err.Error())
+			s.debug.Println(req.RequestURI, err.Error())
 		}
 		req.URL = uri
 		req.Host = uri.Host
@@ -206,7 +201,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	defer func() {
 		req.Body.Close()
 	}()
-	r := s.handle(w, &httpRequest{req})
+	r := s.handle(w, &httpRequest{req, s})
 	for key := range r.headers {
 		w.Header().Set(key, r.headers.Get(key))
 	}
@@ -222,7 +217,7 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 	r = new(response)
 	var err error
 
-	DebugLog("Server", "\n------ New "+req.Method+" request from "+req.RemoteAddr+" ------")
+	s.debug.Println("Server", "\n------ New "+req.Method+" request from "+req.RemoteAddr+" ------")
 
 	// CORS
 	w.Header().Set("Access-Control-Allow-Credentials", "true")
@@ -255,16 +250,16 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 	}
 
 	resource, _ := s.pathInfo(req.BaseURI())
-	DebugLog("Server", "Resource URI: "+resource.URI)
-	DebugLog("Server", "Resource Path: "+resource.File)
+	s.debug.Println("Server", "Resource URI: "+resource.URI)
+	s.debug.Println("Server", "Resource Path: "+resource.File)
 
 	dataMime := req.Header.Get(HCType)
 	dataMime = strings.Split(dataMime, ";")[0]
 	dataHasParser := len(mimeParser[dataMime]) > 0
 	if len(dataMime) > 0 {
-		DebugLog("Server", "Content-Type: "+dataMime)
+		s.debug.Println("Server", "Content-Type: "+dataMime)
 		if dataMime != "multipart/form-data" && !dataHasParser && req.Method != "PUT" && req.Method != "HEAD" && req.Method != "OPTIONS" {
-			DebugLog("Server", "Request contains unsupported Media Type:"+dataMime)
+			s.debug.Println("Server", "Request contains unsupported Media Type:"+dataMime)
 			return r.respond(415, "HTTP 415 - Unsupported Media Type:", dataMime)
 		}
 	}
@@ -275,7 +270,7 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 	if len(acceptList) > 0 && acceptList[0].SubType != "*" {
 		contentType, err = acceptList.Negotiate(serializerMimes...)
 		if err != nil {
-			DebugLog("Server", "Accept type not acceptable: "+err.Error())
+			s.debug.Println("Server", "Accept type not acceptable: "+err.Error())
 			return r.respond(406, "HTTP 406 - Accept type not acceptable: "+err.Error())
 		}
 	}
@@ -346,7 +341,7 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 		// set LDP Link headers
 		stat, err := os.Stat(resource.File)
 		if err != nil {
-			DebugLog("Server", "Got a stat error: "+err.Error())
+			s.debug.Println("Server", "Got a stat error: "+err.Error())
 			r.respond(404, Skins["404"])
 		} else if stat.IsDir() {
 			w.Header().Add("Link", brack("http://www.w3.org/ns/ldp#BasicContainer")+"; rel=\"type\"")
@@ -384,10 +379,10 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 
 		switch {
 		case stat.IsDir():
-			if len(DirIndex) > 0 && contentType == "text/html" {
+			if len(s.Config.DirIndex) > 0 && contentType == "text/html" {
 				magicType = "text/html"
 				maybeRDF = false
-				for _, dirIndex := range DirIndex {
+				for _, dirIndex := range s.Config.DirIndex {
 					_, xerr := os.Stat(resource.File + dirIndex)
 					status = 200
 					if xerr == nil {
@@ -400,7 +395,7 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 					} else {
 						//TODO load file manager skin from local preference file
 						w.Header().Set(HCType, contentType)
-						urlStr := FileManagerURI + resource.Obj.Scheme + "/" + resource.Obj.Host + "/" + resource.Obj.Path
+						urlStr := s.Config.DirSkin + resource.Obj.Scheme + "/" + resource.Obj.Host + "/" + resource.Obj.Path
 						http.Redirect(w, req.Request, urlStr, 303)
 						return
 					}
@@ -516,7 +511,7 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 											// Open an input file, exit on error.
 											fd, err := os.Open(f.File)
 											if err != nil {
-												DebugLog("Server", "GET find mime type error:"+err.Error())
+												s.debug.Println("Server", "GET find mime type error:"+err.Error())
 											}
 											defer fd.Close()
 
@@ -539,7 +534,7 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 											}
 											// log potential errors
 											if err := scanner.Err(); err != nil {
-												DebugLog("Server", "GET scan err: "+scanner.Err().Error())
+												s.debug.Println("Server", "GET scan err: "+scanner.Err().Error())
 											}
 										}
 									}
@@ -568,7 +563,7 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 				w.Header().Set("Link", "<"+resource.MetaURI+">; rel=meta, <"+resource.AclURI+">; rel=acl")
 				if maybeRDF {
 					w.Header().Set(HCType, contentType)
-					return r.respond(200, Skins[Skin])
+					return r.respond(200, Skins[s.Config.DataSkin])
 				}
 				w.Header().Set(HCType, magicType)
 				w.WriteHeader(200)
@@ -576,7 +571,7 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 				if err == nil {
 					defer func() {
 						if err := f.Close(); err != nil {
-							DebugLog("Server", "GET os.Open err: "+err.Error())
+							s.debug.Println("Server", "GET os.Open err: "+err.Error())
 						}
 					}()
 					io.Copy(w, f)
@@ -621,7 +616,7 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 				if err == nil {
 					defer func() {
 						if err := f.Close(); err != nil {
-							DebugLog("Server", "GET f.Close err:"+err.Error())
+							s.debug.Println("Server", "GET f.Close err:"+err.Error())
 						}
 					}()
 					io.Copy(w, f)
@@ -706,14 +701,14 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 
 			f, err := os.OpenFile(resource.File, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
 			if err != nil {
-				DebugLog("Server", "PATCH os.OpenFile err: "+err.Error())
+				s.debug.Println("Server", "PATCH os.OpenFile err: "+err.Error())
 				return r.respond(500, err)
 			}
 			defer f.Close()
 
 			err = g.WriteFile(f, "text/turtle")
 			if err != nil {
-				DebugLog("Server", "PATCH g.WriteFile err: "+err.Error())
+				s.debug.Println("Server", "PATCH g.WriteFile err: "+err.Error())
 			}
 			w.Header().Set("Triples", fmt.Sprintf("%d", g.Len()))
 
@@ -748,7 +743,7 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 
 			uuid, err := newUUID()
 			if err != nil {
-				DebugLog("Server", "POST LDP UUID err: "+err.Error())
+				s.debug.Println("Server", "POST LDP UUID err: "+err.Error())
 				return r.respond(500, err)
 			}
 			uuid = uuid[:6]
@@ -765,9 +760,9 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 					slug = strings.TrimRight(slug, "/")
 				}
 				// TODO check if resource exists already and respond with 409
-				s, _ := os.Stat(resource.File + slug)
-				if s != nil {
-					DebugLog("Server", "POST LDP - A resource with the same name already exists: "+resource.Path+slug)
+				st, _ := os.Stat(resource.File + slug)
+				if st != nil {
+					s.debug.Println("Server", "POST LDP - A resource with the same name already exists: "+resource.Path+slug)
 					return r.respond(409, "409 - Conflict! A resource with the same name already exists.")
 				}
 			} else {
@@ -781,7 +776,7 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 				}
 				resource, err = s.pathInfo(resource.Base + "/" + resource.Path)
 				if err != nil {
-					DebugLog("Server", "POST LDPC s.pathInfo err: "+err.Error())
+					s.debug.Println("Server", "POST LDPC s.pathInfo err: "+err.Error())
 					return r.respond(500, err)
 				}
 
@@ -792,10 +787,10 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 
 				err = os.MkdirAll(resource.File, 0755)
 				if err != nil {
-					DebugLog("Server", "POST LDPC os.MkdirAll err: "+err.Error())
+					s.debug.Println("Server", "POST LDPC os.MkdirAll err: "+err.Error())
 					return r.respond(500, err)
 				}
-				DebugLog("Server", "Created dir "+resource.File)
+				s.debug.Println("Server", "Created dir "+resource.File)
 
 				//Replace the subject with the dir path instead of the meta file path
 				if dataHasParser {
@@ -809,14 +804,14 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 
 					f, err := os.OpenFile(resource.MetaFile, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
 					if err != nil {
-						DebugLog("Server", "POST LDPC os.OpenFile err: "+err.Error())
+						s.debug.Println("Server", "POST LDPC os.OpenFile err: "+err.Error())
 						return r.respond(500, err)
 					}
 					defer f.Close()
 
 					if g.Len() > 0 {
 						if err = g.WriteFile(f, ""); err != nil {
-							DebugLog("Server", "POST LDPC g.WriteFile err: "+err.Error())
+							s.debug.Println("Server", "POST LDPC g.WriteFile err: "+err.Error())
 							return r.respond(500, err)
 						}
 					}
@@ -827,7 +822,7 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 			}
 			resource, err = s.pathInfo(resource.Base + "/" + resource.Path)
 			if err != nil {
-				DebugLog("Server", "POST LDPR s.pathInfo err: "+err.Error())
+				s.debug.Println("Server", "POST LDPR s.pathInfo err: "+err.Error())
 				return r.respond(500, err)
 			}
 			w.Header().Set("Location", resource.URI)
@@ -840,16 +835,16 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 		if stat == nil {
 			err = os.MkdirAll(_path.Dir(resource.File), 0755)
 			if err != nil {
-				DebugLog("Server", "POST MkdirAll err: "+err.Error())
+				s.debug.Println("Server", "POST MkdirAll err: "+err.Error())
 				return r.respond(500, err)
 			}
-			DebugLog("Server", "Created resource "+_path.Dir(resource.File))
+			s.debug.Println("Server", "Created resource "+_path.Dir(resource.File))
 		}
 
 		if dataMime == "multipart/form-data" {
 			err := req.ParseMultipartForm(100000)
 			if err != nil {
-				DebugLog("Server", "POST parse multipart data err: "+err.Error())
+				s.debug.Println("Server", "POST parse multipart data err: "+err.Error())
 			} else {
 				m := req.MultipartForm
 				for elt := range m.File {
@@ -858,7 +853,7 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 						file, err := files[i].Open()
 						defer file.Close()
 						if err != nil {
-							DebugLog("Server", "POST multipart/form f.Open err: "+err.Error())
+							s.debug.Println("Server", "POST multipart/form f.Open err: "+err.Error())
 							return r.respond(500, err)
 						}
 						newFile := ""
@@ -870,11 +865,11 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 						dst, err := os.Create(newFile)
 						defer dst.Close()
 						if err != nil {
-							DebugLog("Server", "POST multipart/form os.Create err: "+err.Error())
+							s.debug.Println("Server", "POST multipart/form os.Create err: "+err.Error())
 							return r.respond(500, err)
 						}
 						if _, err := io.Copy(dst, file); err != nil {
-							DebugLog("Server", "POST multipart/form io.Copy err: "+err.Error())
+							s.debug.Println("Server", "POST multipart/form io.Copy err: "+err.Error())
 							return r.respond(500, err)
 						}
 					}
@@ -906,29 +901,29 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 				}
 				f, err := os.OpenFile(resource.File, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
 				if err != nil {
-					DebugLog("Server", "POST os.OpenFile err: "+err.Error())
+					s.debug.Println("Server", "POST os.OpenFile err: "+err.Error())
 					return r.respond(500, err.Error())
 				}
 				defer f.Close()
 				if g.Len() > 0 {
 					err = g.WriteFile(f, "text/turtle")
 					if err != nil {
-						DebugLog("Server", "POST g.WriteFile err: "+err.Error())
+						s.debug.Println("Server", "POST g.WriteFile err: "+err.Error())
 					} else {
-						DebugLog("Server", "Wrote resource file: "+resource.File)
+						s.debug.Println("Server", "Wrote resource file: "+resource.File)
 					}
 				}
 				w.Header().Set("Triples", fmt.Sprintf("%d", g.Len()))
 			} else {
 				f, err := os.OpenFile(resource.File, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
 				if err != nil {
-					DebugLog("Server", "POST os.OpenFile err: "+err.Error())
+					s.debug.Println("Server", "POST os.OpenFile err: "+err.Error())
 					return r.respond(500, err.Error())
 				}
 				defer f.Close()
 				_, err = io.Copy(f, req.Body)
 				if err != nil {
-					DebugLog("Server", "POST os.OpenFile err: "+err.Error())
+					s.debug.Println("Server", "POST os.OpenFile err: "+err.Error())
 					return r.respond(500, err.Error())
 				}
 			}
@@ -965,7 +960,7 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 		if len(link) > 0 && link == "http://www.w3.org/ns/ldp#BasicContainer" {
 			err := os.MkdirAll(resource.File, 0755)
 			if err != nil {
-				DebugLog("Server", "PUT MkdirAll err: "+err.Error())
+				s.debug.Println("Server", "PUT MkdirAll err: "+err.Error())
 				return r.respond(500, err)
 			}
 			// refresh resource and set the right headers
@@ -979,7 +974,7 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 		}
 		err := os.MkdirAll(_path.Dir(resource.File), 0755)
 		if err != nil {
-			DebugLog("Server", "PUT MkdirAll err: "+err.Error())
+			s.debug.Println("Server", "PUT MkdirAll err: "+err.Error())
 			return r.respond(500, err)
 		}
 
@@ -991,7 +986,7 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 
 		f, err := os.OpenFile(resource.File, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
 		if err != nil {
-			DebugLog("Server", "PUT os.OpenFile err: "+err.Error())
+			s.debug.Println("Server", "PUT os.OpenFile err: "+err.Error())
 			if stat.IsDir() {
 				w.Header().Add("Link", brack(resource.URI)+"; rel=\"describedby\"")
 				return r.respond(406, "406 - Cannot use PUT on a directory.")
@@ -1005,13 +1000,13 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 			g.Parse(req.Body, dataMime)
 			err = g.WriteFile(f, "text/turtle")
 			if err != nil {
-				DebugLog("Server", "PUT g.WriteFile err: "+err.Error())
+				s.debug.Println("Server", "PUT g.WriteFile err: "+err.Error())
 			}
 			w.Header().Set("Triples", fmt.Sprintf("%d", g.Len()))
 		}
 		_, err = io.Copy(f, req.Body)
 		if err != nil {
-			DebugLog("Server", "PUT io.Copy err: "+err.Error())
+			s.debug.Println("Server", "PUT io.Copy err: "+err.Error())
 		}
 
 		if err != nil {

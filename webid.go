@@ -6,6 +6,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/asn1"
+	"errors"
 	"fmt"
 	"strings"
 	"sync"
@@ -54,13 +55,11 @@ func WebIDTLSAuth(tls *tls.ConnectionState) (uri string, err error) {
 	err = nil
 
 	if tls == nil || !tls.HandshakeComplete {
-		DebugLog("WebID-TLS", "Not a TLS connection. TLS handshake failed")
-		return
+		return "", errors.New("Not a TLS connection. TLS handshake failed")
 	}
 
 	if len(tls.PeerCertificates) < 1 {
-		DebugLog("WebID-TLS", "No client certificate found in the TLS request!")
-		return
+		return "", errors.New("No client certificate found in the TLS request!")
 	}
 
 	for _, x := range tls.PeerCertificates[0].Extensions {
@@ -90,7 +89,7 @@ func WebIDTLSAuth(tls *tls.ConnectionState) (uri string, err error) {
 			continue
 		}
 
-		DebugLog("WebID-TLS", "Found public key from client containing WebID claim: "+claim)
+		// DebugLog("WebID-TLS", "Found public key from client containing WebID claim: "+claim)
 
 		pkeyk := fmt.Sprint([]string{t, n, e})
 		webidL.Lock()
@@ -100,20 +99,17 @@ func WebIDTLSAuth(tls *tls.ConnectionState) (uri string, err error) {
 			return
 		}
 
-		DebugLog("WebID-TLS", "Fetching profile information...")
 		g := NewGraph(claim)
 		err = g.LoadURI(claim)
 		if err != nil {
-			DebugLog("WebID-TLS", "Error loading profile: "+err.Error())
-			return
+			return "", err
 		}
-		DebugLog("WebID-TLS", "Found "+fmt.Sprintf("%+v", g.Len())+" triples")
 
 		for _, keyT := range g.All(NewResource(claim), ns.cert.Get("key"), nil) {
-			DebugLog("WebID-TLS", "Found a public key in the profile.")
+			// DebugLog("WebID-TLS", "Found a public key in the profile.")
 			for range g.All(keyT.Object, ns.rdf.Get("type"), ns.cert.Get(t)) {
-				DebugLog("WebID-TLS", "Trying to match modulus found in cert:")
-				DebugLog("WebID-TLS", n)
+				// DebugLog("WebID-TLS", "Trying to match modulus found in cert:")
+				// DebugLog("WebID-TLS", n)
 				for range g.All(keyT.Object, ns.cert.Get("modulus"), NewLiteral(n)) {
 					goto matchModulus
 				}
@@ -121,7 +117,7 @@ func WebIDTLSAuth(tls *tls.ConnectionState) (uri string, err error) {
 					goto matchModulus
 				}
 			matchModulus:
-				DebugLog("WebID-TLS", "Found a matching modulus in the profile.")
+				// DebugLog("WebID-TLS", "Found a matching modulus in the profile.")
 				for range g.All(keyT.Object, ns.cert.Get("exponent"), NewLiteral(e)) {
 					goto matchExponent
 				}
@@ -129,17 +125,17 @@ func WebIDTLSAuth(tls *tls.ConnectionState) (uri string, err error) {
 					goto matchExponent
 				}
 			matchExponent:
-				DebugLog("WebID-TLS", "Found a matching exponent in the profile.")
-				DebugLog("WebID-TLS", "Authenticated claim URI: "+claim)
+				// DebugLog("WebID-TLS", "Found a matching exponent in the profile.")
+				// DebugLog("WebID-TLS", "Authenticated claim URI: "+claim)
 				uri = claim
 				webidL.Lock()
 				pkeyURI[pkeyk] = uri
 				webidL.Unlock()
 				return
 			}
-			DebugLog("WebID-TLS", "Could not find a certificate in the profile.")
+			// DebugLog("WebID-TLS", "Could not find a certificate in the profile.")
 		}
-		DebugLog("WebID-TLS", "Could not find a certificate public key in the profile.")
+		// DebugLog("WebID-TLS", "Could not find a certificate public key in the profile.")
 	}
 	return
 }

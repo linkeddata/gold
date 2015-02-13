@@ -77,7 +77,7 @@ func newAccount(w http.ResponseWriter, req *httpRequest, s *Server) SystemReturn
 		// get public key from spkac
 		pubKey, err := ParseSPKAC(spkac)
 		if err != nil {
-			DebugLog("System", "[newAccount] ParseSPKAC error: "+err.Error())
+			s.debug.Println("System", "[newAccount] ParseSPKAC error: "+err.Error())
 			return SystemReturn{Status: 500, Body: err.Error()}
 		}
 		rsaPub := pubKey.(*rsa.PublicKey)
@@ -91,13 +91,13 @@ func newAccount(w http.ResponseWriter, req *httpRequest, s *Server) SystemReturn
 			Exponent: fmt.Sprintf("%d", rsaPub.E),
 		}
 
-		DebugLog("System", "[newAccount] checking if account profile <"+resource.File+"> exists...")
+		s.debug.Println("System", "[newAccount] checking if account profile <"+resource.File+"> exists...")
 		stat, err := os.Stat(resource.File)
 		if err != nil {
-			DebugLog("System", "Stat error: "+err.Error())
+			s.debug.Println("System", "Stat error: "+err.Error())
 		}
 		if stat != nil && !stat.IsDir() {
-			DebugLog("System", "Found "+resource.File)
+			s.debug.Println("System", "Found "+resource.File)
 			return SystemReturn{Status: 406, Body: "An account with the same name already exists."}
 		}
 
@@ -105,7 +105,7 @@ func newAccount(w http.ResponseWriter, req *httpRequest, s *Server) SystemReturn
 		certName := account.Name + " [on " + resource.Obj.Host + "]"
 		newSpkac, err = NewSPKACx509(webidURI, certName, spkac)
 		if err != nil {
-			DebugLog("System", "[newAccount] NewSPKACx509 error: "+err.Error())
+			s.debug.Println("System", "[newAccount] NewSPKACx509 error: "+err.Error())
 			return SystemReturn{Status: 500, Body: err.Error()}
 		}
 
@@ -115,14 +115,14 @@ func newAccount(w http.ResponseWriter, req *httpRequest, s *Server) SystemReturn
 		// create account space
 		err = os.MkdirAll(_path.Dir(resource.File), 0755)
 		if err != nil {
-			DebugLog("Server", "[newAccount] MkdirAll error: "+err.Error())
+			s.debug.Println("Server", "[newAccount] MkdirAll error: "+err.Error())
 			return SystemReturn{Status: 500, Body: err.Error()}
 		}
 
 		// open WebID profile file
 		f, err := os.OpenFile(resource.File, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
 		if err != nil {
-			DebugLog("Server", "[newAccount] open profile error: "+err.Error())
+			s.debug.Println("Server", "[newAccount] open profile error: "+err.Error())
 			return SystemReturn{Status: 500, Body: err.Error()}
 		}
 		defer f.Close()
@@ -130,7 +130,7 @@ func newAccount(w http.ResponseWriter, req *httpRequest, s *Server) SystemReturn
 		// write WebID profile to disk
 		err = g.WriteFile(f, "text/turtle")
 		if err != nil {
-			DebugLog("Server", "[newAccount] saving profile error: "+err.Error())
+			s.debug.Println("Server", "[newAccount] saving profile error: "+err.Error())
 			return SystemReturn{Status: 500, Body: err.Error()}
 		}
 
@@ -152,7 +152,7 @@ func newAccount(w http.ResponseWriter, req *httpRequest, s *Server) SystemReturn
 		// open profile acl file
 		f, err = os.OpenFile(resource.AclFile, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
 		if err != nil {
-			DebugLog("Server", "[newAccount] open profile acl error: "+err.Error())
+			s.debug.Println("Server", "[newAccount] open profile acl error: "+err.Error())
 			return SystemReturn{Status: 500, Body: err.Error()}
 		}
 		defer f.Close()
@@ -160,15 +160,15 @@ func newAccount(w http.ResponseWriter, req *httpRequest, s *Server) SystemReturn
 		// write profile acl to disk
 		err = g.WriteFile(f, "text/turtle")
 		if err != nil {
-			DebugLog("Server", "[newAccount] saving profile acl error: "+err.Error())
+			s.debug.Println("Server", "[newAccount] saving profile acl error: "+err.Error())
 			return SystemReturn{Status: 500, Body: err.Error()}
 		}
 	} else {
 		// just create account space
-		DebugLog("System", "Creating account dir: "+accountRoot)
+		s.debug.Println("System", "Creating account dir: "+accountRoot)
 		err := os.MkdirAll(accountRoot, 0755)
 		if err != nil {
-			DebugLog("Server", "[newAccount] MkdirAll error: "+err.Error())
+			s.debug.Println("Server", "[newAccount] MkdirAll error: "+err.Error())
 			return SystemReturn{Status: 500, Body: err.Error()}
 		}
 
@@ -194,7 +194,7 @@ func newAccount(w http.ResponseWriter, req *httpRequest, s *Server) SystemReturn
 	// open account acl file
 	f, err := os.OpenFile(resource.AclFile, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
 	if err != nil {
-		DebugLog("Server", "[newAccount] create account acl error: "+err.Error())
+		s.debug.Println("Server", "[newAccount] create account acl error: "+err.Error())
 		return SystemReturn{Status: 500, Body: err.Error()}
 	}
 	defer f.Close()
@@ -202,7 +202,7 @@ func newAccount(w http.ResponseWriter, req *httpRequest, s *Server) SystemReturn
 	// write account acl to disk
 	err = g.WriteFile(f, "text/turtle")
 	if err != nil {
-		DebugLog("Server", "[newAccount] saving account acl error: "+err.Error())
+		s.debug.Println("Server", "[newAccount] saving account acl error: "+err.Error())
 		return SystemReturn{Status: 500, Body: err.Error()}
 	}
 
@@ -247,17 +247,17 @@ func accountStatus(w http.ResponseWriter, req *httpRequest, s *Server) SystemRet
 
 	data, err := ioutil.ReadAll(req.Body)
 	if err != nil {
-		DebugLog("System", "[accountStatus] read body error: "+err.Error())
+		s.debug.Println("System", "[accountStatus] read body error: "+err.Error())
 		return SystemReturn{Status: 500, Body: err.Error()}
 	}
 	if len(data) == 0 {
-		DebugLog("System", "[accountStatus] empty request for accountStatus API")
+		s.debug.Println("System", "[accountStatus] empty request for accountStatus API")
 		return SystemReturn{Status: 500, Body: "Empty request for accountStatus API"}
 	}
 	var accReq accountRequest
 	err = json.Unmarshal(data, &accReq)
 	if err != nil {
-		DebugLog("System", "[accountStatus] unmarshal error: "+err.Error())
+		s.debug.Println("System", "[accountStatus] unmarshal error: "+err.Error())
 		return SystemReturn{Status: 500, Body: err.Error()}
 	}
 	accReq.AccountName = strings.ToLower(accReq.AccountName)
@@ -272,13 +272,13 @@ func accountStatus(w http.ResponseWriter, req *httpRequest, s *Server) SystemRet
 	isAvailable := true
 	resource, _ = s.pathInfo(accURL)
 
-	DebugLog("System", "[accountStatus] checking if account <"+accReq.AccountName+"> exists...")
+	s.debug.Println("System", "[accountStatus] checking if account <"+accReq.AccountName+"> exists...")
 	stat, err := os.Stat(resource.File)
 	if err != nil {
-		DebugLog("System", "Stat error: "+err.Error())
+		s.debug.Println("System", "Stat error: "+err.Error())
 	}
 	if stat != nil && stat.IsDir() {
-		DebugLog("System", "[accountStatus] found "+s.root+accName+"."+resource.Root)
+		s.debug.Println("System", "[accountStatus] found "+s.root+accName+"."+resource.Root)
 		isAvailable = false
 	}
 
@@ -294,7 +294,7 @@ func accountStatus(w http.ResponseWriter, req *httpRequest, s *Server) SystemRet
 	}
 	jsonData, err := json.Marshal(res)
 	if err != nil {
-		DebugLog("System", "[accountStatus] marshal error: "+err.Error())
+		s.debug.Println("System", "[accountStatus] marshal error: "+err.Error())
 	}
 	return SystemReturn{Status: 200, Body: string(jsonData)}
 }
