@@ -8,6 +8,7 @@ import (
 	"strings"
 )
 
+// ServerConfig holds a list of configuration parameters for the server
 type ServerConfig struct {
 	// DataSkin sets the default skin for viewing RDF resources
 	DataSkin string
@@ -31,6 +32,7 @@ type ServerConfig struct {
 	Vhosts bool
 }
 
+// NewServerConfig creates a new config object
 func NewServerConfig() *ServerConfig {
 	return &ServerConfig{
 		DataSkin:  "tabulator",
@@ -42,6 +44,7 @@ func NewServerConfig() *ServerConfig {
 	}
 }
 
+// LoadJSONFile loads server configuration
 func (c *ServerConfig) LoadJSONFile(filename string) error {
 	b, err := ioutil.ReadFile(filename)
 	if err != nil {
