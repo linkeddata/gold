@@ -62,9 +62,9 @@ func newAccount(w http.ResponseWriter, req *httpRequest, s *Server) SystemReturn
 	username := strings.ToLower(req.FormValue("username"))
 	accountBase := resource.Base + "/" + username + "/"
 	accountRoot := resource.Root + username
-	if s.vhosts == true {
+	if s.Config.Vhosts == true {
 		accountBase = "https://" + username + "." + host + port + "/"
-		accountRoot = s.root + username + "." + host + port
+		accountRoot = s.Config.Root + username + "." + host + port
 	}
 	webidURL := accountBase + "profile/card"
 	webidURI := webidURL + "#me"
@@ -266,7 +266,7 @@ func accountStatus(w http.ResponseWriter, req *httpRequest, s *Server) SystemRet
 	status := "success"
 	accName := accReq.AccountName
 	accURL := resource.Base + "/" + accName + "/"
-	if s.vhosts {
+	if s.Config.Vhosts {
 		accURL = resource.Obj.Scheme + "://" + accName + "." + host + port + "/"
 	}
 	isAvailable := true
@@ -278,7 +278,7 @@ func accountStatus(w http.ResponseWriter, req *httpRequest, s *Server) SystemRet
 		s.debug.Println("System", "Stat error: "+err.Error())
 	}
 	if stat != nil && stat.IsDir() {
-		s.debug.Println("System", "[accountStatus] found "+s.root+accName+"."+resource.Root)
+		s.debug.Println("System", "[accountStatus] found "+s.Config.Root+accName+"."+resource.Root)
 		isAvailable = false
 	}
 

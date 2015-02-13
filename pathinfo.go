@@ -38,9 +38,9 @@ func (s *Server) pathInfo(path string) (*pathInfo, error) {
 		return nil, err
 	}
 
-	res.Root = s.root
+	res.Root = s.Config.Root
 	// include host and port if running in vhosts mode
-	if s.vhosts {
+	if s.Config.Vhosts {
 		host, port, _ := net.SplitHostPort(p.Host)
 		if len(host) == 0 {
 			host = p.Host
@@ -48,7 +48,7 @@ func (s *Server) pathInfo(path string) (*pathInfo, error) {
 		if len(port) > 0 {
 			host = host + ":" + port
 		}
-		res.Root = s.root + host + "/"
+		res.Root = s.Config.Root + host + "/"
 	}
 
 	if strings.HasPrefix(p.Path, "/") && len(p.Path) > 0 {
@@ -95,14 +95,14 @@ func (s *Server) pathInfo(path string) (*pathInfo, error) {
 		res.MetaFile = res.Path + METASuffix
 	}
 
-	if s.vhosts {
+	if s.Config.Vhosts {
 		res.File = res.Root + res.File
 		res.AclFile = res.Root + res.AclFile
 		res.MetaFile = res.Root + res.MetaFile
-	} else if len(s.root) > 0 {
-		res.File = s.root + res.File
-		res.AclFile = s.root + res.AclFile
-		res.MetaFile = s.root + res.MetaFile
+	} else if len(s.Config.Root) > 0 {
+		res.File = s.Config.Root + res.File
+		res.AclFile = s.Config.Root + res.AclFile
+		res.MetaFile = s.Config.Root + res.MetaFile
 	}
 
 	return res, nil

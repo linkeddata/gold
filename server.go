@@ -143,8 +143,6 @@ type Server struct {
 
 	Config *ServerConfig
 	debug  *log.Logger
-	root   string
-	vhosts bool
 	webdav *webdav.Handler
 }
 
@@ -156,10 +154,8 @@ func NewServer(config *ServerConfig) *Server {
 	} else {
 		s.debug = log.New(ioutil.Discard, "", 0)
 	}
-	s.root = config.Root
-	s.vhosts = config.Vhosts
 	s.webdav = &webdav.Handler{
-		FileSystem: webdav.Dir(s.root),
+		FileSystem: webdav.Dir(s.Config.Root),
 		LockSystem: webdav.NewMemLS(),
 	}
 	s.debug.Println("---- starting server ----")
