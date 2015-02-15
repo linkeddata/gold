@@ -68,8 +68,8 @@ func main() {
 		serverRoot += "/"
 	}
 
-	gold.CookieAge = *cookieT
 	config := gold.NewServerConfig()
+	config.CookieAge = *cookieT
 	config.Debug = *debug
 	config.Root = serverRoot
 	config.Vhosts = *vhosts

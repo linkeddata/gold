@@ -15,6 +15,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/gorilla/securecookie"
 	"github.com/presbrey/magicmime"
 	"golang.org/x/net/webdav"
 )
@@ -130,21 +131,25 @@ type Server struct {
 	http.Handler
 
 	Config *ServerConfig
+	cookie *securecookie.SecureCookie
 	debug  *log.Logger
 	webdav *webdav.Handler
 }
 
 // NewServer is used to create a new Server instance
 func NewServer(config *ServerConfig) *Server {
-	s := &Server{Config: config}
+	s := &Server{
+		Config: config,
+		cookie: securecookie.New(securecookie.GenerateRandomKey(64), securecookie.GenerateRandomKey(32)),
+		webdav: &webdav.Handler{
+			FileSystem: webdav.Dir(config.Root),
+			LockSystem: webdav.NewMemLS(),
+		},
+	}
 	if config.Debug {
 		s.debug = log.New(os.Stderr, debugPrefix, debugFlags)
 	} else {
 		s.debug = log.New(ioutil.Discard, "", 0)
-	}
-	s.webdav = &webdav.Handler{
-		FileSystem: webdav.Dir(s.Config.Root),
-		LockSystem: webdav.NewMemLS(),
 	}
 	s.debug.Println("---- starting server ----")
 	s.debug.Printf("config: %#v\n", s.Config)
@@ -220,8 +225,8 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 		w.Header().Set("Access-Control-Allow-Origin", origin)
 	}
 
-	// Authenticate request
-	user := req.Auth(w)
+	// Authentication
+	user := req.authn(w)
 	w.Header().Set("User", user)
 	acl := NewWAC(req, s, user)
 
