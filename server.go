@@ -683,7 +683,7 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 			case "application/json":
 				g.JSONPatch(req.Body)
 			case "application/sparql-update":
-				sparql := NewSPARQL(g.URI())
+				sparql := NewSPARQLUpdate(g.URI())
 				sparql.Parse(req.Body)
 				g.SPARQLUpdate(sparql)
 			default:
@@ -886,7 +886,7 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 				case "application/json":
 					g.JSONPatch(req.Body)
 				case "application/sparql-update":
-					sparql := NewSPARQL(g.URI())
+					sparql := NewSPARQLUpdate(g.URI())
 					sparql.Parse(req.Body)
 					g.SPARQLUpdate(sparql)
 				default:

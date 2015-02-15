@@ -8,7 +8,7 @@ import (
 )
 
 func TestSPARQLInsert(t *testing.T) {
-	sparql := NewSPARQL("https://test/")
+	sparql := NewSPARQLUpdate("https://test/")
 	sparql.Parse(strings.NewReader("INSERT DATA { <a> <b> <c> . }"))
 	assert.Equal(t, len(sparql.queries), 1)
 	if len(sparql.queries) > 0 {
@@ -18,7 +18,7 @@ func TestSPARQLInsert(t *testing.T) {
 }
 
 func TestSPARQLInsertDeleteUri(t *testing.T) {
-	sparql := NewSPARQL("https://test/")
+	sparql := NewSPARQLUpdate("https://test/")
 	sparql.Parse(strings.NewReader("INSERT DATA { <a> <b> <c> . }; DELETE DATA { <a> <b> <c> . }"))
 	assert.Equal(t, len(sparql.queries), 2)
 	if len(sparql.queries) > 1 {
@@ -30,7 +30,7 @@ func TestSPARQLInsertDeleteUri(t *testing.T) {
 }
 
 func TestSPARQLInsertDeleteLiteral(t *testing.T) {
-	sparql := NewSPARQL("https://test/")
+	sparql := NewSPARQLUpdate("https://test/")
 	sparql.Parse(strings.NewReader("INSERT DATA { <a> <b> \"};{\" . }; DELETE DATA { <a> <b> \"};{\" . }"))
 	assert.Equal(t, len(sparql.queries), 2)
 	if len(sparql.queries) > 1 {

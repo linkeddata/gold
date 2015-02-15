@@ -9,7 +9,7 @@ import (
 )
 
 // SPARQLQuery contains a verb, the body of the query and the graph
-type SPARQLQuery struct {
+type SPARQLUpdateQuery struct {
 	verb string
 	body string
 
@@ -17,21 +17,21 @@ type SPARQLQuery struct {
 }
 
 // SPARQL contains the base URI and a list of queries
-type SPARQL struct {
+type SPARQLUpdate struct {
 	baseURI string
-	queries []SPARQLQuery
+	queries []SPARQLUpdateQuery
 }
 
 // NewSPARQL creates a new SPARQL object
-func NewSPARQL(baseURI string) *SPARQL {
-	return &SPARQL{
+func NewSPARQLUpdate(baseURI string) *SPARQLUpdate {
+	return &SPARQLUpdate{
 		baseURI: baseURI,
-		queries: []SPARQLQuery{},
+		queries: []SPARQLUpdateQuery{},
 	}
 }
 
 // Parse parses a SPARQL query from the reader
-func (sparql *SPARQL) Parse(src io.Reader) error {
+func (sparql *SPARQLUpdate) Parse(src io.Reader) error {
 	b, _ := ioutil.ReadAll(src)
 	s := new(scanner.Scanner).Init(bytes.NewReader(b))
 	s.Mode = scanner.ScanIdents | scanner.ScanStrings
@@ -59,7 +59,7 @@ func (sparql *SPARQL) Parse(src io.Reader) error {
 		case 125: // }
 			level--
 			if level == 0 {
-				query := SPARQLQuery{
+				query := SPARQLUpdateQuery{
 					body:  string(b[start+1 : s.Position.Offset]),
 					graph: NewGraph(sparql.baseURI),
 					verb:  verb,
@@ -79,7 +79,7 @@ func (sparql *SPARQL) Parse(src io.Reader) error {
 }
 
 // SPARQLUpdate is used to update a graph from a SPARQL query
-func (g *Graph) SPARQLUpdate(sparql *SPARQL) {
+func (g *Graph) SPARQLUpdate(sparql *SPARQLUpdate) {
 	for _, query := range sparql.queries {
 		switch query.verb {
 		case "INSERT", "INSERT DATA":
