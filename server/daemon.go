@@ -38,6 +38,9 @@ func init() {
 
 func redir(w http.ResponseWriter, req *http.Request) {
 	host, _, _ := net.SplitHostPort(req.Host)
+	if host == "" {
+		host = req.Host
+	}
 	http.Redirect(w, req, "https://"+host+":"+httpsPort+req.RequestURI, http.StatusMovedPermanently)
 }
 
