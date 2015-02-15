@@ -140,7 +140,11 @@ func init() {
 
 	for name, syntax := range crdf.SerializerSyntax {
 		switch name {
+		case "json-triples":
+			// only activate: json
+			continue
 		case "rdfxml-xmp", "rdfxml":
+			// only activate: rdfxml-abbrev
 			continue
 		}
 		mimeSerializer[syntax.MimeType] = syntax.Name
