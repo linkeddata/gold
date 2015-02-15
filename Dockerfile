@@ -8,4 +8,4 @@ RUN \
 
 EXPOSE 443
 VOLUME ["/data"]
-CMD ["server","-bind=:443", "-root=/data/"]
+CMD ["server","-https=:443", "-root=/data/"]
