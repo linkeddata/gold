@@ -16,7 +16,7 @@ import (
 	crdf "github.com/presbrey/goraptor"
 )
 
-// AnyGraph implements an interface to ease Graph operations
+// AnyGraph defines methods common to Graph types
 type AnyGraph interface {
 	Len() int
 	URI() string
