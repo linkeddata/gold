@@ -15,8 +15,8 @@ import (
 )
 
 var (
-	httpA    = flag.String("http", ":8080", "HTTP listener address (redirects to HTTPS)")
-	httpsA   = flag.String("https", ":8443", "HTTPS listener address")
+	httpA    = flag.String("http", ":80", "HTTP listener address (redirects to HTTPS)")
+	httpsA   = flag.String("https", ":443", "HTTPS listener address")
 	insecure = flag.Bool("insecure", false, "provide insecure/plain HTTP access (only)")
 	nohttp   = flag.Bool("nohttp", false, "disable HTTP redirects to HTTPS")
 

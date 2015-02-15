@@ -51,11 +51,11 @@ Optionally, you can install some extra dependencies used by the tests:
 Run the server:
 
     cd ~/go/src/github.com/linkeddata/gold/server && go install
-    ~/go/bin/server -https=":443" -root="/home/user/data/" -debug
+    ~/go/bin/server -https=":8443" -root="/home/user/data/" -debug
     
 Alternatively, you can compile and run it from the source dir in one command:
     
-    go run ~/go/src/github.com/linkeddata/gold/server/daemon.go -https=":443" -root="/home/user/data/" -debug
+    go run ~/go/src/github.com/linkeddata/gold/server/daemon.go -https=":8443" -root="/home/user/data/" -debug
 
 To see a list of avialable options:
 
