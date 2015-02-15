@@ -32,10 +32,6 @@ type AnyGraph interface {
 }
 
 var (
-	mimeParser      = map[string]string{}
-	mimeSerializer  = map[string]string{}
-	serializerMimes = []string{}
-
 	httpClient = &http.Client{
 		Transport: &http.Transport{
 			TLSClientConfig: &tls.Config{
@@ -44,37 +40,6 @@ var (
 		},
 	}
 )
-
-func init() {
-	for _, syntax := range crdf.ParserSyntax {
-		switch syntax.MimeType {
-		case "", "text/html":
-			continue
-		}
-		mimeParser[syntax.MimeType] = syntax.Name
-	}
-	mimeParser["text/n3"] = mimeParser["text/turtle"]
-	mimeParser["application/json"] = "internal"
-	mimeParser["application/sparql-update"] = "internal"
-	mimeParser["application/ld+json"] = "jsonld"
-
-	for name, syntax := range crdf.SerializerSyntax {
-		switch name {
-		case "rdfxml-xmp", "rdfxml":
-			continue
-		}
-		mimeSerializer[syntax.MimeType] = syntax.Name
-	}
-	mimeSerializer["application/ld+json"] = "internal"
-	mimeSerializer["text/html"] = "internal"
-	for mime := range mimeSerializer {
-		switch mime {
-		case "application/xhtml+xml":
-			continue
-		}
-		serializerMimes = append(serializerMimes, mime)
-	}
-}
 
 // Graph structure
 type Graph struct {

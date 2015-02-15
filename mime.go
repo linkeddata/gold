@@ -1,5 +1,20 @@
 package gold
 
+import (
+	crdf "github.com/presbrey/goraptor"
+)
+
+var mimeParser = map[string]string{
+	"application/ld+json":       "jsonld",
+	"application/json":          "internal",
+	"application/sparql-update": "internal",
+}
+
+var mimeSerializer = map[string]string{
+	"application/ld+json": "internal",
+	"text/html":           "internal",
+}
+
 var mimeTypes = map[string]string{
 	".js":   "application/javascript",
 	".css":  "text/css; charset=utf-8",
@@ -107,4 +122,34 @@ var mimeTypes = map[string]string{
 	".docx":    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 	".xlsx":    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
 	".pptx":    "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+}
+
+var (
+	serializerMimes = []string{}
+)
+
+func init() {
+	for _, syntax := range crdf.ParserSyntax {
+		switch syntax.MimeType {
+		case "", "text/html":
+			continue
+		}
+		mimeParser[syntax.MimeType] = syntax.Name
+	}
+	mimeParser["text/n3"] = mimeParser["text/turtle"]
+
+	for name, syntax := range crdf.SerializerSyntax {
+		switch name {
+		case "rdfxml-xmp", "rdfxml":
+			continue
+		}
+		mimeSerializer[syntax.MimeType] = syntax.Name
+	}
+	for mime := range mimeSerializer {
+		switch mime {
+		case "application/xhtml+xml":
+			continue
+		}
+		serializerMimes = append(serializerMimes, mime)
+	}
 }
