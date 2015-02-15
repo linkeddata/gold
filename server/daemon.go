@@ -41,7 +41,11 @@ func redir(w http.ResponseWriter, req *http.Request) {
 	if host == "" {
 		host = req.Host
 	}
-	http.Redirect(w, req, "https://"+host+":"+httpsPort+req.RequestURI, http.StatusMovedPermanently)
+	next := "https://" + host
+	if httpsPort != "443" {
+		next += ":" + httpsPort
+	}
+	http.Redirect(w, req, next+req.RequestURI, http.StatusMovedPermanently)
 }
 
 func main() {
