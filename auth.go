@@ -7,13 +7,19 @@ import (
 )
 
 func (req *httpRequest) authn(w http.ResponseWriter) string {
-	user := req.userCookie()
+	user, err := req.userCookie()
+	if err != nil {
+		req.Server.debug.Println("userCookie error:", err)
+	}
 	if len(user) > 0 {
 		req.Server.debug.Println("Cookie authentication successful for User: " + user)
 		return user
 	}
 
-	user, _ = WebIDTLSAuth(req.TLS)
+	user, err = WebIDTLSAuth(req.TLS)
+	if err != nil {
+		req.Server.debug.Println("WebID-TLS error:", err)
+	}
 	if len(user) > 0 {
 		req.Server.debug.Println("WebID-TLS authentication successful for User: " + user)
 		req.Server.userCookieSet(w, user)
@@ -27,18 +33,16 @@ func (req *httpRequest) authn(w http.ResponseWriter) string {
 	return user
 }
 
-func (req *httpRequest) userCookie() string {
+func (req *httpRequest) userCookie() (string, error) {
+	value := make(map[string]string)
 	cookie, err := req.Cookie("Session")
 	if err == nil {
-		value := make(map[string]string)
-		if err = req.Server.cookie.Decode("Session", cookie.Value, &value); err == nil {
-			req.Server.debug.Println("The value of User is " + value["user"])
-			return value["user"]
-		}
-		req.Server.debug.Println("Error decoding cookie: " + err.Error())
+		err = req.Server.cookie.Decode("Session", cookie.Value, &value)
 	}
-	req.Server.debug.Println("Error reading cookie: " + err.Error())
-	return ""
+	if err == nil {
+		return value["user"], nil
+	}
+	return "", err
 }
 
 func (srv *Server) userCookieSet(w http.ResponseWriter, user string) error {
@@ -49,13 +53,12 @@ func (srv *Server) userCookieSet(w http.ResponseWriter, user string) error {
 	if err != nil {
 		return err
 	}
-	cookie := &http.Cookie{
+	http.SetCookie(w, &http.Cookie{
 		Expires: time.Now().Add(srv.Config.CookieAge),
 		Name:    "Session",
 		Path:    "/",
 		Value:   encoded,
-	}
-	http.SetCookie(w, cookie)
+	})
 	return nil
 }
 
