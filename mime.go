@@ -149,6 +149,7 @@ func init() {
 		}
 		mimeSerializer[syntax.MimeType] = syntax.Name
 	}
+
 	for mime := range mimeSerializer {
 		switch mime {
 		case "application/xhtml+xml":

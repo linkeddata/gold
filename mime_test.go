@@ -8,17 +8,17 @@ import (
 
 var (
 	mimeParserExpect = map[string]string{
-		"application/json":          "internal",
+		// "application/json":          "internal",
 		"application/sparql-update": "internal",
 
-		"application/ld+json":   "jsonld",
-		"application/n-triples": "ntriples",
-		"application/rdf+xml":   "rdfxml",
-		"application/rss":       "rss-tag-soup",
-		"application/x-trig":    "trig",
-		"text/n3":               "turtle",
-		"text/turtle":           "turtle",
-		"text/x-nquads":         "nquads",
+		"application/ld+json": "jsonld",
+		"application/rdf+xml": "rdfxml",
+		"application/rss":     "rss-tag-soup",
+		"application/x-trig":  "trig",
+		"text/n3":             "turtle",
+		"text/turtle":         "turtle",
+		"text/x-nquads":       "nquads",
+		// "application/n-triples": "ntriples",
 	}
 	mimeSerializerExpect = map[string]string{
 		"application/ld+json": "internal",
@@ -26,13 +26,13 @@ var (
 
 		"application/atom+xml":  "atom",
 		"application/json":      "json",
-		"application/n-triples": "ntriples",
 		"application/rdf+xml":   "rdfxml-abbrev",
 		"application/rss+xml":   "rss-1.0",
 		"application/xhtml+xml": "html",
 		"text/turtle":           "turtle",
 		"text/x-graphviz":       "dot",
 		"text/x-nquads":         "nquads",
+		// "application/n-triples": "ntriples",
 	}
 )
 
