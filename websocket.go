@@ -25,7 +25,8 @@ func onUpdateURI(uri string) {
 
 // Handles each websocket connection
 func websocketHandler(ws *websocket.Conn) {
-	log.Println("opened via:", ws.RemoteAddr())
+	// @@TODO switch to server logging
+	// log.Println("opened via:", ws.RemoteAddr())
 
 	uris := map[string]bool{}
 	message := ""
@@ -69,7 +70,8 @@ func websocketHandler(ws *websocket.Conn) {
 		delete(websocketSubs[k], ws)
 	}
 	websocketSubsL.Unlock()
-	log.Println("closed via:", ws.RemoteAddr())
+	// @@TODO switch to server logging
+	// log.Println("closed via:", ws.RemoteAddr())
 }
 
 func websocketPublish(uri string) {
