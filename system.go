@@ -49,12 +49,56 @@ func HandleSystem(w http.ResponseWriter, req *httpRequest, s *Server) SystemRetu
 	if strings.Contains(req.BaseURI(), "accountStatus") {
 		// unsupported yet when server is running on one host
 		return accountStatus(w, req, s)
-	} else if strings.Contains(req.BaseURI(), "newAccount") {
+	} else if strings.Contains(req.Request.URL.Path, "newAccount") {
 		return newAccount(w, req, s)
-	} else if strings.Contains(req.BaseURI(), "newCert") {
+	} else if strings.Contains(req.Request.URL.Path, "newCert") {
 		return newCert(w, req, s)
-	} else if strings.Contains(req.BaseURI(), "accountInfo") {
+	} else if strings.Contains(req.Request.URL.Path, "accountInfo") {
 		return accountInfo(w, req, s)
+	} else if strings.Contains(req.Request.URL.Path, "accountRecovery") {
+		return accountRecovery(w, req, s)
+	}
+	return SystemReturn{Status: 200}
+}
+
+func accountRecovery(w http.ResponseWriter, req *httpRequest, s *Server) SystemReturn {
+	// rebuild scheme, since req.Request.URL.Scheme is empty for some reason
+	scheme := "http"
+	if req.TLS != nil || req.Header.Get("X-Forwarded-Proto") == "https" {
+		scheme += "s"
+	}
+	webid := req.FormValue("webid")
+	token := req.FormValue("token")
+
+	if len(webid) > 0 {
+		value := map[string]string{
+			"webid": webid,
+		}
+		encoded, err := s.cookie.Encode("Recovery", value)
+		if err != nil {
+			s.debug.Println("Error encoding new cookie: " + err.Error())
+			return SystemReturn{Status: 500, Body: err.Error()}
+		}
+		// create recovery URL
+		recLink := scheme + "://" + req.Host + "/" + SystemPrefix + "/accountRecovery?token=" + encoded
+		// return SystemReturn{Status: 200, Body: recLink}
+		w.Header().Set("Link", brack(recLink)+"; rel=\"recovery\"") //@@TODO replace rel value with a URI
+		return SystemReturn{Status: 200, Body: `<a href="` + recLink + `">Click here to recover your account</a>`}
+	} else if len(token) > 0 {
+		// test token
+		value := make(map[string]string)
+		err := s.cookie.Decode("Recovery", token, &value)
+		if err != nil {
+			s.debug.Println("Decoding err: " + err.Error())
+			return SystemReturn{Status: 500, Body: err.Error()}
+		}
+		// also set cookie now
+		err = s.userCookieSet(w, value["user"])
+		if err != nil {
+			s.debug.Println("Error setting new cookie: " + err.Error())
+			return SystemReturn{Status: 500, Body: err.Error()}
+		}
+		return SystemReturn{Status: 200, Body: value["webid"]}
 	}
 	return SystemReturn{Status: 200}
 }
