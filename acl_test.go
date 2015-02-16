@@ -19,11 +19,12 @@ const (
 )
 
 var (
-	user1, user2   string
-	user1g, user2g *Graph
-	user1k, user2k *rsa.PrivateKey
-	user1h, user2h *http.Client
-	testServer     *httptest.Server
+	user1, user2         string
+	user1g, user2g       *Graph
+	user1k, user2k       *rsa.PrivateKey
+	user1h, user2h       *http.Client
+	user1cert, user2cert *tls.Certificate
+	testServer           *httptest.Server
 )
 
 func init() {
@@ -39,7 +40,7 @@ func TestACLInit(t *testing.T) {
 
 	user1 = testServer.URL + "/_test/user1#id"
 	user1g, user1k, err = NewWebIDProfileWithKeys(user1)
-	user1cert, err := NewRSAcert(user1, "User 1", user1k)
+	user1cert, err = NewRSAcert(user1, "User 1", user1k)
 	assert.NoError(t, err)
 	user1h = &http.Client{
 		Transport: &http.Transport{
@@ -60,7 +61,7 @@ func TestACLInit(t *testing.T) {
 
 	user2 = testServer.URL + "/_test/user2#id"
 	user2g, user2k, err = NewWebIDProfileWithKeys(user2)
-	user2cert, err := NewRSAcert(user2, "User 2", user2k)
+	user2cert, err = NewRSAcert(user2, "User 2", user2k)
 	assert.NoError(t, err)
 	user2h = &http.Client{
 		Transport: &http.Transport{
