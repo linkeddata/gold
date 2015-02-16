@@ -171,7 +171,7 @@ func (r *response) respond(status int, a ...interface{}) *response {
 
 // ServeHTTP handles the response
 func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	if ProxyPath != "" && strings.Contains(req.URL.Path, ProxyPath) {
+	if ProxyPath != "" && strings.HasPrefix(req.URL.Path, "/"+ProxyPath) {
 		uri, err := url.Parse(req.FormValue("uri"))
 		if err != nil {
 			s.debug.Println(req.RequestURI, err.Error())
