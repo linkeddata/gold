@@ -3,8 +3,11 @@ package gold
 import (
 	"crypto/tls"
 	"net"
+	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -57,11 +60,32 @@ func TestWebSocketPing(t *testing.T) {
 	assert.Equal(t, "pong", string(msg[:n]))
 }
 
-func TestWebSocketSub(t *testing.T) {
-	// sub URI
-}
+func TestWebSocketSubPub(t *testing.T) {
+	resURL := testServerWs.URL + "/abc"
 
-func TestWebSocketPub(t *testing.T) {
-	// put URI
+	config := tls.Config{
+		Certificates:       []tls.Certificate{*user1cert},
+		InsecureSkipVerify: true,
+	}
+	wsCfg1.TlsConfig = &config
+	ws, err := websocket.DialConfig(wsCfg1)
+	assert.NoError(t, err)
+	_, err = ws.Write([]byte("sub " + resURL))
+	assert.NoError(t, err)
 
+	request, err := http.NewRequest("PUT", resURL, strings.NewReader("<a> <b> <c>."))
+	assert.NoError(t, err)
+	request.Header.Add("Content-Type", "text/turtle")
+	response, err := httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.Equal(t, 201, response.StatusCode)
+
+	msg := make([]byte, 512)
+	var n int
+	n, err = ws.Read(msg)
+	assert.NoError(t, err)
+	assert.Equal(t, "pub "+resURL, string(msg[:n]))
+
+	err = os.RemoveAll("_test/")
+	assert.NoError(t, err)
 }
