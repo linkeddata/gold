@@ -64,65 +64,105 @@ func HandleSystem(w http.ResponseWriter, req *httpRequest, s *Server) SystemRetu
 }
 
 func accountRecovery(w http.ResponseWriter, req *httpRequest, s *Server) SystemReturn {
-	// rebuild scheme, since req.Request.URL.Scheme is empty for some reason
-	scheme := "http"
-	if req.TLS != nil || req.Header.Get("X-Forwarded-Proto") == "https" {
-		scheme += "s"
+	if len(req.FormValue("webid")) > 0 && strings.HasPrefix(req.FormValue("webid"), "http") {
+		return sendRecoveryToken(w, req, s)
+	} else if len(req.FormValue("token")) > 0 {
+		return validateRecoveryToken(w, req, s)
 	}
-	webid := req.FormValue("webid")
-	token := req.FormValue("token")
+	return SystemReturn{Status: 400, Body: "Bad request"}
+}
 
+// NewRecoveryToken generates a signed token to be used during account recovery
+func NewRecoveryToken(webid string, s *Server) (string, error) {
 	// set validity for now + 5 mins
-	valid := time.Now().Local().Unix() + 300
+	valid := time.Now().Add(s.Config.TokenAge).Unix()
 
-	if len(webid) > 0 {
-		value := map[string]string{
-			"webid": webid,
-			"valid": fmt.Sprintf("%d", valid),
-		}
-		encoded, err := s.cookie.Encode("Recovery", value)
-		if err != nil {
-			s.debug.Println("Error encoding new cookie: " + err.Error())
-			return SystemReturn{Status: 500, Body: err.Error()}
-		}
-		// create recovery URL
-		recLink := scheme + "://" + req.Host + "/" + SystemPrefix + "/accountRecovery?token=" + encoded
-		// return SystemReturn{Status: 200, Body: recLink}
-		w.Header().Set("Link", brack(recLink)+"; rel=\"recovery\"") //@@TODO replace rel value with a URI
-
-		//@@TODO send email
-		return SystemReturn{Status: 200, Body: `<a href="` + recLink + `">Click here to recover your account</a>`}
-	} else if len(token) > 0 {
-		// test tokenq
-		value := make(map[string]string)
-		err := s.cookie.Decode("Recovery", token, &value)
-		if err != nil {
-			s.debug.Println("Decoding err: " + err.Error())
-			return SystemReturn{Status: 500, Body: err.Error()}
-		}
-
-		if len(value["valid"]) > 0 {
-			v, err := strconv.ParseInt(value["valid"], 10, 64)
-			if err != nil {
-				s.debug.Println("Int parsing err: " + err.Error())
-				return SystemReturn{Status: 500, Body: err.Error()}
-			}
-
-			if time.Now().Local().Unix() > v {
-				s.debug.Println("Token expired!")
-				return SystemReturn{Status: 500, Body: "Token expired!"}
-			}
-			// also set cookie now
-			err = s.userCookieSet(w, value["user"])
-			if err != nil {
-				s.debug.Println("Error setting new cookie: " + err.Error())
-				return SystemReturn{Status: 500, Body: err.Error()}
-			}
-			return SystemReturn{Status: 200, Body: value["webid"]}
-		}
-		return SystemReturn{Status: 500, Body: "Missing validity date for token."}
+	value := map[string]string{
+		"webid": webid,
+		"valid": fmt.Sprintf("%d", valid),
 	}
+	token, err := s.cookie.Encode("Recovery", value)
+	if err != nil {
+		s.debug.Println("Error encoding new cookie: " + err.Error())
+		return "", err
+	}
+	return token, nil
+}
+
+func sendRecoveryToken(w http.ResponseWriter, req *httpRequest, s *Server) SystemReturn {
+	webid := req.FormValue("webid")
+	// exit if not a local WebID
+	// log.Println("Host:" + req.Header.Get("Host"))
+	resource, err := s.pathInfo(req.BaseURI())
+	if err != nil {
+		s.debug.Println("PathInfo error: " + err.Error())
+		return SystemReturn{Status: 500, Body: err.Error()}
+	}
+	if !strings.HasPrefix(webid, resource.Base) {
+		return SystemReturn{Status: 403, Body: "Unauthorized WebID: " + webid + " | match:" + resource.Base}
+	}
+	// try to fetch recovery email from root ,acl
+	resource, _ = s.pathInfo(webid)
+	resource, _ = s.pathInfo(resource.Base)
+	email := ""
+	kb := NewGraph(resource.AclURI)
+	kb.ReadFile(resource.AclFile)
+	// find the policy containing root acl
+	for _, t := range kb.All(nil, ns.acl.Get("agent"), nil) {
+		if strings.HasPrefix(debrack(t.Object.String()), "mailto:") {
+			email = strings.TrimLeft(debrack(t.Object.String()), "mailto:")
+			break
+		}
+	}
+	// exit if no email
+	if len(email) == 0 {
+		s.debug.Println("Could not find a recovery email for WebID: " + webid)
+		return SystemReturn{Status: 400, Body: "Could not find a recovery email for WebID: " + webid}
+	}
+
+	token, err := NewRecoveryToken(webid, s)
+	if err != nil {
+		s.debug.Println("Could not generate recovery token for " + webid + ", err: " + err.Error())
+		return SystemReturn{Status: 400, Body: "Could not generate recovery token for " + webid + ", err: " + err.Error()}
+	}
+	// create recovery URL
+	recLink := resource.Base + "/" + SystemPrefix + "/accountRecovery?token=" + token
+	body := `Click the following link to recover your account: <a href="` + recLink + `">` + recLink + `</a>`
+
+	to := []string{email}
+	go s.sendMail(req.URL.Host, to, body, "accountRecovery")
 	return SystemReturn{Status: 200}
+}
+
+func validateRecoveryToken(w http.ResponseWriter, req *httpRequest, s *Server) SystemReturn {
+	token := req.FormValue("token")
+	value := make(map[string]string)
+	err := s.cookie.Decode("Recovery", token, &value)
+	if err != nil {
+		s.debug.Println("Decoding err: " + err.Error())
+		return SystemReturn{Status: 500, Body: err.Error()}
+	}
+
+	if len(value["valid"]) > 0 {
+		v, err := strconv.ParseInt(value["valid"], 10, 64)
+		if err != nil {
+			s.debug.Println("Int parsing err: " + err.Error())
+			return SystemReturn{Status: 500, Body: err.Error()}
+		}
+
+		if time.Now().Local().Unix() > v {
+			s.debug.Println("Token expired!")
+			return SystemReturn{Status: 498, Body: "Token expired!"}
+		}
+		// also set cookie now
+		err = s.userCookieSet(w, value["user"])
+		if err != nil {
+			s.debug.Println("Error setting new cookie: " + err.Error())
+			return SystemReturn{Status: 500, Body: err.Error()}
+		}
+		return SystemReturn{Status: 200, Body: value["webid"]}
+	}
+	return SystemReturn{Status: 499, Body: "Missing validity date for token."}
 }
 
 func newAccount(w http.ResponseWriter, req *httpRequest, s *Server) SystemReturn {
@@ -263,6 +303,9 @@ func newAccount(w http.ResponseWriter, req *httpRequest, s *Server) SystemReturn
 	g.AddTriple(aclTerm, ns.acl.Get("accessTo"), NewResource(resource.URI))
 	g.AddTriple(aclTerm, ns.acl.Get("accessTo"), NewResource(resource.AclURI))
 	g.AddTriple(aclTerm, ns.acl.Get("agent"), NewResource(webidURI))
+	if len(req.FormValue("email")) > 0 {
+		g.AddTriple(aclTerm, ns.acl.Get("agent"), NewResource("mailto:"+req.FormValue("email")))
+	}
 	g.AddTriple(aclTerm, ns.acl.Get("defaultForNew"), NewResource(resource.URI))
 	g.AddTriple(aclTerm, ns.acl.Get("mode"), ns.acl.Get("Read"))
 	g.AddTriple(aclTerm, ns.acl.Get("mode"), ns.acl.Get("Write"))
