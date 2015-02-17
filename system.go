@@ -11,7 +11,9 @@ import (
 	"os"
 	_path "path"
 	"path/filepath"
+	"strconv"
 	"strings"
+	"time"
 )
 
 // SystemReturn is a generic HTTP response specific to system APIs
@@ -70,9 +72,13 @@ func accountRecovery(w http.ResponseWriter, req *httpRequest, s *Server) SystemR
 	webid := req.FormValue("webid")
 	token := req.FormValue("token")
 
+	// set validity for now + 5 mins
+	valid := time.Now().Local().Unix() + 300
+
 	if len(webid) > 0 {
 		value := map[string]string{
 			"webid": webid,
+			"valid": fmt.Sprintf("%d", valid),
 		}
 		encoded, err := s.cookie.Encode("Recovery", value)
 		if err != nil {
@@ -83,22 +89,38 @@ func accountRecovery(w http.ResponseWriter, req *httpRequest, s *Server) SystemR
 		recLink := scheme + "://" + req.Host + "/" + SystemPrefix + "/accountRecovery?token=" + encoded
 		// return SystemReturn{Status: 200, Body: recLink}
 		w.Header().Set("Link", brack(recLink)+"; rel=\"recovery\"") //@@TODO replace rel value with a URI
+
+		//@@TODO send email
 		return SystemReturn{Status: 200, Body: `<a href="` + recLink + `">Click here to recover your account</a>`}
 	} else if len(token) > 0 {
-		// test token
+		// test tokenq
 		value := make(map[string]string)
 		err := s.cookie.Decode("Recovery", token, &value)
 		if err != nil {
 			s.debug.Println("Decoding err: " + err.Error())
 			return SystemReturn{Status: 500, Body: err.Error()}
 		}
-		// also set cookie now
-		err = s.userCookieSet(w, value["user"])
-		if err != nil {
-			s.debug.Println("Error setting new cookie: " + err.Error())
-			return SystemReturn{Status: 500, Body: err.Error()}
+
+		if len(value["valid"]) > 0 {
+			v, err := strconv.ParseInt(value["valid"], 10, 64)
+			if err != nil {
+				s.debug.Println("Int parsing err: " + err.Error())
+				return SystemReturn{Status: 500, Body: err.Error()}
+			}
+
+			if time.Now().Local().Unix() > v {
+				s.debug.Println("Token expired!")
+				return SystemReturn{Status: 500, Body: "Token expired!"}
+			}
+			// also set cookie now
+			err = s.userCookieSet(w, value["user"])
+			if err != nil {
+				s.debug.Println("Error setting new cookie: " + err.Error())
+				return SystemReturn{Status: 500, Body: err.Error()}
+			}
+			return SystemReturn{Status: 200, Body: value["webid"]}
 		}
-		return SystemReturn{Status: 200, Body: value["webid"]}
+		return SystemReturn{Status: 500, Body: "Missing validity date for token."}
 	}
 	return SystemReturn{Status: 200}
 }
