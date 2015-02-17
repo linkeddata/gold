@@ -38,6 +38,16 @@ jQuery(document).ready(function() {
     <h1>404 - oh noes, there's nothing here</h1>
 </body>
 </html>`,
+		"accountRecovery": `<!DOCTYPE html>
+<html id="docHTML">
+<body>
+    <form method="POST">
+    What is your WebID?
+    <input type="text" name="webid">
+    <input type="submit" value="Recover account">
+    </form>
+</body>
+</html>`,
 	}
 
 	SMTPTemplates = map[string]string{
