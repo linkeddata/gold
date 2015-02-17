@@ -8,19 +8,29 @@ import (
 )
 
 type EmailConfig struct {
+	// Name of the remote SMTP server account, i.e. Server admin
 	Name string
+	// Addr is the remote SMTP server email address, i.e. admin@server.org
 	Addr string
+	// User is the remote SMTP server username, i.e. admin
 	User string
+	// Pass is the remote SMTP server password
 	Pass string
+	// Host is the remote SMTP server IP address or domain
 	Host string
+	// Port is the remote SMTP server port number
 	Port int
 }
 
 type SMTPTemplateData struct {
-	From    string
-	To      string
+	// From is the name of the email account holder
+	From string
+	// To is the recipient's email address
+	To string
+	// Subject for email
 	Subject string
-	Body    string
+	// Body for email
+	Body string
 }
 
 // should be run in a go routine
