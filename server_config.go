@@ -11,8 +11,10 @@ import (
 
 // ServerConfig holds a list of configuration parameters for the server
 type ServerConfig struct {
-	// CookieAge contains the default validity of the cookie
+	// CookieAge contains the validity duration for cookies
 	CookieAge time.Duration
+	// TokenAge contains the validity duration for recovery tokens
+	TokenAge time.Duration
 
 	// DataSkin sets the default skin for viewing RDF resources
 	DataSkin string
@@ -43,6 +45,7 @@ type ServerConfig struct {
 func NewServerConfig() *ServerConfig {
 	return &ServerConfig{
 		CookieAge: 24 * time.Hour,
+		TokenAge:  5 * time.Minute,
 		DataSkin:  "tabulator",
 		DirIndex:  []string{"index.html", "index.htm"},
 		DirSkin:   "http://linkeddata.github.io/warp/#list/",
