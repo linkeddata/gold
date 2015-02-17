@@ -1,0 +1,40 @@
+{
+	"PortHTTP": ":8000",
+	
+	"PortHTTPS": ":4443",
+
+	"TLSCert": "/Users/user/certs/cert.pem",
+
+	"TLSKey": "/Users/user/keys/key.pem",
+
+	"Root": "/Users/user/gold-data/",
+	
+	"Vhosts": true,
+	
+	"Insecure": false,
+	
+	"Debug": false,	
+	
+	"CookieAge": 24,
+	
+	"TokenAge":  5,
+	
+	"DataSkin":  "tabulator",
+	
+	"DirSkin":   "http://linkeddata.github.io/warp/#list/",
+	
+	"SignUpSkin": "http://linkeddata.github.io/signup/",
+
+	"DirIndex":  ["index.html", "index.htm"],	
+	
+	"DiskLimit": 100000000,
+
+	"SMTPConfig": {
+		"Name": "Administrator",
+		"Addr": "admin@test.org",
+		"User": "username",
+		"Pass": "password",
+		"Host": "mail.test.org",
+		"Port": 25
+	}
+}
