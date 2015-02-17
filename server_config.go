@@ -32,6 +32,9 @@ type ServerConfig struct {
 	//DiskLimit is the maximum total disk (in bytes) to be allocated to a given user
 	DiskLimit int
 
+	//SMTPConfig holds the settings for the remote SMTP user/server
+	SMTPConfig EmailConfig
+
 	Root   string
 	Vhosts bool
 }
