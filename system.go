@@ -69,7 +69,9 @@ func accountRecovery(w http.ResponseWriter, req *httpRequest, s *Server) SystemR
 	} else if len(req.FormValue("token")) > 0 {
 		return validateRecoveryToken(w, req, s)
 	}
-	return SystemReturn{Status: 400, Body: "Bad request"}
+	// return default skin
+
+	return SystemReturn{Status: 200, Body: Skins["accountRecovery"]}
 }
 
 // NewRecoveryToken generates a signed token to be used during account recovery
