@@ -33,6 +33,7 @@ func init() {
 	testServer.TLS.ClientAuth = tls.RequestClientCert
 	testServer.TLS.NextProtos = []string{"http/1.1"}
 	testServer.StartTLS()
+	testServer.URL = strings.Replace(testServer.URL, "127.0.0.1", "localhost", 1)
 }
 
 func TestACLInit(t *testing.T) {
