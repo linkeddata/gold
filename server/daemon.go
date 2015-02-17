@@ -10,7 +10,6 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/linkeddata/gold"
 )
@@ -23,7 +22,7 @@ var (
 	insecure = flag.Bool("insecure", false, "provide insecure/plain HTTP access (only)")
 	nohttp   = flag.Bool("nohttp", false, "disable HTTP redirects to HTTPS")
 
-	cookieT = flag.Duration("cookieAge", 24*time.Hour, "lifetime for cookies (in hours)")
+	cookieT = flag.Int64("cookieAge", 24, "lifetime for cookies (in hours)")
 	debug   = flag.Bool("debug", false, "output extra logging")
 	root    = flag.String("root", ".", "path to file storage root")
 	skin    = flag.String("skin", "tabulator", "default view for HTML clients")
@@ -31,7 +30,7 @@ var (
 	tlsKey  = flag.String("tlsKeyFile", "", "TLS certificate eg. key.pem")
 	vhosts  = flag.Bool("vhosts", false, "append serverName to path on disk")
 
-	tokenT = flag.Duration("tokenAge", 5*time.Minute, "recovery token lifetime (in minutes)")
+	tokenT = flag.Int64("tokenAge", 5, "recovery token lifetime (in minutes)")
 
 	emailName = flag.String("emailName", "", "remote SMTP server account name")
 	emailAddr = flag.String("emailAddr", "", "remote SMTP server email address")
@@ -45,7 +44,6 @@ var (
 
 func init() {
 	flag.Parse()
-	_, httpsPort, _ = net.SplitHostPort(*httpsA)
 }
 
 func redir(w http.ResponseWriter, req *http.Request) {
@@ -87,11 +85,17 @@ func main() {
 			log.Fatalln(err)
 		}
 	} else {
+		config.PortHTTP = *httpA
+		config.PortHTTPS = *httpsA
+		config.TLSCert = *tlsCert
+		config.TLSKey = *tlsKey
 		config.CookieAge = *cookieT
 		config.TokenAge = *tokenT
 		config.Debug = *debug
 		config.Root = serverRoot
 		config.Vhosts = *vhosts
+		config.Insecure = *insecure
+		config.NoHTTP = *nohttp
 		if len(*emailName) > 0 && len(*emailAddr) > 0 && len(*emailUser) > 0 &&
 			len(*emailPass) > 0 && len(*emailServ) > 0 && len(*emailPort) > 0 {
 			ep, _ := strconv.Atoi(*emailPort)
@@ -105,6 +109,7 @@ func main() {
 			}
 		}
 	}
+	_, httpsPort, _ = net.SplitHostPort(config.PortHTTPS)
 
 	handler := gold.NewServer(config)
 
@@ -116,17 +121,17 @@ func main() {
 		return
 	}
 
-	if *insecure {
-		err = http.ListenAndServe(*httpA, handler)
+	if config.Insecure {
+		err = http.ListenAndServe(config.PortHTTP, handler)
 		if err != nil {
 			log.Fatalln(err)
 		}
 		return
 	}
 
-	if !*nohttp {
+	if !config.NoHTTP {
 		go func() {
-			err = http.ListenAndServe(*httpA, http.HandlerFunc(redir))
+			err = http.ListenAndServe(config.PortHTTP, http.HandlerFunc(redir))
 			if err != nil {
 				log.Fatalln(err)
 			}
@@ -134,19 +139,19 @@ func main() {
 	}
 
 	var (
-		srv  *http.Server = &http.Server{Addr: *httpsA, Handler: handler}
+		srv  *http.Server = &http.Server{Addr: config.PortHTTPS, Handler: handler}
 		tcpL net.Listener
 		tlsL net.Listener
 	)
 
 	tlsConfig.Certificates = make([]tls.Certificate, 1)
-	if len(*tlsCert) == 0 && len(*tlsKey) == 0 {
+	if len(config.TLSCert) == 0 && len(config.TLSKey) == 0 {
 		tlsConfig.Certificates[0], err = tls.X509KeyPair(tlsTestCert, tlsTestKey)
 	} else {
-		tlsConfig.Certificates[0], err = tls.LoadX509KeyPair(*tlsCert, *tlsKey)
+		tlsConfig.Certificates[0], err = tls.LoadX509KeyPair(config.TLSCert, config.TLSKey)
 	}
 	if err == nil {
-		tcpL, err = net.Listen("tcp", *httpsA)
+		tcpL, err = net.Listen("tcp", config.PortHTTPS)
 	}
 	if err == nil {
 		tlsL = tls.NewListener(tcpL, tlsConfig)

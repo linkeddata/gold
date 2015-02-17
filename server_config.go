@@ -6,52 +6,73 @@ import (
 	"log"
 	"os"
 	"strings"
-	"time"
 )
 
 // ServerConfig holds a list of configuration parameters for the server
 type ServerConfig struct {
-	// CookieAge contains the validity duration for cookies
-	CookieAge time.Duration
-	// TokenAge contains the validity duration for recovery tokens
-	TokenAge time.Duration
+	// PortHTTP contains the HTTPS listening port number in format ":80"
+	PortHTTP string
 
-	// DataSkin sets the default skin for viewing RDF resources
-	DataSkin string
+	// PortHTTPS contains the HTTPS listening port number in format ":443"
+	PortHTTPS string
+
+	// TLSCert holds the server certificate eg. cert.pem
+	TLSCert string
+
+	// TLSKey holds the server key eg. key.pem
+	TLSKey string
+
+	// Root points to the folder that will be used as root for data
+	Root string
+
+	// Vhosts enables the use of virtual hosts (i.e. user.example.org)
+	Vhosts bool
+
+	// Insecure enables insecure (HTTP) operation mode only
+	Insecure bool
+
+	// NoHTTP allows to enable or disable redirects from HTTP to HTTPS
+	NoHTTP bool
 
 	// Debug (display or hide stdout logging)
 	Debug bool
 
-	// DirIndex contains the default index file name
-	DirIndex []string
+	// CookieAge contains the validity duration for cookies
+	CookieAge int64
+
+	// TokenAge contains the validity duration for recovery tokens
+	TokenAge int64
+
+	// DataSkin sets the default skin for viewing RDF resources
+	DataSkin string
 
 	// DirSkin points to the skin/app for browsing the data space
 	DirSkin string
 
-	//SignUpURL points to the skin/app used for creating new accounts
-	SignUpURL string
+	// SignUpSkin points to the skin/app used for creating new accounts
+	SignUpSkin string
 
-	//DiskLimit is the maximum total disk (in bytes) to be allocated to a given user
+	// DirIndex contains the default index file name
+	DirIndex []string
+
+	// DiskLimit is the maximum total disk (in bytes) to be allocated to a given user
 	DiskLimit int
 
-	//SMTPConfig holds the settings for the remote SMTP user/server
+	// SMTPConfig holds the settings for the remote SMTP user/server
 	SMTPConfig EmailConfig
-
-	Root   string
-	Vhosts bool
 }
 
 // NewServerConfig creates a new config object
 func NewServerConfig() *ServerConfig {
 	return &ServerConfig{
-		CookieAge: 24 * time.Hour,
-		TokenAge:  5 * time.Minute,
-		DataSkin:  "tabulator",
-		DirIndex:  []string{"index.html", "index.htm"},
-		DirSkin:   "http://linkeddata.github.io/warp/#list/",
-		SignUpURL: "http://linkeddata.github.io/signup/",
-		DiskLimit: 100000000, // 100MB
-		Root:      serverDefaultRoot(),
+		CookieAge:  24,
+		TokenAge:   5,
+		DataSkin:   "tabulator",
+		DirIndex:   []string{"index.html", "index.htm"},
+		DirSkin:    "http://linkeddata.github.io/warp/#list/",
+		SignUpSkin: "http://linkeddata.github.io/signup/",
+		DiskLimit:  100000000, // 100MB
+		Root:       serverDefaultRoot(),
 	}
 }
 
