@@ -1,7 +1,7 @@
 package gold
 
 // #cgo CFLAGS: -I/usr/local/include/rasqal -I/usr/local/include/raptor2 -I/usr/include/rasqal -I/usr/include/raptor2 -I/usr/local/include
-// #cgo LDFLAGS: -L/usr/local/lib -lrdf
+// #cgo LDFLAGS: -L/usr/local/lib -L/usr/local/lib/redland -lrdf
 // #include <stdlib.h>
 // #include <librdf.h>
 import "C"
