@@ -261,7 +261,10 @@ func TestAccountRecovery(t *testing.T) {
 	assert.Equal(t, 200, response.StatusCode)
 	assert.Empty(t, response.Cookies())
 
-	token, err := NewRecoveryToken(webid, handler1)
+	values := map[string]string{
+		"webid": webid,
+	}
+	token, err := NewSecureToken(values, handler1)
 	form = url.Values{
 		"token": {token},
 	}

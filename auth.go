@@ -1,6 +1,7 @@
 package gold
 
 import (
+	"fmt"
 	"net"
 	"net/http"
 	"time"
@@ -70,4 +71,19 @@ func (srv *Server) userCookieDelete(w http.ResponseWriter) {
 		Path:   "/",
 		MaxAge: -1,
 	})
+}
+
+// NewSecureToken generates a signed token to be used during account recovery
+func NewSecureToken(values map[string]string, s *Server) (string, error) {
+	// set validity for now + 5 mins
+	t := time.Duration(s.Config.TokenAge) * time.Minute
+	valid := time.Now().Add(t).Unix()
+
+	values["valid"] = fmt.Sprintf("%d", valid)
+	token, err := s.cookie.Encode("Recovery", values)
+	if err != nil {
+		s.debug.Println("Error encoding new cookie: " + err.Error())
+		return "", err
+	}
+	return token, nil
 }

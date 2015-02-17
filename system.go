@@ -69,27 +69,8 @@ func accountRecovery(w http.ResponseWriter, req *httpRequest, s *Server) SystemR
 	} else if len(req.FormValue("token")) > 0 {
 		return validateRecoveryToken(w, req, s)
 	}
-	// return default skin
-
+	// return default skin with form
 	return SystemReturn{Status: 200, Body: Skins["accountRecovery"]}
-}
-
-// NewRecoveryToken generates a signed token to be used during account recovery
-func NewRecoveryToken(webid string, s *Server) (string, error) {
-	// set validity for now + 5 mins
-	t := time.Duration(s.Config.TokenAge) * time.Minute
-	valid := time.Now().Add(t).Unix()
-
-	value := map[string]string{
-		"webid": webid,
-		"valid": fmt.Sprintf("%d", valid),
-	}
-	token, err := s.cookie.Encode("Recovery", value)
-	if err != nil {
-		s.debug.Println("Error encoding new cookie: " + err.Error())
-		return "", err
-	}
-	return token, nil
 }
 
 func sendRecoveryToken(w http.ResponseWriter, req *httpRequest, s *Server) SystemReturn {
@@ -122,8 +103,10 @@ func sendRecoveryToken(w http.ResponseWriter, req *httpRequest, s *Server) Syste
 		s.debug.Println("Could not find a recovery email for WebID: " + webid)
 		return SystemReturn{Status: 400, Body: "Could not find a recovery email for WebID: " + webid}
 	}
-
-	token, err := NewRecoveryToken(webid, s)
+	values := map[string]string{
+		"webid": webid,
+	}
+	token, err := NewSecureToken(values, s)
 	if err != nil {
 		s.debug.Println("Could not generate recovery token for " + webid + ", err: " + err.Error())
 		return SystemReturn{Status: 400, Body: "Could not generate recovery token for " + webid + ", err: " + err.Error()}
