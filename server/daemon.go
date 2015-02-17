@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/fcgi"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -15,6 +16,8 @@ import (
 )
 
 var (
+	conf = flag.String("conf", "", "use this configuration file")
+
 	httpA    = flag.String("http", ":80", "HTTP listener address (redirects to HTTPS)")
 	httpsA   = flag.String("https", ":443", "HTTPS listener address")
 	insecure = flag.Bool("insecure", false, "provide insecure/plain HTTP access (only)")
@@ -27,6 +30,13 @@ var (
 	tlsCert = flag.String("tlsCertFile", "", "TLS certificate eg. cert.pem")
 	tlsKey  = flag.String("tlsKeyFile", "", "TLS certificate eg. key.pem")
 	vhosts  = flag.Bool("vhosts", false, "append serverName to path on disk")
+
+	emailName = flag.String("emailName", "", "remote SMTP server account name")
+	emailAddr = flag.String("emailAddr", "", "remote SMTP server email address")
+	emailUser = flag.String("emailUser", "", "remote SMTP server username")
+	emailPass = flag.String("emailPass", "", "remote SMTP server password")
+	emailServ = flag.String("emailServ", "", "remote SMTP server address / domain")
+	emailPort = flag.String("emailPort", "", "remote SMTP port number")
 
 	httpsPort string
 )
@@ -69,10 +79,30 @@ func main() {
 	}
 
 	config := gold.NewServerConfig()
-	config.CookieAge = *cookieT
-	config.Debug = *debug
-	config.Root = serverRoot
-	config.Vhosts = *vhosts
+	if len(*conf) > 0 {
+		err = config.LoadJSONFile(*conf)
+		if err != nil {
+			log.Fatalln(err)
+		}
+	} else {
+		config.CookieAge = *cookieT
+		config.Debug = *debug
+		config.Root = serverRoot
+		config.Vhosts = *vhosts
+		if len(*emailName) > 0 && len(*emailAddr) > 0 && len(*emailUser) > 0 &&
+			len(*emailPass) > 0 && len(*emailServ) > 0 && len(*emailPort) > 0 {
+			ep, _ := strconv.Atoi(*emailPort)
+			config.SMTPConfig = gold.EmailConfig{
+				Name: *emailName,
+				Addr: *emailAddr,
+				User: *emailUser,
+				Pass: *emailPass,
+				Host: *emailServ,
+				Port: ep,
+			}
+		}
+	}
+
 	handler := gold.NewServer(config)
 
 	if os.Getenv("FCGI_ROLE") != "" {
