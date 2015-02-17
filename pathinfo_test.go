@@ -13,6 +13,17 @@ func TestPathInfo(t *testing.T) {
 	p, err := handler.pathInfo("")
 	assert.NotNil(t, err)
 
+	p, err = handler.pathInfo(testServer.URL)
+	assert.Nil(t, err)
+	assert.Equal(t, testServer.URL+"/", p.URI)
+	assert.Equal(t, testServer.URL, p.Base)
+	assert.Equal(t, "", p.Path)
+	assert.Equal(t, sroot, p.File)
+	assert.Equal(t, testServer.URL+"/"+ACLSuffix, p.AclURI)
+	assert.Equal(t, sroot+ACLSuffix, p.AclFile)
+	assert.Equal(t, testServer.URL+"/"+METASuffix, p.MetaURI)
+	assert.Equal(t, sroot+METASuffix, p.MetaFile)
+
 	p, err = handler.pathInfo(testServer.URL + "/")
 	assert.Nil(t, err)
 	assert.Equal(t, testServer.URL+"/", p.URI)

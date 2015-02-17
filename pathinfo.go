@@ -38,23 +38,23 @@ func (s *Server) pathInfo(path string) (*pathInfo, error) {
 		return nil, err
 	}
 
+	res.Base = p.Scheme + "://" + p.Host
 	res.Root = s.Config.Root
 	// include host and port if running in vhosts mode
+	host, port, _ := net.SplitHostPort(p.Host)
+	if len(host) == 0 {
+		host = p.Host
+	}
+	if len(port) > 0 {
+		host += ":" + port
+	}
 	if s.Config.Vhosts {
-		host, port, _ := net.SplitHostPort(p.Host)
-		if len(host) == 0 {
-			host = p.Host
-		}
-		if len(port) > 0 {
-			host = host + ":" + port
-		}
 		res.Root = s.Config.Root + host + "/"
+		res.Base = p.Scheme + "://" + host
 	}
 
 	if strings.HasPrefix(p.Path, "/") && len(p.Path) > 0 {
 		p.Path = strings.TrimLeft(p.Path, "/")
-	} else if len(p.Path) == 0 {
-		p.Path += "/"
 	}
 
 	// Add missing trailing slashes for dirs
@@ -65,8 +65,6 @@ func (s *Server) pathInfo(path string) (*pathInfo, error) {
 			p.Path += "/"
 		}
 	}
-	// hack: url.EncodeQuery() uses + instead of %20 to encode whitespaces in the path
-	//p.Path = strings.Replace(p.Path, " ", "%20", -1)
 
 	if len(p.Path) == 0 {
 		res.URI = p.String() + "/"
@@ -74,35 +72,31 @@ func (s *Server) pathInfo(path string) (*pathInfo, error) {
 		res.URI = p.String()
 	}
 	res.Obj = p
-	res.Base = p.Scheme + "://" + p.Host
-	res.Path = p.Path
 	res.File = p.Path
-
-	if strings.HasSuffix(res.Path, ",acl") {
-		res.AclURI = res.URI
-		res.AclFile = res.Path
-		res.MetaURI = res.URI
-		res.MetaFile = res.Path
-	} else if strings.HasSuffix(res.Path, ",meta") || strings.HasSuffix(res.Path, ",meta/") {
-		res.AclURI = res.URI + ACLSuffix
-		res.AclFile = res.Path + ACLSuffix
-		res.MetaURI = res.URI
-		res.MetaFile = res.Path
-	} else {
-		res.AclURI = res.URI + ACLSuffix
-		res.AclFile = res.Path + ACLSuffix
-		res.MetaURI = res.URI + METASuffix
-		res.MetaFile = res.Path + METASuffix
-	}
+	res.Path = p.Path
 
 	if s.Config.Vhosts {
-		res.File = res.Root + res.File
-		res.AclFile = res.Root + res.AclFile
-		res.MetaFile = res.Root + res.MetaFile
+		res.File = res.Root + p.Path
 	} else if len(s.Config.Root) > 0 {
-		res.File = s.Config.Root + res.File
-		res.AclFile = s.Config.Root + res.AclFile
-		res.MetaFile = s.Config.Root + res.MetaFile
+		res.File = s.Config.Root + p.Path
+	}
+
+	if strings.HasSuffix(p.Path, ",acl") {
+		res.AclURI = res.URI
+		res.AclFile = res.File
+		res.MetaURI = res.URI
+		res.MetaFile = res.File
+	} else if strings.HasSuffix(p.Path, ",meta") || strings.HasSuffix(p.Path, ",meta/") {
+		res.AclURI = res.URI + ACLSuffix
+		res.AclFile = res.File + ACLSuffix
+		res.MetaURI = res.URI
+		res.MetaFile = res.File
+	} else {
+		res.AclURI = res.URI + ACLSuffix
+		res.AclFile = res.File + ACLSuffix
+		// println("s.Config.Vhosts: res.File=" + res.File + " / res.AclFile=" + res.AclFile)
+		res.MetaURI = res.URI + METASuffix
+		res.MetaFile = res.File + METASuffix
 	}
 
 	return res, nil
