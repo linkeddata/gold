@@ -335,7 +335,7 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 		if err != nil {
 			if s.Config.Vhosts && resource.Base == strings.TrimRight(req.BaseURI(), "/") && contentType == "text/html" {
 				w.Header().Set(HCType, contentType)
-				urlStr := s.Config.SignUpSkin + "?tab=signup&endpointUrl=" + url.QueryEscape(resource.Obj.Scheme+"://"+resource.Obj.Host+"/"+SystemPrefix+"/accountStatus")
+				urlStr := s.Config.SignUpSkin + url.QueryEscape(resource.Obj.Scheme+"://"+resource.Obj.Host+"/"+SystemPrefix+"/accountStatus")
 				http.Redirect(w, req.Request, urlStr, 303)
 				return
 			}

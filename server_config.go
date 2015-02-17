@@ -70,7 +70,7 @@ func NewServerConfig() *ServerConfig {
 		DataSkin:   "tabulator",
 		DirIndex:   []string{"index.html", "index.htm"},
 		DirSkin:    "http://linkeddata.github.io/warp/#list/",
-		SignUpSkin: "http://linkeddata.github.io/signup/",
+		SignUpSkin: "http://linkeddata.github.io/signup/?tab=signup&endpointUrl=",
 		DiskLimit:  100000000, // 100MB
 		DataRoot:   serverDefaultRoot(),
 	}

@@ -23,7 +23,7 @@
 	
 	"DirSkin":   "http://linkeddata.github.io/warp/#list/",
 	
-	"SignUpSkin": "http://linkeddata.github.io/signup/",
+	"SignUpSkin": "http://linkeddata.github.io/signup/?tab=signup&endpointUrl=",
 
 	"DirIndex":  ["index.html", "index.htm"],	
 	
