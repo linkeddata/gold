@@ -75,7 +75,8 @@ func accountRecovery(w http.ResponseWriter, req *httpRequest, s *Server) SystemR
 // NewRecoveryToken generates a signed token to be used during account recovery
 func NewRecoveryToken(webid string, s *Server) (string, error) {
 	// set validity for now + 5 mins
-	valid := time.Now().Add(s.Config.TokenAge).Unix()
+	t := time.Duration(s.Config.TokenAge) * time.Minute
+	valid := time.Now().Add(t).Unix()
 
 	value := map[string]string{
 		"webid": webid,
