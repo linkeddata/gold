@@ -7,7 +7,7 @@
 
 	"TLSKey": "/Users/user/keys/key.pem",
 
-	"Root": "/Users/user/gold-data/",
+	"DataRoot": "/Users/user/gold-data/",
 	
 	"Vhosts": true,
 	

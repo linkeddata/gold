@@ -181,7 +181,7 @@ func newAccount(w http.ResponseWriter, req *httpRequest, s *Server) SystemReturn
 	accountRoot := resource.Root + username
 	if s.Config.Vhosts == true {
 		accountBase = "https://" + username + "." + host + port + "/"
-		accountRoot = s.Config.Root + username + "." + host + port
+		accountRoot = s.Config.DataRoot + username + "." + host + port
 	}
 	webidURL := accountBase + "profile/card"
 	webidURI := webidURL + "#me"
@@ -428,7 +428,7 @@ func accountStatus(w http.ResponseWriter, req *httpRequest, s *Server) SystemRet
 		s.debug.Println("Stat error: " + err.Error())
 	}
 	if stat != nil && stat.IsDir() {
-		s.debug.Println("Found " + s.Config.Root + accName + "." + resource.Root)
+		s.debug.Println("Found " + s.Config.DataRoot + accName + "." + resource.Root)
 		isAvailable = false
 	}
 

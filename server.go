@@ -142,7 +142,7 @@ func NewServer(config *ServerConfig) *Server {
 		Config: config,
 		cookie: securecookie.New(securecookie.GenerateRandomKey(64), securecookie.GenerateRandomKey(32)),
 		webdav: &webdav.Handler{
-			FileSystem: webdav.Dir(config.Root),
+			FileSystem: webdav.Dir(config.DataRoot),
 			LockSystem: webdav.NewMemLS(),
 		},
 	}

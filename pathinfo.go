@@ -39,7 +39,7 @@ func (s *Server) pathInfo(path string) (*pathInfo, error) {
 	}
 
 	res.Base = p.Scheme + "://" + p.Host
-	res.Root = s.Config.Root
+	res.Root = s.Config.DataRoot
 	// include host and port if running in vhosts mode
 	host, port, _ := net.SplitHostPort(p.Host)
 	if len(host) == 0 {
@@ -49,7 +49,7 @@ func (s *Server) pathInfo(path string) (*pathInfo, error) {
 		host += ":" + port
 	}
 	if s.Config.Vhosts {
-		res.Root = s.Config.Root + host + "/"
+		res.Root = s.Config.DataRoot + host + "/"
 		res.Base = p.Scheme + "://" + host
 	}
 
@@ -77,8 +77,8 @@ func (s *Server) pathInfo(path string) (*pathInfo, error) {
 
 	if s.Config.Vhosts {
 		res.File = res.Root + p.Path
-	} else if len(s.Config.Root) > 0 {
-		res.File = s.Config.Root + p.Path
+	} else if len(s.Config.DataRoot) > 0 {
+		res.File = s.Config.DataRoot + p.Path
 	}
 
 	if strings.HasSuffix(p.Path, ",acl") {

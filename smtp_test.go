@@ -12,7 +12,7 @@ var (
 
 func init() {
 	cfg := NewServerConfig()
-	cfg.Root += "_test/"
+	cfg.DataRoot += "_test/"
 	cfg.Vhosts = false
 	cfg.Debug = true
 	cfg.SMTPConfig = EmailConfig{

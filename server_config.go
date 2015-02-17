@@ -23,7 +23,7 @@ type ServerConfig struct {
 	TLSKey string
 
 	// Root points to the folder that will be used as root for data
-	Root string
+	DataRoot string
 
 	// Vhosts enables the use of virtual hosts (i.e. user.example.org)
 	Vhosts bool
@@ -72,7 +72,7 @@ func NewServerConfig() *ServerConfig {
 		DirSkin:    "http://linkeddata.github.io/warp/#list/",
 		SignUpSkin: "http://linkeddata.github.io/signup/",
 		DiskLimit:  100000000, // 100MB
-		Root:       serverDefaultRoot(),
+		DataRoot:   serverDefaultRoot(),
 	}
 }
 

@@ -92,7 +92,7 @@ func main() {
 		config.CookieAge = *cookieT
 		config.TokenAge = *tokenT
 		config.Debug = *debug
-		config.Root = serverRoot
+		config.DataRoot = serverRoot
 		config.Vhosts = *vhosts
 		config.Insecure = *insecure
 		config.NoHTTP = *nohttp

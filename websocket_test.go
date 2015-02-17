@@ -24,7 +24,7 @@ func init() {
 	wsOrigin = "http://localhost/"
 
 	configWs := NewServerConfig()
-	configWs.Root += "_test/"
+	configWs.DataRoot += "_test/"
 	configWs.Vhosts = false
 	handlerWs := NewServer(configWs)
 
