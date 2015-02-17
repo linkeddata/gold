@@ -23,13 +23,15 @@ var (
 	insecure = flag.Bool("insecure", false, "provide insecure/plain HTTP access (only)")
 	nohttp   = flag.Bool("nohttp", false, "disable HTTP redirects to HTTPS")
 
-	cookieT = flag.Duration("cookieAge", 24*time.Hour, "lifetime for cookies")
+	cookieT = flag.Duration("cookieAge", 24*time.Hour, "lifetime for cookies (in hours)")
 	debug   = flag.Bool("debug", false, "output extra logging")
 	root    = flag.String("root", ".", "path to file storage root")
 	skin    = flag.String("skin", "tabulator", "default view for HTML clients")
 	tlsCert = flag.String("tlsCertFile", "", "TLS certificate eg. cert.pem")
 	tlsKey  = flag.String("tlsKeyFile", "", "TLS certificate eg. key.pem")
 	vhosts  = flag.Bool("vhosts", false, "append serverName to path on disk")
+
+	tokenT = flag.Duration("tokenAge", 5*time.Minute, "recovery token lifetime (in minutes)")
 
 	emailName = flag.String("emailName", "", "remote SMTP server account name")
 	emailAddr = flag.String("emailAddr", "", "remote SMTP server email address")
@@ -86,6 +88,7 @@ func main() {
 		}
 	} else {
 		config.CookieAge = *cookieT
+		config.TokenAge = *tokenT
 		config.Debug = *debug
 		config.Root = serverRoot
 		config.Vhosts = *vhosts
