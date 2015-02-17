@@ -156,19 +156,24 @@ func (acl *WAC) allow(mode string, path string) bool {
 	return true
 }
 
-// AllowRead checks if the Read access is allowed
+// AllowRead checks if Read access is allowed
 func (acl *WAC) AllowRead(path string) bool {
 	return acl.allow("Read", path)
 }
 
-// AllowWrite checks if the Read access is allowed
+// AllowWrite checks if Write access is allowed
 func (acl *WAC) AllowWrite(path string) bool {
 	return acl.allow("Write", path)
 }
 
-// AllowAppend checks if the Read access is allowed
+// AllowAppend checks if Append access is allowed
 func (acl *WAC) AllowAppend(path string) bool {
 	return acl.allow("Append", path)
+}
+
+// AllowAppend checks if Control access is allowed
+func (acl *WAC) AllowControl(path string) bool {
+	return acl.allow("Control", path)
 }
 
 func verifyDelegator(delegator string, delegatee string) bool {
