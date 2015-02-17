@@ -53,8 +53,9 @@ func (srv *Server) userCookieSet(w http.ResponseWriter, user string) error {
 	if err != nil {
 		return err
 	}
+	t := time.Duration(srv.Config.CookieAge) * time.Hour
 	http.SetCookie(w, &http.Cookie{
-		Expires: time.Now().Add(srv.Config.CookieAge),
+		Expires: time.Now().Add(t),
 		Name:    "Session",
 		Path:    "/",
 		Value:   encoded,
