@@ -23,8 +23,11 @@ type SMTPTemplateData struct {
 	Body    string
 }
 
-// should be ran in a go routine
+// should be run in a go routine
 func (s *Server) sendMail(goldHost string, to []string, msg string, tpl string) {
+	if &s.Config.SMTPConfig == nil {
+		s.debug.Println("Missing smtp server configuration")
+	}
 	smtpCfg := &s.Config.SMTPConfig
 	context := &SMTPTemplateData{
 		smtpCfg.Name,
