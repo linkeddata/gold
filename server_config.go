@@ -37,10 +37,10 @@ type ServerConfig struct {
 	// Debug (display or hide stdout logging)
 	Debug bool
 
-	// CookieAge contains the validity duration for cookies
+	// CookieAge contains the validity duration for cookies (in hours)
 	CookieAge int64
 
-	// TokenAge contains the validity duration for recovery tokens
+	// TokenAge contains the validity duration for recovery tokens (in minutes)
 	TokenAge int64
 
 	// DataSkin sets the default skin for viewing RDF resources
