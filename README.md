@@ -55,7 +55,7 @@ Run the server:
     
 Alternatively, you can compile and run it from the source dir in one command:
     
-    go run ~/go/src/github.com/linkeddata/gold/server/daemon.go -https=":8443" -root="/home/user/data/" -debug
+    go run ~/go/src/github.com/linkeddata/gold/server/*.go -https=":8443" -root="/home/user/data/" -debug
 
 To see a list of avialable options:
 
