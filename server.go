@@ -860,7 +860,7 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 						} else {
 							newFile = resource.File + files[i].Filename
 						}
-						dst, err := os.Create(newFile)
+						dst, err := os.OpenFile(newFile, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
 						defer dst.Close()
 						if err != nil {
 							s.debug.Println("POST multipart/form os.Create err: " + err.Error())
@@ -1066,6 +1066,9 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 		return r.respond(201)
 
 	case "COPY", "MOVE", "LOCK", "UNLOCK":
+		if !acl.AllowWrite(resource.URI) {
+			return r.respond(403, "403 - Forbidden")
+		}
 		s.webdav.ServeHTTP(w, req.Request)
 
 	default:
