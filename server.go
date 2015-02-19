@@ -388,7 +388,7 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 						if err != nil {
 							return r.respond(500, err)
 						}
-						w.Header().Set("Link", "<"+resource.MetaURI+">; rel=\"meta\", <"+resource.AclURI+">; rel=\"acl\"")
+						w.Header().Set("Link", brack(resource.MetaURI)+"; rel=\"meta\", "+brack(resource.AclURI)+"; rel=\"acl\"")
 						break
 					} else {
 						//TODO load file manager skin from local preference file
@@ -399,7 +399,7 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 					}
 				}
 			} else {
-				w.Header().Add("Link", "<"+resource.MetaURI+">; rel=\"meta\"")
+				w.Header().Add("Link", brack(resource.MetaURI)+"; rel=\"meta\"")
 
 				root := NewResource(resource.URI)
 				g.AddTriple(root, NewResource("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), NewResource("http://www.w3.org/ns/posix/stat#Directory"))
@@ -558,7 +558,7 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 			if req.Method == "GET" && strings.Contains(contentType, "text/html") {
 				// delete ETag to force load the skin
 				w.Header().Del("ETag")
-				w.Header().Set("Link", "<"+resource.MetaURI+">; rel=meta, <"+resource.AclURI+">; rel=acl")
+				w.Header().Set("Link", brack(resource.MetaURI)+"; rel=\"meta\", "+brack(resource.AclURI)+"; rel=\"acl\"")
 				if maybeRDF {
 					w.Header().Set(HCType, contentType)
 					return r.respond(200, Skins[s.Config.DataSkin])
@@ -824,7 +824,7 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 				return r.respond(500, err)
 			}
 			w.Header().Set("Location", resource.URI)
-			w.Header().Set("Link", "<"+resource.MetaURI+">; rel=\"meta\", <"+resource.AclURI+">; rel=\"acl\"")
+			w.Header().Set("Link", brack(resource.MetaURI)+"; rel=\"meta\", "+brack(resource.AclURI)+"; rel=\"acl\"")
 			// LDP header
 			w.Header().Add("Link", brack("http://www.w3.org/ns/ldp#Resource")+"; rel=\"type\"")
 			isNew = true
@@ -963,7 +963,7 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 			}
 			// refresh resource and set the right headers
 			resource, err = s.pathInfo(resource.URI)
-			w.Header().Set("Link", "<"+resource.MetaURI+">; rel=\"meta\", <"+resource.AclURI+">; rel=\"acl\"")
+			w.Header().Set("Link", brack(resource.MetaURI)+"; rel=\"meta\", "+brack(resource.AclURI)+"; rel=\"acl\"")
 			// LDP header
 			w.Header().Add("Link", brack("http://www.w3.org/ns/ldp#Resource")+"; rel=\"type\"")
 
