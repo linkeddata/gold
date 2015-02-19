@@ -40,7 +40,7 @@ Setup Go + dependencies:
     mkdir ~/go; export GOPATH=~/go
     go version
 
-`IMPORTANT`: Please check that you have at least Go version 1.4 installed. If you don't, please consider [updating](http://golang.org/doc/install) to a more recent version. 
+`IMPORTANT`: Please check that you have at least Go version 1.4 installed. If you don't, please consider [installing](http://golang.org/doc/install) a more recent version. 
 
 Use the `go get` command to install the server and all the dependencies:
 
