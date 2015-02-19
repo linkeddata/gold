@@ -142,7 +142,7 @@ func validateRecoveryToken(w http.ResponseWriter, req *httpRequest, s *Server) S
 			return SystemReturn{Status: 498, Body: "Token expired!"}
 		}
 		// also set cookie now
-		err = s.userCookieSet(w, value["user"])
+		err = s.userCookieSet(w, value["webid"])
 		if err != nil {
 			s.debug.Println("Error setting new cookie: " + err.Error())
 			return SystemReturn{Status: 500, Body: err.Error()}
