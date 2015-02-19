@@ -11,10 +11,10 @@ import (
 // ServerConfig holds a list of configuration parameters for the server
 type ServerConfig struct {
 	// PortHTTP contains the HTTPS listening port number in format ":80"
-	PortHTTP string
+	ListenHTTP string
 
 	// PortHTTPS contains the HTTPS listening port number in format ":443"
-	PortHTTPS string
+	ListenHTTPS string
 
 	// TLSCert holds the server certificate eg. cert.pem
 	TLSCert string

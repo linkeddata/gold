@@ -85,8 +85,8 @@ func main() {
 			log.Fatalln(err)
 		}
 	} else {
-		config.PortHTTP = *httpA
-		config.PortHTTPS = *httpsA
+		config.ListenHTTP = *httpA
+		config.ListenHTTPS = *httpsA
 		config.TLSCert = *tlsCert
 		config.TLSKey = *tlsKey
 		config.CookieAge = *cookieT
@@ -109,7 +109,7 @@ func main() {
 			}
 		}
 	}
-	_, httpsPort, _ = net.SplitHostPort(config.PortHTTPS)
+	_, httpsPort, _ = net.SplitHostPort(config.ListenHTTPS)
 
 	handler := gold.NewServer(config)
 
@@ -122,7 +122,7 @@ func main() {
 	}
 
 	if config.Insecure {
-		err = http.ListenAndServe(config.PortHTTP, handler)
+		err = http.ListenAndServe(config.ListenHTTP, handler)
 		if err != nil {
 			log.Fatalln(err)
 		}
@@ -131,7 +131,7 @@ func main() {
 
 	if !config.NoHTTP {
 		go func() {
-			err = http.ListenAndServe(config.PortHTTP, http.HandlerFunc(redir))
+			err = http.ListenAndServe(config.ListenHTTP, http.HandlerFunc(redir))
 			if err != nil {
 				log.Fatalln(err)
 			}
@@ -139,7 +139,7 @@ func main() {
 	}
 
 	var (
-		srv  *http.Server = &http.Server{Addr: config.PortHTTPS, Handler: handler}
+		srv  *http.Server = &http.Server{Addr: config.ListenHTTPS, Handler: handler}
 		tcpL net.Listener
 		tlsL net.Listener
 	)
@@ -151,7 +151,7 @@ func main() {
 		tlsConfig.Certificates[0], err = tls.LoadX509KeyPair(config.TLSCert, config.TLSKey)
 	}
 	if err == nil {
-		tcpL, err = net.Listen("tcp", config.PortHTTPS)
+		tcpL, err = net.Listen("tcp", config.ListenHTTPS)
 	}
 	if err == nil {
 		tlsL = tls.NewListener(tcpL, tlsConfig)

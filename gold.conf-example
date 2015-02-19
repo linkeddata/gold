@@ -1,7 +1,7 @@
 {
-	"PortHTTP": ":8000",
+	"ListenHTTP": ":8000",
 	
-	"PortHTTPS": ":4443",
+	"ListenHTTPS": ":4443",
 
 	"TLSCert": "/Users/user/certs/cert.pem",
 
