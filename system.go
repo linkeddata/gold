@@ -82,26 +82,28 @@ func sendRecoveryToken(w http.ResponseWriter, req *httpRequest, s *Server) Syste
 		s.debug.Println("PathInfo error: " + err.Error())
 		return SystemReturn{Status: 500, Body: err.Error()}
 	}
-	if !strings.HasPrefix(webid, resource.Base) {
-		return SystemReturn{Status: 403, Body: "Unauthorized WebID: " + webid + " | match:" + resource.Base}
-	}
 	// try to fetch recovery email from root ,acl
-	resource, _ = s.pathInfo(webid)
 	resource, _ = s.pathInfo(resource.Base)
 	email := ""
 	kb := NewGraph(resource.AclURI)
 	kb.ReadFile(resource.AclFile)
 	// find the policy containing root acl
-	for _, t := range kb.All(nil, ns.acl.Get("agent"), nil) {
-		if strings.HasPrefix(debrack(t.Object.String()), "mailto:") {
-			email = strings.TrimLeft(debrack(t.Object.String()), "mailto:")
-			break
+	for range kb.All(nil, ns.acl.Get("accessTo"), NewResource(resource.AclURI)) {
+		for _, t := range kb.All(nil, ns.acl.Get("agent"), nil) {
+			email = debrack(t.Object.String())
+			if strings.HasPrefix(email, "mailto:") {
+				email = strings.TrimPrefix(email, "mailto:")
+				break
+			}
 		}
 	}
 	// exit if no email
 	if len(email) == 0 {
-		s.debug.Println("Could not find a recovery email for WebID: " + webid)
-		return SystemReturn{Status: 400, Body: "Could not find a recovery email for WebID: " + webid}
+		str, _ := kb.Serialize("text/turtle")
+		println("ACL: " + resource.AclURI + " / file: " + resource.AclFile)
+		println(str)
+		s.debug.Println("Access denied! Could not find a recovery email for WebID: " + webid)
+		return SystemReturn{Status: 403, Body: "Access denied! Could not find a recovery email for WebID: " + webid}
 	}
 	values := map[string]string{
 		"webid": webid,
@@ -109,14 +111,13 @@ func sendRecoveryToken(w http.ResponseWriter, req *httpRequest, s *Server) Syste
 	token, err := NewSecureToken(values, s)
 	if err != nil {
 		s.debug.Println("Could not generate recovery token for " + webid + ", err: " + err.Error())
-		return SystemReturn{Status: 400, Body: "Could not generate recovery token for " + webid + ", err: " + err.Error()}
+		return SystemReturn{Status: 500, Body: "Could not generate recovery token for " + webid + ", err: " + err.Error()}
 	}
 	// create recovery URL
-	recLink := resource.Base + "/" + SystemPrefix + "/accountRecovery?token=" + token
-	body := `Click the following link to recover your account: <a href="` + recLink + `">` + recLink + `</a>`
-
+	IP, _, _ := net.SplitHostPort(req.Request.RemoteAddr)
+	link := resource.Base + "/" + SystemPrefix + "/accountRecovery?token=" + token
 	to := []string{email}
-	go s.sendMail(req.URL.Host, to, body, "accountRecovery")
+	go s.sendRecoveryMail(resource.Obj.Host, IP, to, link)
 	return SystemReturn{Status: 200}
 }
 

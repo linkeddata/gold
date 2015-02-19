@@ -51,17 +51,16 @@ jQuery(document).ready(function() {
 	}
 
 	SMTPTemplates = map[string]string{
-		"accountRecovery": `From: {{.From}}
-To: {{.To}}
-Subject: {{.Subject}}
-MIME-version: 1.0
-Content-Type: text/html; charset="UTF-8"
+		"accountRecovery": `<p>Hello,</p>
 
-{{.Body}}
+<p>We have a received a request to recover you account, originating from <strong>{{.IP}}</strong>. Please ignore this email if you did not send this request.</p>
 
-Sincerely,
+<p>Click the following link to recover your account: <a href="{{.Link}}" target="_blank">{{.Link}}</a></p>
 
-{{.From}}
+<p>This email was generated automatically. No one will respond if you reply to it.</p>
+
+<p>Sincerely,<br>
+{{.From}}</p>
 `,
 	}
 )

@@ -1,10 +1,12 @@
 package gold
 
 import (
-	"bytes"
+	"crypto/tls"
+	"fmt"
+	"net/mail"
 	"net/smtp"
 	"strconv"
-	"text/template"
+	"strings"
 )
 
 type EmailConfig struct {
@@ -20,41 +22,17 @@ type EmailConfig struct {
 	Host string
 	// Port is the remote SMTP server port number
 	Port int
-}
-
-type SMTPTemplateData struct {
-	// From is the name of the email account holder
-	From string
-	// To is the recipient's email address
-	To string
-	// Subject for email
-	Subject string
-	// Body for email
-	Body string
+	// ForceSSL forces SSL/TLS connection instead of StartTLS
+	ForceSSL bool
 }
 
 // should be run in a go routine
-func (s *Server) sendMail(goldHost string, to []string, msg string, tpl string) {
+func (s *Server) sendRecoveryMail(goldHost string, IP string, to []string, link string) {
 	if &s.Config.SMTPConfig == nil {
 		s.debug.Println("Missing smtp server configuration")
 	}
+	subject := "Recovery instructions for your account on " + goldHost
 	smtpCfg := &s.Config.SMTPConfig
-	context := &SMTPTemplateData{
-		smtpCfg.Name,
-		to[0],
-		"Recovery instructions for your account on " + goldHost,
-		msg,
-	}
-	t := template.New(tpl)
-	t, err := t.Parse(SMTPTemplates[tpl])
-	if err != nil {
-		s.debug.Println("Error trying to parse mail template")
-	}
-	var body bytes.Buffer
-	err = t.Execute(&body, context)
-	if err != nil {
-		s.debug.Println("Error trying to execute mail template")
-	}
 
 	auth := smtp.PlainAuth("",
 		smtpCfg.User,
@@ -62,14 +40,118 @@ func (s *Server) sendMail(goldHost string, to []string, msg string, tpl string) 
 		smtpCfg.Host,
 	)
 
-	if len(smtpCfg.Host) > 0 && smtpCfg.Port > 0 {
+	// Setup headers
+	src := mail.Address{"", smtpCfg.Addr}
+	dst := mail.Address{"", to[0]}
+	headers := make(map[string]string)
+	headers["From"] = src.String()
+	headers["To"] = dst.String()
+	headers["Subject"] = subject
+	headers["MIME-Version"] = "1.0"
+	headers["Content-Type"] = "text/html; charset=\"utf-8\""
+	// Setup message
+	vals := make(map[string]string)
+	vals["{{.IP}}"] = IP
+	vals["{{.From}}"] = smtpCfg.Name
+	vals["{{.Link}}"] = link
+	body := parseMailTemplate("accountRecovery", vals)
+
+	message := ""
+	for k, v := range headers {
+		message += fmt.Sprintf("%s: %s\r\n", k, v)
+	}
+	message += "\r\n" + body
+
+	if len(smtpCfg.Host) > 0 && smtpCfg.Port > 0 && auth != nil {
 		smtpServer := smtpCfg.Host + ":" + strconv.Itoa(smtpCfg.Port)
-		err = smtp.SendMail(smtpServer, auth, smtpCfg.Addr, to, body.Bytes())
+		var err error
+		// force upgrade to full SSL/TLS connection
+		if smtpCfg.ForceSSL {
+			err = s.sendSecureRecoveryMail(src, dst, []byte(message), smtpCfg)
+		} else {
+			err = smtp.SendMail(smtpServer, auth, smtpCfg.Addr, to, []byte(message))
+		}
 		if err != nil {
 			println(err.Error())
-			s.debug.Println("Error sending email to " + to[0] + ": " + err.Error())
+			s.debug.Println("Error sending recovery email to " + to[0] + ": " + err.Error())
+		} else {
+			s.debug.Println("Successfully sent recovery email to " + to[0])
 		}
 	} else {
 		s.debug.Println("Missing smtp server and/or port")
 	}
+}
+
+func (s *Server) sendSecureRecoveryMail(from mail.Address, to mail.Address, msg []byte, cfg *EmailConfig) (err error) {
+	// Connect to the SMTP Server
+	serverName := cfg.Host + ":" + strconv.Itoa(cfg.Port)
+	auth := smtp.PlainAuth("", cfg.User, cfg.Pass, cfg.Host)
+
+	// TLS config
+	tlsconfig := &tls.Config{
+		ServerName: cfg.Host,
+	}
+
+	// Here is the key, you need to call tls.Dial instead of smtp.Dial
+	// for smtp servers running on 465 that require an ssl connection
+	// from the very beginning (no starttls)
+	conn, err := tls.Dial("tcp", serverName, tlsconfig)
+	if err != nil {
+		s.debug.Println(err.Error())
+		return
+	}
+
+	c, err := smtp.NewClient(conn, cfg.Host)
+	if err != nil {
+		s.debug.Println(err.Error())
+		return
+	}
+
+	// Auth
+	if err = c.Auth(auth); err != nil {
+		s.debug.Println(err.Error())
+		return
+	}
+
+	// To && From
+	if err = c.Mail(from.Address); err != nil {
+		s.debug.Println(err.Error())
+		return
+	}
+
+	if err = c.Rcpt(to.Address); err != nil {
+		s.debug.Println(err.Error())
+		return
+	}
+
+	// Data
+	w, err := c.Data()
+	if err != nil {
+		s.debug.Println(err.Error())
+		return
+	}
+
+	_, err = w.Write(msg)
+	if err != nil {
+		s.debug.Println(err.Error())
+		return
+	}
+
+	err = w.Close()
+	if err != nil {
+		s.debug.Println(err.Error())
+		return
+	}
+
+	c.Quit()
+	return nil
+}
+
+func parseMailTemplate(tpl string, vals map[string]string) string {
+	body := SMTPTemplates[tpl]
+
+	for oVal, nVal := range vals {
+		body = strings.Replace(body, oVal, nVal, -1)
+	}
+	return body
 }

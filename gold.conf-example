@@ -35,6 +35,7 @@
 		"User": "username",
 		"Pass": "password",
 		"Host": "mail.test.org",
-		"Port": 25
+		"Port": 25,
+		"SSL": true 
 	}
 }
