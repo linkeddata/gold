@@ -183,7 +183,7 @@ func verifyDelegator(delegator string, delegatee string) bool {
 		log.Println("Error loading graph for " + delegator)
 	}
 
-	for _, val := range g.All(NewResource(delegator), NewResource("http://www.w3.org/ns/auth/acl#delegatee"), nil) {
+	for _, val := range g.All(NewResource(delegator), NewResource("http://www.w3.org/ns/auth/acl#delegates"), nil) {
 		if debrack(val.Object.String()) == delegatee {
 			return true
 		}

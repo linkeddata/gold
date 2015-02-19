@@ -823,7 +823,7 @@ func TestACLDefaultForNew(t *testing.T) {
 }
 
 func TestACLWebIDDelegation(t *testing.T) {
-	request, err := http.NewRequest("POST", user1, strings.NewReader("<"+user1+"> <http://www.w3.org/ns/auth/acl#delegatee> <"+user2+"> ."))
+	request, err := http.NewRequest("POST", user1, strings.NewReader("<"+user1+"> <http://www.w3.org/ns/auth/acl#delegates> <"+user2+"> ."))
 	assert.NoError(t, err)
 	request.Header.Add("Content-Type", "text/turtle")
 	response, err := user1h.Do(request)
