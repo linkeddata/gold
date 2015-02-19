@@ -38,6 +38,9 @@ Setup Go + dependencies:
     sudo apt-get install golang-go libraptor2-dev libmagic-dev 
 
     mkdir ~/go; export GOPATH=~/go
+    go version
+
+`IMPORTANT`: Please check that you have at least Go version 1.4 installed. If you don't, please consider [updating](http://golang.org/doc/install) to a more recent version. 
 
 Use the `go get` command to install the server and all the dependencies:
 
@@ -57,9 +60,11 @@ Alternatively, you can compile and run it from the source dir in one command:
     
     go run ~/go/src/github.com/linkeddata/gold/server/*.go -https=":8443" -root="/home/user/data/" -debug
 
-To see a list of avialable options:
+To see a list of available options:
 
     ~/go/bin/server -help
+
+`IMPORTANT`: Please consider running gold as a regular user instead of root. Since gold treats all files equally, and even though uploaded files are not made executable, it will not prevent clients from uploading malicious shell scripts.
 
 ## License
 
