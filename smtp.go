@@ -24,6 +24,8 @@ type EmailConfig struct {
 	Port int
 	// ForceSSL forces SSL/TLS connection instead of StartTLS
 	ForceSSL bool
+	// Insecure allows connections to insecure remote SMTP servers (self-signed certs)
+	Insecure bool
 }
 
 // should be run in a go routine
@@ -72,7 +74,6 @@ func (s *Server) sendRecoveryMail(goldHost string, IP string, to []string, link 
 			err = smtp.SendMail(smtpServer, auth, smtpCfg.Addr, to, []byte(message))
 		}
 		if err != nil {
-			println(err.Error())
 			s.debug.Println("Error sending recovery email to " + to[0] + ": " + err.Error())
 		} else {
 			s.debug.Println("Successfully sent recovery email to " + to[0])
@@ -89,7 +90,8 @@ func (s *Server) sendSecureRecoveryMail(from mail.Address, to mail.Address, msg 
 
 	// TLS config
 	tlsconfig := &tls.Config{
-		ServerName: cfg.Host,
+		InsecureSkipVerify: s.Config.SMTPConfig.Insecure,
+		ServerName:         cfg.Host,
 	}
 
 	// Here is the key, you need to call tls.Dial instead of smtp.Dial
