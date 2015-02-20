@@ -99,9 +99,6 @@ func sendRecoveryToken(w http.ResponseWriter, req *httpRequest, s *Server) Syste
 	}
 	// exit if no email
 	if len(email) == 0 {
-		str, _ := kb.Serialize("text/turtle")
-		println("ACL: " + resource.AclURI + " / file: " + resource.AclFile)
-		println(str)
 		s.debug.Println("Access denied! Could not find a recovery email for WebID: " + webid)
 		return SystemReturn{Status: 403, Body: "Access denied! Could not find a recovery email for WebID: " + webid}
 	}
