@@ -38,7 +38,8 @@ var (
 	emailPass     = flag.String("emailPass", "", "remote SMTP server password")
 	emailServ     = flag.String("emailServ", "", "remote SMTP server address / domain")
 	emailPort     = flag.String("emailPort", "", "remote SMTP port number")
-	emailForceSSL = flag.Bool("emailSSL", false, "force SSL/TLS connection for remote SMTP server?")
+	emailForceSSL = flag.Bool("emailForceSSL", false, "force SSL/TLS connection for remote SMTP server?")
+	emailInsecure = flag.Bool("emailInsecure", false, "allow connections to insecure remote SMTP servers (self-signed certs)?")
 
 	httpsPort string
 )
@@ -108,6 +109,7 @@ func main() {
 				Host:     *emailServ,
 				Port:     ep,
 				ForceSSL: *emailForceSSL,
+				Insecure: *emailInsecure,
 			}
 		}
 	}

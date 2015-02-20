@@ -36,6 +36,7 @@
 		"Pass": "password",
 		"Host": "mail.test.org",
 		"Port": 25,
-		"SSL": true 
+		"SSL": true,
+		"Insecure": false
 	}
 }
