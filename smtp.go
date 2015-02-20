@@ -102,6 +102,7 @@ func (s *Server) sendSecureRecoveryMail(from mail.Address, to mail.Address, msg 
 		s.debug.Println(err.Error())
 		return
 	}
+	defer conn.Close()
 
 	c, err := smtp.NewClient(conn, cfg.Host)
 	if err != nil {
