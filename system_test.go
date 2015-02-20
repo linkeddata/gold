@@ -24,14 +24,27 @@ var (
 )
 
 func init() {
+	smtpCfg := EmailConfig{
+		Name:     "Full Name",
+		Addr:     "email@example.org",
+		User:     "username",
+		Pass:     "password",
+		Host:     "localhost",
+		Port:     3000,
+		ForceSSL: false,
+	}
+
 	config1 = NewServerConfig()
 	config1.DataRoot += "_test/"
+	config1.Insecure = false
 	config1.Vhosts = true
+	config1.SMTPConfig = smtpCfg
 	handler1 = NewServer(config1)
 
 	config2 = NewServerConfig()
 	config2.DataRoot += "_test/"
 	config2.Vhosts = false
+	config2.SMTPConfig = smtpCfg
 	handler2 = NewServer(config2)
 }
 
@@ -207,81 +220,172 @@ func TestNewAccountWithSPKAC(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-// func TestAccountRecovery(t *testing.T) {
-// 	webid := "https://user.example.org/card#me"
-// 	form := url.Values{
-// 		"webid": {webid},
-// 	}
-// 	request, err := http.NewRequest("POST", testServer.URL+"/"+SystemPrefix+"/accountRecovery", bytes.NewBufferString(form.Encode()))
-// 	assert.NoError(t, err)
-// 	request.Header.Add("Content-Type", "application/x-www-form-urlencoded")
-// 	request.Header.Add("Content-Length", strconv.Itoa(len(form.Encode())))
-// 	response, err := httpClient.Do(request)
-// 	assert.NoError(t, err)
-// 	assert.Equal(t, 403, response.StatusCode)
-// 	assert.Empty(t, response.Cookies())
+func TestAccountRecoveryForm(t *testing.T) {
+	request, err := http.NewRequest("POST", testServer.URL+"/"+SystemPrefix+"/accountRecovery", nil)
+	assert.NoError(t, err)
+	response, err := httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, response.StatusCode)
+	body, _ := ioutil.ReadAll(response.Body)
+	response.Body.Close()
+	assert.Contains(t, string(body), "What is your WebID?")
+}
 
-// 	testServer1 := httptest.NewUnstartedServer(handler1)
-// 	testServer1.TLS = new(tls.Config)
-// 	testServer1.TLS.ClientAuth = tls.RequestClientCert
-// 	testServer1.TLS.NextProtos = []string{"http/1.1"}
-// 	testServer1.StartTLS()
+func TestAccountRecovery(t *testing.T) {
+	webid := "https://user.example.org/card#me"
+	form := url.Values{
+		"webid": {webid},
+	}
+	request, err := http.NewRequest("POST", testServer.URL+"/"+SystemPrefix+"/accountRecovery", bytes.NewBufferString(form.Encode()))
+	assert.NoError(t, err)
+	request.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+	request.Header.Add("Content-Length", strconv.Itoa(len(form.Encode())))
+	response, err := httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.Equal(t, 403, response.StatusCode)
+	assert.Empty(t, response.Cookies())
 
-// 	// create new account
-// 	spkac := `MIICRTCCAS0wggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQDK/2gvbZk5wajwkX6wwhCrG39NetMycseg8nFgN23MKSLbjU/JspvCrk6jlHNs8d1+FcFyU/AHqYYiY60mSMymDetnho/iqW5sThziyOaVmQ7I7JM6Lqr1tD3376VTvq/1KKrIJrnyCEuxeysflFpS+uTY5X5YV5n8AUPQhjr0aJXnIAI0SryLd0KeSGb+p7uxlmKG7Q8mxl1wel3WXEFr1oVLa61BHfbO8IhrAV8bUBsc0tWX/OSZc611exX1XZ/f3ujxRaL96xraN7AS7/zNI024r4261jPnVTpdFwf2CcnfU7rwCjgcezfBDcIVOUliyUfh1QTRZEYS4LUUVHAHAgMBAAEWBWhlbGxvMA0GCSqGSIb3DQEBBAUAA4IBAQCIBcbE+nw/vpjLvdl7EVnX4TWpKxDej92MOafyaOjNmy/iVhto57Lr+jBhm0A1oHpmGXLarkQPSLcXndZJFm/WSdHZ5pids+fEpe9yyMhgYYkVqqNbnGQmgSrmRZjIbzF6J69SaYXqJ1jQAZ4RrxRsgimfUfGw3C59yytdqkqllg2ojZe158vRlO/X6ysyCevchT9InDAWXE8YM/LBaI6jSlAz1BUFw0phpnAWTpULjMoP45QelY26gfNT1oDD+7PXAiEeo101kba67UcKXr8/7Z05iUONvkE+X1nNLynpvSskz7hha0pjtR+ipDVL9vIQxBFZ1xwrbbOj1fmIKzaE`
-// 	form = url.Values{"spkac": {spkac},
-// 		"username": {"user"},
-// 		"name":     {"Test User"},
-// 		"email":    {"test@user.org"},
-// 		"img":      {"https://img.org/"},
-// 	}
-// 	request, err = http.NewRequest("POST", testServer1.URL+"/,system/newAccount", bytes.NewBufferString(form.Encode()))
-// 	assert.NoError(t, err)
-// 	request.Header.Add("Content-Type", "application/x-www-form-urlencoded")
-// 	request.Header.Add("Content-Length", strconv.Itoa(len(form.Encode())))
-// 	request.Header.Add("User-Agent", "Chrome")
-// 	response, err = httpClient.Do(request)
-// 	assert.NoError(t, err)
-// 	assert.Equal(t, 200, response.StatusCode)
+	testServer1 := httptest.NewUnstartedServer(handler1)
+	testServer1.TLS = new(tls.Config)
+	testServer1.TLS.ClientAuth = tls.RequestClientCert
+	testServer1.TLS.NextProtos = []string{"http/1.1"}
+	testServer1.StartTLS()
 
-// 	// recover new account
-// 	webid = "https://user." + strings.TrimLeft(testServer1.URL, "https://") + "/profile/card#me"
-// 	form = url.Values{
-// 		"webid": {webid},
-// 	}
-// 	// @@@TODO test
-// 	request, err = http.NewRequest("POST", testServer1.URL+"/"+SystemPrefix+"/accountRecovery", bytes.NewBufferString(form.Encode()))
-// 	assert.NoError(t, err)
-// 	request.Header.Add("Content-Type", "application/x-www-form-urlencoded")
-// 	request.Header.Add("Content-Length", strconv.Itoa(len(form.Encode())))
-// 	request.Host = "user"
+	// create new account
+	spkac := `MIICRTCCAS0wggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQDK/2gvbZk5wajwkX6wwhCrG39NetMycseg8nFgN23MKSLbjU/JspvCrk6jlHNs8d1+FcFyU/AHqYYiY60mSMymDetnho/iqW5sThziyOaVmQ7I7JM6Lqr1tD3376VTvq/1KKrIJrnyCEuxeysflFpS+uTY5X5YV5n8AUPQhjr0aJXnIAI0SryLd0KeSGb+p7uxlmKG7Q8mxl1wel3WXEFr1oVLa61BHfbO8IhrAV8bUBsc0tWX/OSZc611exX1XZ/f3ujxRaL96xraN7AS7/zNI024r4261jPnVTpdFwf2CcnfU7rwCjgcezfBDcIVOUliyUfh1QTRZEYS4LUUVHAHAgMBAAEWBWhlbGxvMA0GCSqGSIb3DQEBBAUAA4IBAQCIBcbE+nw/vpjLvdl7EVnX4TWpKxDej92MOafyaOjNmy/iVhto57Lr+jBhm0A1oHpmGXLarkQPSLcXndZJFm/WSdHZ5pids+fEpe9yyMhgYYkVqqNbnGQmgSrmRZjIbzF6J69SaYXqJ1jQAZ4RrxRsgimfUfGw3C59yytdqkqllg2ojZe158vRlO/X6ysyCevchT9InDAWXE8YM/LBaI6jSlAz1BUFw0phpnAWTpULjMoP45QelY26gfNT1oDD+7PXAiEeo101kba67UcKXr8/7Z05iUONvkE+X1nNLynpvSskz7hha0pjtR+ipDVL9vIQxBFZ1xwrbbOj1fmIKzaE`
+	form = url.Values{"spkac": {spkac},
+		"username": {"user"},
+		"name":     {"Test User"},
+		"email":    {"test@localhost"},
+		"img":      {"https://img.org/"},
+	}
+	request, err = http.NewRequest("POST", testServer1.URL+"/,system/newAccount", bytes.NewBufferString(form.Encode()))
+	assert.NoError(t, err)
+	request.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+	request.Header.Add("Content-Length", strconv.Itoa(len(form.Encode())))
+	request.Header.Add("User-Agent", "Chrome")
+	request.Host = "localhost"
+	response, err = httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, response.StatusCode)
+	// FINISHED CREATING ACCOUNT
 
-// 	response, err = httpClient.Do(request)
-// 	assert.NoError(t, err)
-// 	assert.Equal(t, 200, response.StatusCode)
-// 	assert.Empty(t, response.Cookies())
+	// recover new account
+	webid = "https://user/profile/card#me"
+	form = url.Values{
+		"webid": {webid},
+	}
+	request, err = http.NewRequest("POST", testServer1.URL+"/"+SystemPrefix+"/accountRecovery", bytes.NewBufferString(form.Encode()))
+	assert.NoError(t, err)
+	request.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+	request.Header.Add("Content-Length", strconv.Itoa(len(form.Encode())))
+	request.Host = "user.localhost"
 
-// 	values := map[string]string{
-// 		"webid": webid,
-// 	}
-// 	token, err := NewSecureToken(values, handler1)
-// 	form = url.Values{
-// 		"token": {token},
-// 	}
-// 	request, err = http.NewRequest("POST", testServer1.URL+"/"+SystemPrefix+"/accountRecovery", bytes.NewBufferString(form.Encode()))
-// 	assert.NoError(t, err)
-// 	request.Header.Add("Content-Type", "application/x-www-form-urlencoded")
-// 	request.Header.Add("Content-Length", strconv.Itoa(len(form.Encode())))
-// 	response, err = httpClient.Do(request)
-// 	assert.NoError(t, err)
-// 	assert.Equal(t, 200, response.StatusCode)
-// 	assert.NotEmpty(t, response.Cookies())
-// 	assert.Equal(t, "Session", response.Cookies()[0].Name)
+	response, err = httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, response.StatusCode)
+	assert.Empty(t, response.Cookies())
 
-// 	// delete user
-// 	err = os.RemoveAll("_test/")
-// 	assert.NoError(t, err)
-// }
+	values := map[string]string{
+		"webid": webid,
+	}
+	token, err := NewSecureToken(values, handler1)
+	form = url.Values{
+		"token": {token},
+	}
+	request, err = http.NewRequest("POST", testServer1.URL+"/"+SystemPrefix+"/accountRecovery", bytes.NewBufferString(form.Encode()))
+	assert.NoError(t, err)
+	request.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+	request.Header.Add("Content-Length", strconv.Itoa(len(form.Encode())))
+	response, err = httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, response.StatusCode)
+	assert.NotEmpty(t, response.Cookies())
+	assert.Equal(t, "Session", response.Cookies()[0].Name)
+
+	// delete user
+	err = os.RemoveAll("_test/")
+	assert.NoError(t, err)
+}
+
+func TestAccountRecoverySecureSMTP(t *testing.T) {
+	sc := NewServerConfig()
+	sc.DataRoot += "_test/"
+	sc.Vhosts = true
+	sc.Insecure = true
+	sc.SMTPConfig = EmailConfig{
+		Name:     "Full Name",
+		Addr:     "email@example.org",
+		User:     "username",
+		Pass:     "password",
+		Host:     "localhost",
+		Port:     3030,
+		ForceSSL: true,
+	}
+	h := NewServer(sc)
+	testServer1 := httptest.NewUnstartedServer(h)
+	testServer1.TLS = new(tls.Config)
+	testServer1.TLS.ClientAuth = tls.RequestClientCert
+	testServer1.TLS.NextProtos = []string{"http/1.1"}
+	testServer1.StartTLS()
+
+	// create new account
+	spkac := `MIICRTCCAS0wggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQDK/2gvbZk5wajwkX6wwhCrG39NetMycseg8nFgN23MKSLbjU/JspvCrk6jlHNs8d1+FcFyU/AHqYYiY60mSMymDetnho/iqW5sThziyOaVmQ7I7JM6Lqr1tD3376VTvq/1KKrIJrnyCEuxeysflFpS+uTY5X5YV5n8AUPQhjr0aJXnIAI0SryLd0KeSGb+p7uxlmKG7Q8mxl1wel3WXEFr1oVLa61BHfbO8IhrAV8bUBsc0tWX/OSZc611exX1XZ/f3ujxRaL96xraN7AS7/zNI024r4261jPnVTpdFwf2CcnfU7rwCjgcezfBDcIVOUliyUfh1QTRZEYS4LUUVHAHAgMBAAEWBWhlbGxvMA0GCSqGSIb3DQEBBAUAA4IBAQCIBcbE+nw/vpjLvdl7EVnX4TWpKxDej92MOafyaOjNmy/iVhto57Lr+jBhm0A1oHpmGXLarkQPSLcXndZJFm/WSdHZ5pids+fEpe9yyMhgYYkVqqNbnGQmgSrmRZjIbzF6J69SaYXqJ1jQAZ4RrxRsgimfUfGw3C59yytdqkqllg2ojZe158vRlO/X6ysyCevchT9InDAWXE8YM/LBaI6jSlAz1BUFw0phpnAWTpULjMoP45QelY26gfNT1oDD+7PXAiEeo101kba67UcKXr8/7Z05iUONvkE+X1nNLynpvSskz7hha0pjtR+ipDVL9vIQxBFZ1xwrbbOj1fmIKzaE`
+	form := url.Values{"spkac": {spkac},
+		"username": {"user"},
+		"name":     {"Test User"},
+		"email":    {"test@localhost"},
+		"img":      {"https://img.org/"},
+	}
+	request, err := http.NewRequest("POST", testServer1.URL+"/,system/newAccount", bytes.NewBufferString(form.Encode()))
+	assert.NoError(t, err)
+	request.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+	request.Header.Add("Content-Length", strconv.Itoa(len(form.Encode())))
+	request.Header.Add("User-Agent", "Chrome")
+	request.Host = "localhost"
+	response, err := httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, response.StatusCode)
+	// FINISHED CREATING ACCOUNT
+
+	// recover new account
+	webid := "https://user/profile/card#me"
+	form = url.Values{
+		"webid": {webid},
+	}
+	// @@@TODO test
+	request, err = http.NewRequest("POST", testServer1.URL+"/"+SystemPrefix+"/accountRecovery", bytes.NewBufferString(form.Encode()))
+	assert.NoError(t, err)
+	request.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+	request.Header.Add("Content-Length", strconv.Itoa(len(form.Encode())))
+	request.Host = "user.localhost"
+
+	response, err = httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, response.StatusCode)
+	assert.Empty(t, response.Cookies())
+
+	values := map[string]string{
+		"webid": webid,
+	}
+	token, err := NewSecureToken(values, h)
+	form = url.Values{
+		"token": {token},
+	}
+	request, err = http.NewRequest("POST", testServer1.URL+"/"+SystemPrefix+"/accountRecovery", bytes.NewBufferString(form.Encode()))
+	assert.NoError(t, err)
+	request.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+	request.Header.Add("Content-Length", strconv.Itoa(len(form.Encode())))
+	response, err = httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, response.StatusCode)
+	assert.NotEmpty(t, response.Cookies())
+	assert.Equal(t, "Session", response.Cookies()[0].Name)
+
+	// delete user
+	err = os.RemoveAll("_test/")
+	assert.NoError(t, err)
+}
 
 func TestAccountStatusWithoutVhosts(t *testing.T) {
 	// test vhosts
