@@ -369,7 +369,8 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 		if !req.ifMatch("\"" + etag + "\"") {
 			return r.respond(412, "412 - Precondition Failed")
 		}
-		if !req.ifNoneMatch("\"" + etag + "\"") {
+		if !req.ifNoneMatch("\""+etag+"\"") && !stat.IsDir() && contentType != "text/html" {
+			// do not return cached views of dirs for html requests
 			return r.respond(304, "304 - Not Modified")
 		}
 

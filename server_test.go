@@ -739,11 +739,28 @@ func TestIfMatch(t *testing.T) {
 
 func TestIfNoneMatch(t *testing.T) {
 	testflight.WithServer(handler, func(r *testflight.Requester) {
-		request, _ := http.NewRequest("HEAD", "/_test/abc", nil)
+		request, _ := http.NewRequest("HEAD", "/_test/", nil)
 		response := r.Do(request)
 		assert.Equal(t, 200, response.StatusCode)
 
 		ETag := response.RawResponse.Header.Get("ETag")
+
+		request, _ = http.NewRequest("HEAD", "/_test/", nil)
+		request.Header.Add("If-None-Match", ETag)
+		response = r.Do(request)
+		assert.Equal(t, 200, response.StatusCode)
+
+		request, _ = http.NewRequest("HEAD", "/_test/", nil)
+		request.Header.Add("If-None-Match", ETag)
+		request.Header.Add("Accept", "text/html")
+		response = r.Do(request)
+		assert.Equal(t, 200, response.StatusCode)
+
+		request, _ = http.NewRequest("HEAD", "/_test/abc", nil)
+		response = r.Do(request)
+		assert.Equal(t, 200, response.StatusCode)
+
+		ETag = response.RawResponse.Header.Get("ETag")
 		newTag := ETag[:len(ETag)-1] + "1\""
 
 		request, _ = http.NewRequest("HEAD", "/_test/abc", nil)
@@ -779,7 +796,6 @@ func TestIfNoneMatch(t *testing.T) {
 		request.Header.Add("If-None-Match", newTag)
 		response = r.Do(request)
 		assert.Equal(t, 201, response.StatusCode)
-
 	})
 }
 
