@@ -9,6 +9,7 @@ import (
 	"net"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -185,12 +186,16 @@ func TestStartFakeSecureSMTPServer(t *testing.T) {
 
 func TestFakeSMTPDial(t *testing.T) {
 	t.Parallel()
+	// give the server some time to start
+	time.Sleep(200 * time.Millisecond)
 	_, err := net.Dial("tcp", "localhost:3000")
 	assert.NoError(t, err)
 }
 
 func TestFakeSMTPSecureDial(t *testing.T) {
 	t.Parallel()
+	// give the server some time to start
+	time.Sleep(200 * time.Millisecond)
 	tlsconfig := &tls.Config{
 		InsecureSkipVerify: true,
 		ServerName:         "localhost",
