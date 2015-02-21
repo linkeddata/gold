@@ -49,7 +49,7 @@ jQuery(document).ready(function() {
 </body>
 </html>`,
 	}
-
+	// SMTPTemplates contains a list of templates for sending emails
 	SMTPTemplates = map[string]string{
 		"accountRecovery": `<p>Hello,</p>
 

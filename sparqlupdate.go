@@ -8,7 +8,7 @@ import (
 	"text/scanner"
 )
 
-// SPARQLQuery contains a verb, the body of the query and the graph
+// SPARQLUpdateQuery contains a verb, the body of the query and the graph
 type SPARQLUpdateQuery struct {
 	verb string
 	body string
@@ -16,13 +16,13 @@ type SPARQLUpdateQuery struct {
 	graph AnyGraph
 }
 
-// SPARQL contains the base URI and a list of queries
+// SPARQLUpdate contains the base URI and a list of queries
 type SPARQLUpdate struct {
 	baseURI string
 	queries []SPARQLUpdateQuery
 }
 
-// NewSPARQL creates a new SPARQL object
+// NewSPARQLUpdate creates a new SPARQL object
 func NewSPARQLUpdate(baseURI string) *SPARQLUpdate {
 	return &SPARQLUpdate{
 		baseURI: baseURI,

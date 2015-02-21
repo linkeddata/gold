@@ -171,7 +171,7 @@ func (acl *WAC) AllowAppend(path string) bool {
 	return acl.allow("Append", path)
 }
 
-// AllowAppend checks if Control access is allowed
+// AllowControl checks if Control access is allowed
 func (acl *WAC) AllowControl(path string) bool {
 	return acl.allow("Control", path)
 }

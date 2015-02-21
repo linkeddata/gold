@@ -101,7 +101,7 @@ func (srv *smtpServer) Listen(network, address string, secure bool) error {
 				}
 			}()
 			c.Write([]byte("Commands available: \n"))
-			for command, _ := range srv.Commands {
+			for command := range srv.Commands {
 				c.Write([]byte("# "))
 				c.Write([]byte(command))
 				c.Write([]byte(" [payload] \n"))

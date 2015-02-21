@@ -9,6 +9,7 @@ import (
 	"strings"
 )
 
+// EmailConfig holds configuration values for remote SMTP servers
 type EmailConfig struct {
 	// Name of the remote SMTP server account, i.e. Server admin
 	Name string
