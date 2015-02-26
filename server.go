@@ -333,7 +333,8 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 		// check if resource exists and set LDP Link headers
 		stat, err := os.Stat(resource.File)
 		if err != nil {
-			if s.Config.Vhosts && resource.Base == strings.TrimRight(req.BaseURI(), "/") && contentType == "text/html" {
+			// redirect to skin
+			if s.Config.Vhosts && resource.Base == strings.TrimRight(req.BaseURI(), "/") && contentType == "text/html" && req.Method != "HEAD" {
 				w.Header().Set(HCType, contentType)
 				urlStr := s.Config.SignUpSkin + url.QueryEscape(resource.Obj.Scheme+"://"+resource.Obj.Host+"/"+SystemPrefix+"/accountStatus")
 				http.Redirect(w, req.Request, urlStr, 303)
