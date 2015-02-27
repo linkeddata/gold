@@ -392,7 +392,7 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 						}
 						w.Header().Set("Link", brack(resource.MetaURI)+"; rel=\"meta\", "+brack(resource.AclURI)+"; rel=\"acl\"")
 						break
-					} else {
+					} else if req.Method != "HEAD" {
 						//TODO load file manager skin from local preference file
 						w.Header().Set(HCType, contentType)
 						urlStr := s.Config.DirSkin + resource.Obj.Scheme + "/" + resource.Obj.Host + "/" + resource.Obj.Path
