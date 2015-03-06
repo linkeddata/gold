@@ -274,9 +274,11 @@ func (g *Graph) ParseBase(reader io.Reader, mime string, baseURI string) {
 // ReadFile is used to read RDF data from a file into the graph
 func (g *Graph) ReadFile(filename string) {
 	stat, err := os.Stat(filename)
-	if os.IsNotExist(err) || stat.IsDir() {
+	if os.IsNotExist(err) {
 		return
-	} else if err != nil && !stat.IsDir() {
+	} else if stat.IsDir() {
+		return
+	} else if !stat.IsDir() && err != nil {
 		log.Println(err)
 		return
 	}
