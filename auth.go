@@ -39,9 +39,9 @@ func (req *httpRequest) userCookie() (string, error) {
 	cookie, err := req.Cookie("Session")
 	if err == nil {
 		err = req.Server.cookie.Decode("Session", cookie.Value, &value)
-	}
-	if err == nil {
-		return value["user"], nil
+		if err == nil {
+			return value["user"], nil
+		}
 	}
 	return "", err
 }

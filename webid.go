@@ -187,7 +187,7 @@ func NewWebIDProfile(account webidAccount) *Graph {
 
 	g.AddTriple(userTerm, ns.rdf.Get("type"), ns.foaf.Get("Person"))
 	if len(account.Name) > 0 {
-		g.AddTriple(profileTerm, ns.foaf.Get("title"), NewLiteral("WebID profile of "+account.Name))
+		g.AddTriple(profileTerm, ns.dct.Get("title"), NewLiteral("WebID profile of "+account.Name))
 		g.AddTriple(userTerm, ns.foaf.Get("name"), NewLiteral(account.Name))
 	}
 	if len(account.Email) > 0 {
