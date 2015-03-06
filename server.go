@@ -879,6 +879,7 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 							s.debug.Println("POST multipart/form io.Copy err: " + err.Error())
 							return r.respond(500, err)
 						}
+						w.Header().Add("Location", resource.URI+files[i].Filename)
 					}
 				}
 				onUpdateURI(resource.URI)

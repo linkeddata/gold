@@ -829,37 +829,42 @@ func TestPOSTForm(t *testing.T) {
 }
 
 func TestPOSTMultiForm(t *testing.T) {
-	testflight.WithServer(handler, func(r *testflight.Requester) {
-		path := "tests/img.jpg"
-		file, err := os.Open(path)
-		defer file.Close()
-		assert.NoError(t, err)
 
-		bodyReader, bodyWriter := io.Pipe()
-		multiWriter := multipart.NewWriter(bodyWriter)
-		errChan := make(chan error, 1)
-		go func() {
-			defer bodyWriter.Close()
-			part, err := multiWriter.CreateFormFile("file", filepath.Base(path))
-			if err != nil {
-				errChan <- err
-				return
-			}
-			if _, err := io.Copy(part, file); err != nil {
-				errChan <- err
-				return
-			}
-			errChan <- multiWriter.Close()
-		}()
+	path := "tests/img.jpg"
+	file, err := os.Open(path)
+	defer file.Close()
+	assert.NoError(t, err)
 
-		request, _ := http.NewRequest("POST", "", bodyReader)
-		request.Header.Add("Content-Type", "multipart/form-data; boundary="+multiWriter.Boundary())
-		response := r.Do(request)
-		assert.Equal(t, 201, response.StatusCode)
+	bodyReader, bodyWriter := io.Pipe()
+	multiWriter := multipart.NewWriter(bodyWriter)
+	errChan := make(chan error, 1)
+	go func() {
+		defer bodyWriter.Close()
+		part, err := multiWriter.CreateFormFile("file", filepath.Base(path))
+		if err != nil {
+			errChan <- err
+			return
+		}
+		if _, err := io.Copy(part, file); err != nil {
+			errChan <- err
+			return
+		}
+		errChan <- multiWriter.Close()
+	}()
 
-		response = r.Delete("/img.jpg", "", "")
-		assert.Equal(t, 200, response.StatusCode)
-	})
+	request, err := http.NewRequest("POST", testServer.URL+"/_test/", bodyReader)
+	assert.NoError(t, err)
+	request.Header.Add("Content-Type", "multipart/form-data; boundary="+multiWriter.Boundary())
+	response, err := httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.Equal(t, 201, response.StatusCode)
+	assert.Equal(t, testServer.URL+"/_test/img.jpg", response.Header.Get("Location"))
+
+	request, err = http.NewRequest("DELETE", response.Header.Get("Location"), nil)
+	assert.NoError(t, err)
+	response, err = httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, response.StatusCode)
 }
 
 func TestLISTDIR(t *testing.T) {
