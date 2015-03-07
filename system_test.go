@@ -14,6 +14,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -38,6 +39,7 @@ func init() {
 	config1.DataRoot += "_test/"
 	config1.Insecure = false
 	config1.Vhosts = true
+	config1.TokenAge = 5
 	config1.SMTPConfig = smtpCfg
 	handler1 = NewServer(config1)
 
@@ -289,7 +291,9 @@ func TestAccountRecovery(t *testing.T) {
 	values := map[string]string{
 		"webid": webid,
 	}
-	token, err := NewSecureToken(values, handler1)
+	// set validity for now + 5 mins
+	validity := time.Duration(config1.TokenAge) * time.Minute
+	token, err := NewSecureToken(values, validity, handler1)
 	form = url.Values{
 		"token": {token},
 	}
@@ -368,7 +372,9 @@ func TestAccountRecoverySecureSMTP(t *testing.T) {
 	values := map[string]string{
 		"webid": webid,
 	}
-	token, err := NewSecureToken(values, h)
+	// set validity for now + 5 mins
+	validity := time.Duration(config1.TokenAge) * time.Minute
+	token, err := NewSecureToken(values, validity, h)
 	form = url.Values{
 		"token": {token},
 	}

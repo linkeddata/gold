@@ -74,11 +74,8 @@ func (srv *Server) userCookieDelete(w http.ResponseWriter) {
 }
 
 // NewSecureToken generates a signed token to be used during account recovery
-func NewSecureToken(values map[string]string, s *Server) (string, error) {
-	// set validity for now + 5 mins
-	t := time.Duration(s.Config.TokenAge) * time.Minute
-	valid := time.Now().Add(t).Unix()
-
+func NewSecureToken(values map[string]string, duration time.Duration, s *Server) (string, error) {
+	valid := time.Now().Add(duration).Unix()
 	values["valid"] = fmt.Sprintf("%d", valid)
 	token, err := s.cookie.Encode("Recovery", values)
 	if err != nil {
