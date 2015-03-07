@@ -614,6 +614,36 @@ func TestPATCHJson(t *testing.T) {
 	})
 }
 
+func TestPATCHSPARQL(t *testing.T) {
+	testflight.WithServer(handler, func(r *testflight.Requester) {
+		sparqlData := `INSERT DATA { <a> <b> <c> . } ; INSERT DATA { <a> <d> "123"^^<http://www.w3.org/2001/XMLSchema#int> . } ;
+						DELETE DATA { <a> <b> <c> . }; DELETE DATA { <a> <d> "123"^^<http://www.w3.org/2001/XMLSchema#int> . }`
+		request, _ := http.NewRequest("PATCH", "/_test/abc", strings.NewReader(sparqlData))
+		request.Header.Add("Content-Type", "application/sparql-update")
+		response := r.Do(request)
+		assert.Empty(t, response.Body)
+		assert.Equal(t, 200, response.StatusCode)
+		assert.Equal(t, "0", response.RawResponse.Header.Get("Triples"))
+
+		request, _ = http.NewRequest("GET", "/_test/abc", nil)
+		request.Header.Add("Accept", "text/turtle")
+		response = r.Do(request)
+		assert.Equal(t, 200, response.StatusCode)
+	})
+}
+
+func TestPATCHFailParse(t *testing.T) {
+	testflight.WithServer(handler, func(r *testflight.Requester) {
+		sparqlData := `I { <a> <b> <c> . }`
+		request, _ := http.NewRequest("PATCH", "/_test/abc", strings.NewReader(sparqlData))
+		request.Header.Add("Content-Type", "application/sparql-update")
+		response := r.Do(request)
+		assert.Empty(t, response.Body)
+		assert.Equal(t, 200, response.StatusCode)
+		assert.Equal(t, "0", response.RawResponse.Header.Get("Triples"))
+	})
+}
+
 func TestPUTTurtle(t *testing.T) {
 	testflight.WithServer(handler, func(r *testflight.Requester) {
 		response := r.Put("/_test/abc", "text/turtle", "<d> <e> <f> ; <h> <i> .")

@@ -271,7 +271,7 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 	w.Header().Set("Link", brack(resource.AclURI)+"; rel=\"acl\", "+brack(resource.MetaURI)+"; rel=\"meta\"")
 
 	// generic headers
-	w.Header().Set("Accept-Patch", "application/json")
+	w.Header().Set("Accept-Patch", "application/json, application/sparql-update")
 	w.Header().Set("Accept-Post", "text/turtle, application/json")
 	w.Header().Set("Allow", strings.Join(methodsAll, ", "))
 
@@ -717,11 +717,13 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 			if err != nil {
 				s.debug.Println("PATCH g.WriteFile err: " + err.Error())
 			}
-			w.Header().Set("Triples", fmt.Sprintf("%d", g.Len()))
 
 			if err != nil {
 				return r.respond(500, err)
 			}
+
+			w.Header().Set("Triples", fmt.Sprintf("%d", g.Len()))
+			return r.respond(200)
 		}
 
 	case "POST":
