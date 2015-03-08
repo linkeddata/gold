@@ -76,7 +76,25 @@ func TestCookieAuth(t *testing.T) {
 	assert.NoError(t, err)
 	response, err = httpClient.Do(request)
 	assert.NoError(t, err)
-	assert.Equal(t, 403, response.StatusCode)
+	assert.Equal(t, 401, response.StatusCode)
+
+}
+
+func TestWebIDDigestAuth(t *testing.T) {
+	request, err := http.NewRequest("GET", testServer.URL+aclDir+"abc", nil)
+	assert.NoError(t, err)
+	response, err := httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.Equal(t, 401, response.StatusCode)
+}
+
+func TestCleanupAuth(t *testing.T) {
+	request, err := http.NewRequest("HEAD", testServer.URL+aclDir+"abc", nil)
+	assert.NoError(t, err)
+	response, err := user1h.Do(request)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, response.StatusCode)
+	acl := ParseLinkHeader(response.Header.Get("Link")).MatchRel("acl")
 
 	request, err = http.NewRequest("DELETE", acl, nil)
 	assert.NoError(t, err)

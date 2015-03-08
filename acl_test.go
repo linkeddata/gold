@@ -220,7 +220,7 @@ func TestACLOrigin(t *testing.T) {
 	response, err = httpClient.Do(request)
 	assert.NoError(t, err)
 	response.Body.Close()
-	assert.Equal(t, 403, response.StatusCode)
+	assert.Equal(t, 401, response.StatusCode)
 }
 
 func TestACLOwnerOnly(t *testing.T) {
@@ -314,7 +314,7 @@ func TestACLOwnerOnly(t *testing.T) {
 	response, err = httpClient.Do(request)
 	assert.NoError(t, err)
 	response.Body.Close()
-	assert.Equal(t, 403, response.StatusCode)
+	assert.Equal(t, 401, response.StatusCode)
 }
 
 func TestACLReadOnly(t *testing.T) {
@@ -404,7 +404,7 @@ func TestACLReadOnly(t *testing.T) {
 	response, err = httpClient.Do(request)
 	assert.NoError(t, err)
 	response.Body.Close()
-	assert.Equal(t, 403, response.StatusCode)
+	assert.Equal(t, 401, response.StatusCode)
 
 	request, err = http.NewRequest("DELETE", acl, nil)
 	assert.NoError(t, err)
@@ -495,7 +495,7 @@ func TestACLAppendOnly(t *testing.T) {
 	response, err = httpClient.Do(request)
 	assert.NoError(t, err)
 	response.Body.Close()
-	assert.Equal(t, 403, response.StatusCode)
+	assert.Equal(t, 401, response.StatusCode)
 
 	request, err = http.NewRequest("POST", testServer.URL+aclDir+"abc", strings.NewReader("<g> <h> <i> ."))
 	assert.NoError(t, err)
@@ -595,7 +595,7 @@ func TestACLRestricted(t *testing.T) {
 	response, err = httpClient.Do(request)
 	assert.NoError(t, err)
 	response.Body.Close()
-	assert.Equal(t, 403, response.StatusCode)
+	assert.Equal(t, 401, response.StatusCode)
 
 	request, err = http.NewRequest("POST", testServer.URL+aclDir+"abc", strings.NewReader("<d> <e> <f> ."))
 	assert.NoError(t, err)
@@ -603,7 +603,7 @@ func TestACLRestricted(t *testing.T) {
 	response, err = httpClient.Do(request)
 	assert.NoError(t, err)
 	response.Body.Close()
-	assert.Equal(t, 403, response.StatusCode)
+	assert.Equal(t, 401, response.StatusCode)
 
 	request, err = http.NewRequest("DELETE", acl, nil)
 	assert.NoError(t, err)
@@ -705,14 +705,14 @@ func TestACLGroup(t *testing.T) {
 	response, err = httpClient.Do(request)
 	assert.NoError(t, err)
 	response.Body.Close()
-	assert.Equal(t, 403, response.StatusCode)
+	assert.Equal(t, 401, response.StatusCode)
 
 	request, err = http.NewRequest("POST", testServer.URL+aclDir+"abc", strings.NewReader("<d> <e> <f> ."))
 	request.Header.Add("Content-Type", "text/turtle")
 	response, err = httpClient.Do(request)
 	response.Body.Close()
 	assert.NoError(t, err)
-	assert.Equal(t, 403, response.StatusCode)
+	assert.Equal(t, 401, response.StatusCode)
 
 	request, err = http.NewRequest("DELETE", testServer.URL+aclDir+"group", nil)
 	assert.NoError(t, err)
@@ -819,7 +819,7 @@ func TestACLDefaultForNew(t *testing.T) {
 	response, err = httpClient.Do(request)
 	assert.NoError(t, err)
 	response.Body.Close()
-	assert.Equal(t, 403, response.StatusCode)
+	assert.Equal(t, 401, response.StatusCode)
 }
 
 func TestACLWebIDDelegation(t *testing.T) {

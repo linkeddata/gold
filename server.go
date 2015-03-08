@@ -126,6 +126,23 @@ func (req httpRequest) ifNoneMatch(etag string) bool {
 	return false
 }
 
+func handleStatusText(status int, err error) string {
+	switch status {
+	case 200:
+		return ""
+	case 401:
+		return "HTTP 401 - Unauthorized\n\n" + err.Error()
+	case 403:
+		return "HTTP 403 - Forbidden\n\n" + err.Error()
+	case 404:
+		return "HTTP 404 - Not found\n\n" + err.Error()
+	case 500:
+		return "HTTP 500 - Internal Server Error\n\n" + err.Error()
+	default: // 501
+		return "HTTP 501 - Not implemented\n\n" + err.Error()
+	}
+}
+
 // Server object contains http handler, root where the data is found and whether it uses vhosts or not
 type Server struct {
 	http.Handler
@@ -349,7 +366,13 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 			}
 			s.debug.Println("Got a stat error: " + err.Error())
 			r.respond(404, Skins["404"])
-		} else if stat.IsDir() {
+		}
+
+		if os.IsNotExist(err) {
+			return r.respond(404, Skins["404"])
+		}
+
+		if stat.IsDir() {
 			w.Header().Add("Link", brack("http://www.w3.org/ns/ldp#BasicContainer")+"; rel=\"type\"")
 		}
 		if req.Method == "HEAD" && stat != nil {
@@ -358,16 +381,14 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 		w.Header().Add("Link", brack("http://www.w3.org/ns/ldp#Resource")+"; rel=\"type\"")
 
 		status := 501
-		if !acl.AllowRead(resource.URI) {
-			return r.respond(403, "403 - Forbidden")
+		aclStatus, err := acl.AllowRead(resource.URI)
+		if aclStatus > 200 || err != nil {
+			return r.respond(aclStatus, handleStatusText(aclStatus, err))
 		}
 
 		unlock := lock(resource.File)
 		defer unlock()
 
-		if os.IsNotExist(err) {
-			return r.respond(404, Skins["404"])
-		}
 		etag, err = NewETag(resource.File)
 		if err != nil {
 			return r.respond(500, err)
@@ -445,7 +466,8 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 									if err != nil {
 										return r.respond(500, err)
 									}
-									if acl.AllowRead(res.URI) {
+									aclStatus, err = acl.AllowRead(resource.URI)
+									if aclStatus == 200 && err == nil {
 										g.AppendFile(res.File, res.URI)
 										g.AddTriple(root, NewResource("http://www.w3.org/ns/ldp#contains"), NewResource(res.URI))
 									}
@@ -677,8 +699,13 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 		defer unlock()
 
 		// check append first
-		if !acl.AllowAppend(resource.URI) && !acl.AllowWrite(resource.URI) {
-			return r.respond(403, "403 - Forbidden")
+		aclAppend, err := acl.AllowAppend(resource.URI)
+		if aclAppend > 200 || err != nil {
+			// check if we can write then
+			aclWrite, err := acl.AllowWrite(resource.URI)
+			if aclWrite > 200 || err != nil {
+				return r.respond(aclWrite, handleStatusText(aclWrite, err))
+			}
 		}
 
 		etag, _ := NewETag(resource.File)
@@ -731,8 +758,13 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 		defer unlock()
 
 		// check append first
-		if !acl.AllowAppend(resource.URI) && !acl.AllowWrite(resource.URI) {
-			return r.respond(403, "403 - Forbidden")
+		aclAppend, err := acl.AllowAppend(resource.URI)
+		if aclAppend > 200 || err != nil {
+			// check if we can write then
+			aclWrite, err := acl.AllowWrite(resource.URI)
+			if aclWrite > 200 || err != nil {
+				return r.respond(aclWrite, handleStatusText(aclWrite, err))
+			}
 		}
 
 		etag, _ := NewETag(resource.File)
@@ -953,8 +985,13 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 		w.Header().Add("Link", brack("http://www.w3.org/ns/ldp#Resource")+"; rel=\"type\"")
 
 		// check append first
-		if !acl.AllowAppend(resource.URI) && !acl.AllowWrite(resource.URI) {
-			return r.respond(403, "403 - Forbidden")
+		aclAppend, err := acl.AllowAppend(resource.URI)
+		if aclAppend > 200 || err != nil {
+			// check if we can write then
+			aclWrite, err := acl.AllowWrite(resource.URI)
+			if aclWrite > 200 || err != nil {
+				return r.respond(aclWrite, handleStatusText(aclWrite, err))
+			}
 		}
 
 		etag, _ := NewETag(resource.File)
@@ -982,7 +1019,7 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 			onUpdateURI(resource.URI)
 			return r.respond(201)
 		}
-		err := os.MkdirAll(_path.Dir(resource.File), 0755)
+		err = os.MkdirAll(_path.Dir(resource.File), 0755)
 		if err != nil {
 			s.debug.Println("PUT MkdirAll err: " + err.Error())
 			return r.respond(500, err)
@@ -1033,13 +1070,15 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 		unlock := lock(resource.Path)
 		defer unlock()
 
-		if !acl.AllowWrite(resource.URI) {
-			return r.respond(403, "403 - Forbidden")
+		aclWrite, err := acl.AllowWrite(resource.URI)
+		if aclWrite > 200 || err != nil {
+			return r.respond(aclWrite, handleStatusText(aclWrite, err))
 		}
+
 		if len(resource.Path) == 0 {
 			return r.respond(500, "500 - Cannot DELETE /")
 		}
-		err := os.Remove(resource.File)
+		err = os.Remove(resource.File)
 		if err != nil {
 			if os.IsNotExist(err) {
 				return r.respond(404, Skins["404"])
@@ -1057,10 +1096,12 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 		unlock := lock(resource.File)
 		defer unlock()
 
-		if !acl.AllowWrite(resource.URI) {
-			return r.respond(403, "403 - Forbidden")
+		aclWrite, err := acl.AllowWrite(resource.URI)
+		if aclWrite > 200 || err != nil {
+			return r.respond(aclWrite, handleStatusText(aclWrite, err))
 		}
-		err := os.MkdirAll(resource.File, 0755)
+
+		err = os.MkdirAll(resource.File, 0755)
 		if err != nil {
 			switch err.(type) {
 			case *os.PathError:
@@ -1078,8 +1119,9 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 		return r.respond(201)
 
 	case "COPY", "MOVE", "LOCK", "UNLOCK":
-		if !acl.AllowWrite(resource.URI) {
-			return r.respond(403, "403 - Forbidden")
+		aclWrite, err := acl.AllowWrite(resource.URI)
+		if aclWrite > 200 || err != nil {
+			return r.respond(aclWrite, handleStatusText(aclWrite, err))
 		}
 		s.webdav.ServeHTTP(w, req.Request)
 

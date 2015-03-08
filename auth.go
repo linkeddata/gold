@@ -2,7 +2,6 @@ package gold
 
 import (
 	"fmt"
-	"net"
 	"net/http"
 	"time"
 )
@@ -17,6 +16,15 @@ func (req *httpRequest) authn(w http.ResponseWriter) string {
 		return user
 	}
 
+	user, err = WebIDDigestAuth(req)
+	if err != nil {
+		req.Server.debug.Println("WebID Digest authentication erro:", err)
+	}
+	if len(user) > 0 {
+		req.Server.debug.Println("WebID Digest authentication successful for User: " + user)
+		return user
+	}
+
 	user, err = WebIDTLSAuth(req.TLS)
 	if err != nil {
 		req.Server.debug.Println("WebID-TLS error:", err)
@@ -27,10 +35,8 @@ func (req *httpRequest) authn(w http.ResponseWriter) string {
 		return user
 	}
 
-	host, _, _ := net.SplitHostPort(req.RemoteAddr)
-	remoteAddr := net.ParseIP(host)
-	user = "dns:" + remoteAddr.String()
-	req.Server.debug.Println("Unauthenticated User: " + user)
+	user = ""
+	req.Server.debug.Println("Unauthenticated User")
 	return user
 }
 

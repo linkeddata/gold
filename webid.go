@@ -48,8 +48,9 @@ func pkeyTypeNE(pkey interface{}) (t, n, e string) {
 	return
 }
 
-func WebIDTokenAuth() {
-
+func WebIDDigestAuth(req *httpRequest) (string, error) {
+	// log.Printf("%+v\n", req.Header)
+	return "", nil
 }
 
 // WebIDTLSAuth - performs WebID-TLS authentication

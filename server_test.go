@@ -86,6 +86,7 @@ func TestRedirectSignUpWithVhosts(t *testing.T) {
 	request.Header.Add("Accept", "text/html")
 	response, err = user1h.Do(request)
 	assert.NoError(t, err)
+	response.Body.Close()
 	assert.Equal(t, 404, response.StatusCode)
 
 	request, err = http.NewRequest("GET", testServer1.URL+"/file", nil)
@@ -971,6 +972,7 @@ func TestDELETEFiles(t *testing.T) {
 }
 
 func TestDELETEFolders(t *testing.T) {
+	handler.Config.Debug = true
 	testflight.WithServer(handler, func(r *testflight.Requester) {
 		response := r.Delete("/_test/dir", "", "")
 		assert.Empty(t, response.Body)
@@ -989,6 +991,7 @@ func TestDELETEFolders(t *testing.T) {
 		response = r.Delete("/", "", "")
 		assert.Equal(t, 500, response.StatusCode)
 	})
+	handler.Config.Debug = false
 }
 
 func TestInvalidMethod(t *testing.T) {

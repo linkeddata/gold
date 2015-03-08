@@ -1,6 +1,7 @@
 package gold
 
 import (
+	"errors"
 	"log"
 	"path/filepath"
 	"strings"
@@ -25,19 +26,20 @@ func NewWAC(req *httpRequest, srv *Server, user string) *WAC {
 	return &WAC{req: req, srv: srv, user: user}
 }
 
-func (acl *WAC) allow(mode string, path string) bool {
+// Return an HTTP code and error (200 if authd, 401 if auth required, 403 if not authorized, 500 if error)
+func (acl *WAC) allow(mode string, path string) (int, error) {
 	origin := acl.req.Header.Get("Origin")
 	accessType := "accessTo"
 	p, err := acl.srv.pathInfo(path)
 	if err != nil {
-		return false
+		return 500, err
 	}
 	depth := strings.Split(p.Path, "/")
 
 	for i := 0; i < len(depth); i++ {
 		p, err := acl.srv.pathInfo(path)
 		if err != nil {
-			return false
+			return 500, err
 		}
 
 		acl.srv.debug.Println("Checking " + accessType + " <" + mode + "> to " + p.URI + " for WebID: " + acl.user)
@@ -52,18 +54,18 @@ func (acl *WAC) allow(mode string, path string) bool {
 				for range aclGraph.All(i.Subject, ns.acl.Get(accessType), NewResource(p.URI)) {
 					for range aclGraph.All(i.Subject, ns.acl.Get("owner"), NewResource(acl.user)) {
 						acl.srv.debug.Println(mode + " access allowed (as owner) for: " + acl.user)
-						return true
+						return 200, nil
 					}
 					for range aclGraph.All(i.Subject, ns.acl.Get("agent"), NewResource(acl.user)) {
 						acl.srv.debug.Println(mode + " access allowed (as agent) for: " + acl.user)
-						return true
+						return 200, nil
 					}
 					for _, t := range aclGraph.All(i.Subject, ns.acl.Get("agentClass"), nil) {
 						// check for foaf groups
 						acl.srv.debug.Println("Found agentClass policy")
 						if t.Object.Equal(ns.foaf.Get("Agent")) {
 							acl.srv.debug.Println(mode + " access allowed as FOAF Agent")
-							return true
+							return 200, nil
 						}
 
 						groupURI := debrack(t.Object.String())
@@ -72,7 +74,7 @@ func (acl *WAC) allow(mode string, path string) bool {
 						if groupGraph.Len() > 0 && groupGraph.One(t.Object, ns.rdf.Get("type"), ns.foaf.Get("Group")) != nil {
 							for range groupGraph.All(t.Object, ns.foaf.Get("member"), NewResource(acl.user)) {
 								acl.srv.debug.Println(acl.user + " listed as a member of the group " + groupURI)
-								return true
+								return 200, nil
 							}
 						}
 					}
@@ -99,18 +101,18 @@ func (acl *WAC) allow(mode string, path string) bool {
 					acl.srv.debug.Println("In allowOrigin")
 					for range aclGraph.All(i.Subject, ns.acl.Get("owner"), NewResource(acl.user)) {
 						acl.srv.debug.Println(mode + " access allowed (as owner) for: " + acl.user)
-						return true
+						return 200, nil
 					}
 					for range aclGraph.All(i.Subject, ns.acl.Get("agent"), NewResource(acl.user)) {
 						acl.srv.debug.Println(mode + " access allowed (as agent) for: " + acl.user)
-						return true
+						return 200, nil
 					}
 					for _, t := range aclGraph.All(i.Subject, ns.acl.Get("agentClass"), nil) {
 						// check for foaf groups
 						acl.srv.debug.Println("Found agentClass policy")
 						if t.Object.Equal(ns.foaf.Get("Agent")) {
 							acl.srv.debug.Println(mode + " access allowed as FOAF Agent")
-							return true
+							return 200, nil
 						}
 						groupURI := debrack(t.Object.String())
 						groupGraph := NewGraph(groupURI)
@@ -118,14 +120,18 @@ func (acl *WAC) allow(mode string, path string) bool {
 						if groupGraph.Len() > 0 && groupGraph.One(t.Object, ns.rdf.Get("type"), ns.foaf.Get("Group")) != nil {
 							for range groupGraph.All(t.Object, ns.foaf.Get("member"), NewResource(acl.user)) {
 								acl.srv.debug.Println(acl.user + " listed as a member of the group " + groupURI)
-								return true
+								return 200, nil
 							}
 						}
 					}
 				}
 			}
+			if len(acl.user) == 0 {
+				acl.srv.debug.Println("Authentication required")
+				return 401, errors.New("Access to " + p.URI + " requires authentication")
+			}
 			acl.srv.debug.Println(mode + " access denied for: " + acl.user)
-			return false
+			return 403, errors.New("Access denied for: " + acl.user)
 		}
 
 		accessType = "defaultForNew"
@@ -153,26 +159,26 @@ func (acl *WAC) allow(mode string, path string) bool {
 		path += "/"
 	}
 	acl.srv.debug.Println("No ACL policies present - access allowed for: " + acl.user)
-	return true
+	return 200, nil
 }
 
 // AllowRead checks if Read access is allowed
-func (acl *WAC) AllowRead(path string) bool {
+func (acl *WAC) AllowRead(path string) (int, error) {
 	return acl.allow("Read", path)
 }
 
 // AllowWrite checks if Write access is allowed
-func (acl *WAC) AllowWrite(path string) bool {
+func (acl *WAC) AllowWrite(path string) (int, error) {
 	return acl.allow("Write", path)
 }
 
 // AllowAppend checks if Append access is allowed
-func (acl *WAC) AllowAppend(path string) bool {
+func (acl *WAC) AllowAppend(path string) (int, error) {
 	return acl.allow("Append", path)
 }
 
 // AllowControl checks if Control access is allowed
-func (acl *WAC) AllowControl(path string) bool {
+func (acl *WAC) AllowControl(path string) (int, error) {
 	return acl.allow("Control", path)
 }
 
