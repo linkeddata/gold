@@ -3,19 +3,22 @@ package gold
 import (
 	"errors"
 	"log"
+	"net/http"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 // WAC WebAccessControl object
 type WAC struct {
 	req  *httpRequest
 	srv  *Server
+	w    http.ResponseWriter
 	user string
 }
 
 // NewWAC creates a new WAC object
-func NewWAC(req *httpRequest, srv *Server, user string) *WAC {
+func NewWAC(req *httpRequest, srv *Server, w http.ResponseWriter, user string) *WAC {
 	if len(req.Header.Get("On-Behalf-Of")) > 0 {
 		delegator := debrack(req.Header.Get("On-Behalf-Of"))
 		if verifyDelegator(delegator, user) {
@@ -23,7 +26,7 @@ func NewWAC(req *httpRequest, srv *Server, user string) *WAC {
 			user = delegator
 		}
 	}
-	return &WAC{req: req, srv: srv, user: user}
+	return &WAC{req: req, srv: srv, w: w, user: user}
 }
 
 // Return an HTTP code and error (200 if authd, 401 if auth required, 403 if not authorized, 500 if error)
@@ -128,6 +131,18 @@ func (acl *WAC) allow(mode string, path string) (int, error) {
 			}
 			if len(acl.user) == 0 {
 				acl.srv.debug.Println("Authentication required")
+				tokenValues := map[string]string{
+					"secret": string(acl.srv.cookieSalt),
+				}
+				// set validity for now + 1 min
+				validity := 1 * time.Minute
+				token, err := NewSecureToken("Recovery", tokenValues, validity, acl.srv)
+				if err != nil {
+					acl.srv.debug.Println("Error generating Auth token: ", err)
+					return 500, err
+				}
+				wwwAuth := `WebID-RSA nonce="` + token + `"`
+				acl.w.Header().Set("WWW-Authenticate", wwwAuth)
 				return 401, errors.New("Access to " + p.URI + " requires authentication")
 			}
 			acl.srv.debug.Println(mode + " access denied for: " + acl.user)

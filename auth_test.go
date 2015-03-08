@@ -1,6 +1,9 @@
 package gold
 
 import (
+	"crypto/x509"
+	"encoding/base64"
+	"encoding/pem"
 	"net/http"
 	"strings"
 	"testing"
@@ -86,6 +89,38 @@ func TestWebIDDigestAuth(t *testing.T) {
 	response, err := httpClient.Do(request)
 	assert.NoError(t, err)
 	assert.Equal(t, 401, response.StatusCode)
+	wwwAuth := response.Header.Get("WWW-Authenticate")
+	assert.NotEmpty(t, wwwAuth)
+
+	//@@@TODO extract nonce
+	authParsed, _ := ParseDigestAuthHeader(wwwAuth)
+
+	// Load private key
+	pKey := x509.MarshalPKCS1PrivateKey(user1k)
+	keyBytes := pem.EncodeToMemory(&pem.Block{
+		Type:  "RSA PRIVATE KEY",
+		Bytes: pKey,
+	})
+	signer, err := ParsePrivateKey(keyBytes)
+	assert.NoError(t, err)
+
+	toSign := user1 + authParsed.Nonce
+
+	signed, err := signer.Sign([]byte(toSign))
+	assert.NoError(t, err)
+
+	sig := base64.StdEncoding.EncodeToString(signed)
+	assert.NotEmpty(t, sig)
+
+	authHeader := `WebID-RSA username="` + user1 + `",
+                     nonce="` + authParsed.Nonce + `",
+                     sig="` + sig + `"`
+
+	request, err = http.NewRequest("GET", testServer.URL+aclDir+"abc", nil)
+	request.Header.Add("Authorization", authHeader)
+	assert.NoError(t, err)
+	response, err = httpClient.Do(request)
+	assert.NoError(t, err)
 }
 
 func TestCleanupAuth(t *testing.T) {

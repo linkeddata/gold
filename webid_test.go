@@ -19,8 +19,9 @@ func TestWebIDTLSauth(t *testing.T) {
 }
 
 func TestNewWebIDProfileWithKeys(t *testing.T) {
-	g, k, err := NewWebIDProfileWithKeys(user1)
+	g, k, p, err := NewWebIDProfileWithKeys(user1)
 	assert.NoError(t, err)
 	assert.NotNil(t, k)
+	assert.NotNil(t, p)
 	assert.Equal(t, 8, g.Len())
 }

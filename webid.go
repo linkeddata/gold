@@ -8,6 +8,7 @@ import (
 	"encoding/asn1"
 	"errors"
 	"fmt"
+	"log"
 	"strings"
 	"sync"
 	"time"
@@ -49,7 +50,7 @@ func pkeyTypeNE(pkey interface{}) (t, n, e string) {
 }
 
 func WebIDDigestAuth(req *httpRequest) (string, error) {
-	// log.Printf("%+v\n", req.Header)
+	log.Printf("%+v\n", req.Header.Get("Authorization"))
 	return "", nil
 }
 
@@ -163,10 +164,10 @@ func WebIDFromCert(cert []byte) (string, error) {
 }
 
 // NewWebIDProfileWithKeys creates a WebID profile graph and corresponding keys
-func NewWebIDProfileWithKeys(uri string) (*Graph, *rsa.PrivateKey, error) {
+func NewWebIDProfileWithKeys(uri string) (*Graph, *rsa.PrivateKey, *rsa.PublicKey, error) {
 	priv, err := rsa.GenerateKey(rand.Reader, rsaBits)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 	var account = webidAccount{
 		URI:      uri,
@@ -174,7 +175,7 @@ func NewWebIDProfileWithKeys(uri string) (*Graph, *rsa.PrivateKey, error) {
 		Exponent: fmt.Sprintf("%d", priv.E),
 	}
 	g := NewWebIDProfile(account)
-	return g, priv, nil
+	return g, priv, &priv.PublicKey, nil
 }
 
 // NewWebIDProfile creates a WebID profile graph based on account data

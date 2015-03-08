@@ -129,7 +129,7 @@ func (req httpRequest) ifNoneMatch(etag string) bool {
 func handleStatusText(status int, err error) string {
 	switch status {
 	case 200:
-		return ""
+		return "HTTP 200 - OK"
 	case 401:
 		return "HTTP 401 - Unauthorized\n\n" + err.Error()
 	case 403:
@@ -147,17 +147,19 @@ func handleStatusText(status int, err error) string {
 type Server struct {
 	http.Handler
 
-	Config *ServerConfig
-	cookie *securecookie.SecureCookie
-	debug  *log.Logger
-	webdav *webdav.Handler
+	Config     *ServerConfig
+	cookie     *securecookie.SecureCookie
+	cookieSalt []byte
+	debug      *log.Logger
+	webdav     *webdav.Handler
 }
 
 // NewServer is used to create a new Server instance
 func NewServer(config *ServerConfig) *Server {
 	s := &Server{
-		Config: config,
-		cookie: securecookie.New(securecookie.GenerateRandomKey(64), securecookie.GenerateRandomKey(32)),
+		Config:     config,
+		cookie:     securecookie.New(securecookie.GenerateRandomKey(64), securecookie.GenerateRandomKey(32)),
+		cookieSalt: securecookie.GenerateRandomKey(32),
 		webdav: &webdav.Handler{
 			FileSystem: webdav.Dir(config.DataRoot),
 			LockSystem: webdav.NewMemLS(),
@@ -245,7 +247,7 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 	// Authentication
 	user := req.authn(w)
 	w.Header().Set("User", user)
-	acl := NewWAC(req, s, user)
+	acl := NewWAC(req, s, w, user)
 
 	// Intercept API requests
 	if strings.HasPrefix(req.Request.URL.Path, "/"+SystemPrefix) && req.Method != "OPTIONS" {

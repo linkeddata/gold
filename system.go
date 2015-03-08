@@ -107,7 +107,7 @@ func sendRecoveryToken(w http.ResponseWriter, req *httpRequest, s *Server) Syste
 	}
 	// set validity for now + 5 mins
 	t := time.Duration(s.Config.TokenAge) * time.Minute
-	token, err := NewSecureToken(values, t, s)
+	token, err := NewSecureToken("Recovery", values, t, s)
 	if err != nil {
 		s.debug.Println("Could not generate recovery token for " + webid + ", err: " + err.Error())
 		return SystemReturn{Status: 500, Body: "Could not generate recovery token for " + webid + ", err: " + err.Error()}

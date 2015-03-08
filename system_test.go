@@ -293,7 +293,7 @@ func TestAccountRecovery(t *testing.T) {
 	}
 	// set validity for now + 5 mins
 	validity := time.Duration(config1.TokenAge) * time.Minute
-	token, err := NewSecureToken(values, validity, handler1)
+	token, err := NewSecureToken("Recovery", values, validity, handler1)
 	form = url.Values{
 		"token": {token},
 	}
@@ -374,7 +374,7 @@ func TestAccountRecoverySecureSMTP(t *testing.T) {
 	}
 	// set validity for now + 5 mins
 	validity := time.Duration(config1.TokenAge) * time.Minute
-	token, err := NewSecureToken(values, validity, h)
+	token, err := NewSecureToken("Recovery", values, validity, h)
 	form = url.Values{
 		"token": {token},
 	}
