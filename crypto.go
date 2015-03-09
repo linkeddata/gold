@@ -9,6 +9,8 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
+	"math/big"
+	"strconv"
 )
 
 // Signer creates signatures that verify against a public key.
@@ -29,8 +31,41 @@ type rsaPrivKey struct {
 	*rsa.PrivateKey
 }
 
+func ParseRSAPublicKeyNE(keyT, keyN, keyE string) (Verifier, error) {
+	if len(keyN) == 0 && len(keyE) == 0 {
+		return nil, errors.New("No modulus and/or exponent provided")
+	}
+	intN := new(big.Int)
+	intN.SetString(keyN, 16)
+
+	intE, err := strconv.ParseInt(keyE, 10, 0)
+	if err != nil {
+		return nil, err
+	}
+
+	var rawkey interface{}
+	switch keyT {
+	case "RSAPublicKey":
+		rawkey = &rsa.PublicKey{
+			N: intN,
+			E: int(intE),
+		}
+	default:
+		return nil, fmt.Errorf("Unsupported key type %q", keyT)
+	}
+	return newVerifierFromKey(rawkey)
+}
+
+func ParseRSAPublicKey(key *rsa.PublicKey) (Verifier, error) {
+	return newVerifierFromKey(key)
+}
+
+func ParseRSAPrivateKey(key *rsa.PrivateKey) (Signer, error) {
+	return newSignerFromKey(key)
+}
+
 // ParsePublicKey parses a PEM encoded private key and returns an Verifier.
-func ParsePublicKey(pemBytes []byte) (Verifier, error) {
+func ParseRSAPublicPEMKey(pemBytes []byte) (Verifier, error) {
 	block, _ := pem.Decode(pemBytes)
 	if block == nil {
 		return nil, errors.New("No key found")
@@ -38,7 +73,7 @@ func ParsePublicKey(pemBytes []byte) (Verifier, error) {
 
 	var rawkey interface{}
 	switch block.Type {
-	case "PUBLIC KEY":
+	case "RSA PUBLIC KEY":
 		rsa, err := x509.ParsePKIXPublicKey(block.Bytes)
 		if err != nil {
 			return nil, err
@@ -52,7 +87,7 @@ func ParsePublicKey(pemBytes []byte) (Verifier, error) {
 }
 
 // ParsePublicKey parses a PEM encoded private key and returns a Signer.
-func ParsePrivateKey(pemBytes []byte) (Signer, error) {
+func ParseRSAPrivatePEMKey(pemBytes []byte) (Signer, error) {
 	block, _ := pem.Decode(pemBytes)
 	if block == nil {
 		return nil, errors.New("No key found")
@@ -84,14 +119,14 @@ func newSignerFromKey(k interface{}) (Signer, error) {
 }
 
 func newVerifierFromKey(k interface{}) (Verifier, error) {
-	var uKey Verifier
+	var vKey Verifier
 	switch t := k.(type) {
 	case *rsa.PublicKey:
-		uKey = &rsaPubKey{t}
+		vKey = &rsaPubKey{t}
 	default:
 		return nil, fmt.Errorf("Unsupported key type %T", k)
 	}
-	return uKey, nil
+	return vKey, nil
 }
 
 // Sign signs data with rsa-sha256

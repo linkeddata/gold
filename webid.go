@@ -6,9 +6,10 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/asn1"
+	"encoding/base64"
 	"errors"
 	"fmt"
-	"log"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -50,7 +51,74 @@ func pkeyTypeNE(pkey interface{}) (t, n, e string) {
 }
 
 func WebIDDigestAuth(req *httpRequest) (string, error) {
-	log.Printf("%+v\n", req.Header.Get("Authorization"))
+	if len(req.Header.Get("Authorization")) == 0 {
+		return "", nil
+	}
+
+	authH, err := ParseDigestAuthorizationHeader(req.Header.Get("Authorization"))
+	if err != nil {
+		return "", err
+	}
+
+	webid := authH.Username
+	claim := authH.Username + authH.Nonce
+	signature, err := base64.StdEncoding.DecodeString(authH.Signature)
+	if err != nil {
+		return "", err
+	}
+
+	if len(webid) == 0 || len(claim) == 0 || len(signature) == 0 {
+		return "", errors.New("No WebID and/or claim found in the Authorization header")
+	}
+
+	// Decrypt and validate nonce from secure token
+	tValues, err := ValidateSecureToken("WWW-Authenticate", authH.Nonce, req.Server)
+	if err != nil {
+		return "", err
+	}
+	v, err := strconv.ParseInt(tValues["valid"], 10, 64)
+	if err != nil {
+		return "", err
+	}
+	if time.Now().Local().Unix() > v {
+		return "", errors.New("Token expired for " + webid)
+	}
+	if len(tValues["secret"]) == 0 {
+		return "", errors.New("Missing secret from token (tempered with?)")
+	}
+	if tValues["secret"] != string(req.Server.cookieSalt) {
+		return "", errors.New("Wrong secret value in client token!")
+	}
+
+	// fetch WebID to get pubKey
+	g := NewGraph(webid)
+	err = g.LoadURI(webid)
+	if err != nil {
+		return "", err
+	}
+
+	for _, keyT := range g.All(NewResource(webid), ns.cert.Get("key"), nil) {
+		for range g.All(keyT.Object, ns.rdf.Get("type"), ns.cert.Get("RSAPublicKey")) {
+			for _, pubN := range g.All(keyT.Object, ns.cert.Get("modulus"), nil) {
+				keyN := term2C(pubN.Object).String()
+				for _, pubE := range g.All(keyT.Object, ns.cert.Get("exponent"), nil) {
+					keyE := term2C(pubE.Object).String()
+					// println(keyN, keyE)
+					parser, err := ParseRSAPublicKeyNE("RSAPublicKey", keyN, keyE)
+					if err != nil {
+						return "", err
+					}
+					err = parser.Verify([]byte(claim), signature)
+					if err != nil {
+						return "", err
+					}
+					return webid, nil
+				}
+			}
+		}
+	}
+	// also loop through all the PEM keys
+
 	return "", nil
 }
 
@@ -169,13 +237,14 @@ func NewWebIDProfileWithKeys(uri string) (*Graph, *rsa.PrivateKey, *rsa.PublicKe
 	if err != nil {
 		return nil, nil, nil, err
 	}
+	pub := &priv.PublicKey
 	var account = webidAccount{
 		URI:      uri,
-		Modulus:  fmt.Sprintf("%x", priv.N),
-		Exponent: fmt.Sprintf("%d", priv.E),
+		Modulus:  fmt.Sprintf("%x", pub.N),
+		Exponent: fmt.Sprintf("%d", pub.E),
 	}
 	g := NewWebIDProfile(account)
-	return g, priv, &priv.PublicKey, nil
+	return g, priv, pub, nil
 }
 
 // NewWebIDProfile creates a WebID profile graph based on account data

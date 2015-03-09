@@ -136,7 +136,7 @@ func (acl *WAC) allow(mode string, path string) (int, error) {
 				}
 				// set validity for now + 1 min
 				validity := 1 * time.Minute
-				token, err := NewSecureToken("Recovery", tokenValues, validity, acl.srv)
+				token, err := NewSecureToken("WWW-Authenticate", tokenValues, validity, acl.srv)
 				if err != nil {
 					acl.srv.debug.Println("Error generating Auth token: ", err)
 					return 500, err

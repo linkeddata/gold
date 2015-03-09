@@ -8,8 +8,28 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/drewolson/testflight"
 	"github.com/stretchr/testify/assert"
 )
+
+func TestParseDigestAuthorizationHeader(t *testing.T) {
+	h := `WebID-RSA username="http://example.org/", nonce="string1", sig="string2"`
+	p, err := ParseDigestAuthorizationHeader(h)
+	assert.NoError(t, err)
+	assert.Equal(t, "WebID-RSA", p.Type)
+	assert.Equal(t, "http://example.org/", p.Username)
+	assert.Equal(t, "string1", p.Nonce)
+	assert.Equal(t, "string2", p.Signature)
+}
+
+func TestParseDigestAuthenticateHeader(t *testing.T) {
+	h := `WebID-RSA nonce="string1"`
+
+	p, err := ParseDigestAuthenticateHeader(h)
+	assert.NoError(t, err)
+	assert.Equal(t, "WebID-RSA", p.Type)
+	assert.Equal(t, "string1", p.Nonce)
+}
 
 func TestCookieAuth(t *testing.T) {
 	request, err := http.NewRequest("MKCOL", testServer.URL+aclDir, nil)
@@ -92,8 +112,7 @@ func TestWebIDDigestAuth(t *testing.T) {
 	wwwAuth := response.Header.Get("WWW-Authenticate")
 	assert.NotEmpty(t, wwwAuth)
 
-	//@@@TODO extract nonce
-	authParsed, _ := ParseDigestAuthHeader(wwwAuth)
+	p, _ := ParseDigestAuthenticateHeader(wwwAuth)
 
 	// Load private key
 	pKey := x509.MarshalPKCS1PrivateKey(user1k)
@@ -101,26 +120,25 @@ func TestWebIDDigestAuth(t *testing.T) {
 		Type:  "RSA PRIVATE KEY",
 		Bytes: pKey,
 	})
-	signer, err := ParsePrivateKey(keyBytes)
+	signer, err := ParseRSAPrivatePEMKey(keyBytes)
 	assert.NoError(t, err)
 
-	toSign := user1 + authParsed.Nonce
+	claim := user1 + p.Nonce
 
-	signed, err := signer.Sign([]byte(toSign))
+	signed, err := signer.Sign([]byte(claim))
 	assert.NoError(t, err)
 
-	sig := base64.StdEncoding.EncodeToString(signed)
-	assert.NotEmpty(t, sig)
+	b64Sig := base64.StdEncoding.EncodeToString(signed)
+	assert.NotEmpty(t, b64Sig)
 
-	authHeader := `WebID-RSA username="` + user1 + `",
-                     nonce="` + authParsed.Nonce + `",
-                     sig="` + sig + `"`
+	authHeader := `WebID-RSA username="` + user1 + `", nonce="` + p.Nonce + `", sig="` + b64Sig + `"`
 
 	request, err = http.NewRequest("GET", testServer.URL+aclDir+"abc", nil)
 	request.Header.Add("Authorization", authHeader)
 	assert.NoError(t, err)
 	response, err = httpClient.Do(request)
 	assert.NoError(t, err)
+	assert.Equal(t, 200, response.StatusCode)
 }
 
 func TestCleanupAuth(t *testing.T) {
@@ -151,4 +169,13 @@ func TestCleanupAuth(t *testing.T) {
 	assert.NoError(t, err)
 	response.Body.Close()
 	assert.Equal(t, 200, response.StatusCode)
+}
+
+func TestACLCleanUsers(t *testing.T) {
+	testflight.WithServer(handler, func(r *testflight.Requester) {
+		response := r.Delete("/_test/user1", "", "")
+		assert.Equal(t, 200, response.StatusCode)
+		response = r.Delete("/_test/user2", "", "")
+		assert.Equal(t, 200, response.StatusCode)
+	})
 }

@@ -972,7 +972,6 @@ func TestDELETEFiles(t *testing.T) {
 }
 
 func TestDELETEFolders(t *testing.T) {
-	handler.Config.Debug = true
 	testflight.WithServer(handler, func(r *testflight.Requester) {
 		response := r.Delete("/_test/dir", "", "")
 		assert.Empty(t, response.Body)
@@ -991,7 +990,6 @@ func TestDELETEFolders(t *testing.T) {
 		response = r.Delete("/", "", "")
 		assert.Equal(t, 500, response.StatusCode)
 	})
-	handler.Config.Debug = false
 }
 
 func TestInvalidMethod(t *testing.T) {
