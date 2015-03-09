@@ -103,7 +103,7 @@ func TestCookieAuth(t *testing.T) {
 
 }
 
-func TestWebIDDigestAuth(t *testing.T) {
+func TestWebIDRSAAuth(t *testing.T) {
 	request, err := http.NewRequest("GET", testServer.URL+aclDir+"abc", nil)
 	assert.NoError(t, err)
 	response, err := httpClient.Do(request)
