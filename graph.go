@@ -246,6 +246,9 @@ func (g *Graph) Parse(reader io.Reader, mime string) {
 
 	} else {
 		parser := crdf.NewParser(parserName)
+		parser.SetLogHandler(func(level int, message string) {
+			log.Println(message)
+		})
 		defer parser.Free()
 		out := parser.Parse(reader, g.uri)
 		for s := range out {
