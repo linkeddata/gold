@@ -9,5 +9,5 @@ RUN \
 EXPOSE 443
 EXPOSE 80
 VOLUME ["/data", "/config"]
-COPY ./src/github.com/linkeddata/gold/gold.conf-example /config/
+COPY /go/src/github.com/linkeddata/gold/gold.conf-example /config/
 CMD ["server", "-conf=/config/gold.conf", "-https=:443","-http=:80", "-root=/data/"]
