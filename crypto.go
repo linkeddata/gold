@@ -73,7 +73,7 @@ func ParseRSAPublicPEMKey(pemBytes []byte) (Verifier, error) {
 
 	var rawkey interface{}
 	switch block.Type {
-	case "RSA PUBLIC KEY":
+	case "RSA PUBLIC KEY", "PUBLIC KEY":
 		rsa, err := x509.ParsePKIXPublicKey(block.Bytes)
 		if err != nil {
 			return nil, err
@@ -95,7 +95,7 @@ func ParseRSAPrivatePEMKey(pemBytes []byte) (Signer, error) {
 
 	var rawkey interface{}
 	switch block.Type {
-	case "RSA PRIVATE KEY":
+	case "RSA PRIVATE KEY", "PRIVATE KEY":
 		rsa, err := x509.ParsePKCS1PrivateKey(block.Bytes)
 		if err != nil {
 			return nil, err
