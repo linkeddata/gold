@@ -499,6 +499,7 @@ func TestLDPLinkHeaders(t *testing.T) {
 	assert.NoError(t, err)
 	response, err = httpClient.Do(request)
 	assert.NoError(t, err)
+	assert.NotEmpty(t, response.Header.Get("Location"))
 	assert.True(t, ParseLinkHeader(strings.Join(response.Header["Link"], ", ")).MatchURI("http://www.w3.org/ns/ldp#Resource"))
 	assert.False(t, ParseLinkHeader(strings.Join(response.Header["Link"], ", ")).MatchURI("http://www.w3.org/ns/ldp#BasicContainer"))
 
@@ -649,6 +650,7 @@ func TestPUTTurtle(t *testing.T) {
 		response := r.Put("/_test/abc", "text/turtle", "<d> <e> <f> ; <h> <i> .")
 		assert.Empty(t, response.Body)
 		assert.Equal(t, 201, response.StatusCode)
+		assert.NotEmpty(t, response.RawResponse.Header.Get("Location"))
 
 		request, _ := http.NewRequest("GET", "/_test/abc", nil)
 		request.Header.Add("Accept", "text/turtle")

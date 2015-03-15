@@ -1023,6 +1023,8 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 			return r.respond(500, err)
 		}
 
+		w.Header().Set("Location", resource.URI)
+
 		onUpdateURI(resource.URI)
 		if isNew {
 			return r.respond(201)
