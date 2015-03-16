@@ -545,20 +545,6 @@ func TestStreaming(t *testing.T) {
 	})
 }
 
-func TestETag(t *testing.T) {
-	testflight.WithServer(handler, func(r *testflight.Requester) {
-		etag := "\"3520a395fdacd680ba71627e3ef6b13a\""
-		response := r.Get("/_test/")
-		assert.Equal(t, 200, response.StatusCode)
-		assert.Equal(t, etag, response.RawResponse.Header.Get("ETag"))
-
-		etag = "\"d41d8cd98f00b204e9800998ecf8427e\""
-		response = r.Get("/_test/abc")
-		assert.Equal(t, 200, response.StatusCode)
-		assert.Equal(t, etag, response.RawResponse.Header.Get("ETag"))
-	})
-}
-
 func TestPOSTSPARQL(t *testing.T) {
 	testflight.WithServer(handler, func(r *testflight.Requester) {
 		request, _ := http.NewRequest("POST", "/_test/abc", strings.NewReader("INSERT DATA { <a> <b> <c>, <c0> . }"))

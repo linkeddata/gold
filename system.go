@@ -361,7 +361,7 @@ func newCert(w http.ResponseWriter, req *httpRequest, s *Server) SystemReturn {
 //	method:   "accountStatus",
 //  status:   "success",
 //  formURL:  "https://example.org/,system/spkac",
-//  loginURL: "https://example.org/,login/",
+//  loginURL: "https://example.org/,system/login/",
 //  response: {
 //             accountURL: "user",
 //             available:   true
