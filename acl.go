@@ -177,7 +177,7 @@ func (acl *WAC) allow(mode string, path string) (int, error) {
 
 		path += "/"
 	}
-	acl.srv.debug.Println("No ACL policies present - access allowed for: " + acl.user)
+	acl.srv.debug.Println("No ACL policies present - access allowed")
 	return 200, nil
 }
 
