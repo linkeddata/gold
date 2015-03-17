@@ -61,16 +61,17 @@ func (s *Server) pathInfo(path string) (*pathInfo, error) {
 
 	res.Exists = true
 	// check if file exits first
-	if _, err := os.Stat(res.Root + p.Path); os.IsNotExist(err) {
+	if stat, err := os.Stat(res.Root + p.Path); os.IsNotExist(err) {
 		res.Exists = false
 	} else {
 		// Add missing trailing slashes for dirs
+		if stat.IsDir() && !strings.HasSuffix(p.Path, "/") && len(p.Path) > 1 {
+			p.Path += "/"
+		}
+		// get filetype
 		res.FileType, err = magic.TypeByFile(res.Root + p.Path)
-		if err == nil {
-			// add missing slash for dirs unless we're dealing with root
-			if res.FileType == "inode/directory" && !strings.HasSuffix(p.Path, "/") && len(p.Path) > 1 {
-				p.Path += "/"
-			}
+		if err != nil {
+			s.debug.Println(err)
 		}
 	}
 
