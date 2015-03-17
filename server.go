@@ -367,10 +367,7 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 				return
 			}
 			s.debug.Println("Got a stat error: " + err.Error())
-			r.respond(404, Skins["404"])
-		}
 
-		if os.IsNotExist(err) {
 			return r.respond(404, Skins["404"])
 		}
 
@@ -804,7 +801,6 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 				if strings.HasSuffix(slug, "/") {
 					slug = strings.TrimRight(slug, "/")
 				}
-				// TODO check if resource exists already and respond with 409
 				st, _ := os.Stat(resource.File + slug)
 				if st != nil {
 					s.debug.Println("POST LDP - A resource with the same name already exists: " + resource.Path + slug)
