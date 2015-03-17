@@ -4,6 +4,7 @@ import (
 	"errors"
 	"net"
 	"net/url"
+	"os"
 	"strings"
 )
 
@@ -19,6 +20,7 @@ type pathInfo struct {
 	AclFile  string
 	MetaURI  string
 	MetaFile string
+	Exists   bool
 }
 
 func (s *Server) pathInfo(path string) (*pathInfo, error) {
@@ -57,12 +59,18 @@ func (s *Server) pathInfo(path string) (*pathInfo, error) {
 		p.Path = strings.TrimLeft(p.Path, "/")
 	}
 
-	// Add missing trailing slashes for dirs
-	res.FileType, err = magic.TypeByFile(res.Root + p.Path)
-	if err == nil {
-		// add missing slash for dirs unless we're dealing with root
-		if res.FileType == "inode/directory" && !strings.HasSuffix(p.Path, "/") && len(p.Path) > 1 {
-			p.Path += "/"
+	res.Exists = true
+	// check if file exits first
+	if _, err := os.Stat(res.Root + p.Path); os.IsNotExist(err) {
+		res.Exists = false
+	} else {
+		// Add missing trailing slashes for dirs
+		res.FileType, err = magic.TypeByFile(res.Root + p.Path)
+		if err == nil {
+			// add missing slash for dirs unless we're dealing with root
+			if res.FileType == "inode/directory" && !strings.HasSuffix(p.Path, "/") && len(p.Path) > 1 {
+				p.Path += "/"
+			}
 		}
 	}
 

@@ -23,6 +23,7 @@ func TestPathInfo(t *testing.T) {
 	assert.Equal(t, sroot+ACLSuffix, p.AclFile)
 	assert.Equal(t, testServer.URL+"/"+METASuffix, p.MetaURI)
 	assert.Equal(t, sroot+METASuffix, p.MetaFile)
+	assert.True(t, p.Exists)
 
 	p, err = handler.pathInfo(testServer.URL + "/")
 	assert.Nil(t, err)
@@ -34,6 +35,7 @@ func TestPathInfo(t *testing.T) {
 	assert.Equal(t, sroot+ACLSuffix, p.AclFile)
 	assert.Equal(t, testServer.URL+"/"+METASuffix, p.MetaURI)
 	assert.Equal(t, sroot+METASuffix, p.MetaFile)
+	assert.True(t, p.Exists)
 
 	p, err = handler.pathInfo(path)
 	assert.Nil(t, err)
@@ -45,6 +47,7 @@ func TestPathInfo(t *testing.T) {
 	assert.Equal(t, sroot+"_test/"+ACLSuffix, p.AclFile)
 	assert.Equal(t, path+METASuffix, p.MetaURI)
 	assert.Equal(t, sroot+"_test/"+METASuffix, p.MetaFile)
+	assert.True(t, p.Exists)
 
 	p, err = handler.pathInfo(path + "abc")
 	assert.Nil(t, err)
@@ -56,6 +59,7 @@ func TestPathInfo(t *testing.T) {
 	assert.Equal(t, sroot+"_test/abc"+ACLSuffix, p.AclFile)
 	assert.Equal(t, path+"abc"+METASuffix, p.MetaURI)
 	assert.Equal(t, sroot+"_test/abc"+METASuffix, p.MetaFile)
+	assert.False(t, p.Exists)
 
 	p, err = handler.pathInfo(path + ACLSuffix)
 	assert.Nil(t, err)
@@ -67,6 +71,7 @@ func TestPathInfo(t *testing.T) {
 	assert.Equal(t, sroot+"_test/"+ACLSuffix, p.AclFile)
 	assert.Equal(t, path+ACLSuffix, p.MetaURI)
 	assert.Equal(t, sroot+"_test/"+ACLSuffix, p.MetaFile)
+	assert.False(t, p.Exists)
 
 	p, err = handler.pathInfo(path + METASuffix)
 	assert.Nil(t, err)
@@ -78,4 +83,5 @@ func TestPathInfo(t *testing.T) {
 	assert.Equal(t, sroot+"_test/"+METASuffix+ACLSuffix, p.AclFile)
 	assert.Equal(t, path+METASuffix, p.MetaURI)
 	assert.Equal(t, sroot+"_test/"+METASuffix, p.MetaFile)
+	assert.False(t, p.Exists)
 }
