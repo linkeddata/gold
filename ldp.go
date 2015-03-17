@@ -12,10 +12,6 @@ import (
 	"strings"
 )
 
-func init() {
-
-}
-
 type linkheader struct {
 	uri string
 	rel string
@@ -156,43 +152,31 @@ func newUUID() (string, error) {
 func NewETag(path string) (string, error) {
 	var (
 		hash []byte
-		md5s []string
+		md5s string
 		err  error
 	)
 	stat, err := os.Stat(path)
 	if err != nil {
 		return "", err
 	}
-	switch {
-	case stat.IsDir():
+	if stat.IsDir() {
 		if files, err := ioutil.ReadDir(path); err == nil {
 			if !strings.HasSuffix(path, "/") {
 				path = path + "/"
 			}
 			if len(files) == 0 {
-				md5s = append(md5s, path+stat.ModTime().String())
+				md5s += path + stat.ModTime().String()
 			}
 			for _, file := range files {
-				h, err := NewETag(path + file.Name())
-				if err != nil {
-					return "", err
-				}
-				md5s = append(md5s, h)
+				md5s += file.ModTime().String() + fmt.Sprint("%d", file.Size())
 			}
 		}
-		h := md5.New()
-		io.Copy(h, bytes.NewBufferString(fmt.Sprintf("%s", md5s)))
-		hash = h.Sum([]byte(""))
-	default:
-		f, err := os.Open(path)
-		if err != nil {
-			return "", err
-		}
-		defer f.Close()
-		h := md5.New()
-		io.Copy(h, f)
-		hash = h.Sum([]byte(""))
+	} else {
+		md5s += stat.ModTime().String() + fmt.Sprint("%d", stat.Size())
 	}
+	h := md5.New()
+	io.Copy(h, bytes.NewBufferString(md5s))
+	hash = h.Sum([]byte(""))
 
 	return hex.EncodeToString(hash), err
 }

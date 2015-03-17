@@ -81,12 +81,15 @@ func main() {
 	}
 
 	config := gold.NewServerConfig()
+	confLoaded := true
 	if len(*conf) > 0 {
 		err = config.LoadJSONFile(*conf)
 		if err != nil {
-			log.Fatalln(err)
+			log.Println(err)
+			confLoaded = false
 		}
-	} else {
+	}
+	if !confLoaded {
 		config.ListenHTTP = *httpA
 		config.ListenHTTPS = *httpsA
 		config.TLSCert = *tlsCert

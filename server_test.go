@@ -500,6 +500,7 @@ func TestLDPLinkHeaders(t *testing.T) {
 	assert.NoError(t, err)
 	response, err = httpClient.Do(request)
 	assert.NoError(t, err)
+	assert.NotEmpty(t, response.Header.Get("Location"))
 	assert.True(t, ParseLinkHeader(strings.Join(response.Header["Link"], ", ")).MatchURI("http://www.w3.org/ns/ldp#Resource"))
 	assert.False(t, ParseLinkHeader(strings.Join(response.Header["Link"], ", ")).MatchURI("http://www.w3.org/ns/ldp#BasicContainer"))
 
@@ -542,20 +543,6 @@ func TestStreaming(t *testing.T) {
 		request, _ = http.NewRequest("PUT", "/_test/abc", nil)
 		response = r.Do(request)
 		assert.Equal(t, 201, response.StatusCode)
-	})
-}
-
-func TestETag(t *testing.T) {
-	testflight.WithServer(handler, func(r *testflight.Requester) {
-		etag := "\"3520a395fdacd680ba71627e3ef6b13a\""
-		response := r.Get("/_test/")
-		assert.Equal(t, 200, response.StatusCode)
-		assert.Equal(t, etag, response.RawResponse.Header.Get("ETag"))
-
-		etag = "\"d41d8cd98f00b204e9800998ecf8427e\""
-		response = r.Get("/_test/abc")
-		assert.Equal(t, 200, response.StatusCode)
-		assert.Equal(t, etag, response.RawResponse.Header.Get("ETag"))
 	})
 }
 
@@ -650,6 +637,7 @@ func TestPUTTurtle(t *testing.T) {
 		response := r.Put("/_test/abc", "text/turtle", "<d> <e> <f> ; <h> <i> .")
 		assert.Empty(t, response.Body)
 		assert.Equal(t, 201, response.StatusCode)
+		assert.NotEmpty(t, response.RawResponse.Header.Get("Location"))
 
 		request, _ := http.NewRequest("GET", "/_test/abc", nil)
 		request.Header.Add("Accept", "text/turtle")

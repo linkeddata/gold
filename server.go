@@ -230,7 +230,7 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 	// CORS
 	w.Header().Set("Access-Control-Allow-Credentials", "true")
 	w.Header().Set("Access-Control-Expose-Headers", "User, Triples, Location, Link, Vary, Last-Modified, Content-Length")
-	w.Header().Set("Access-Control-Max-Age", "60")
+	w.Header().Set("Access-Control-Max-Age", "1728000")
 
 	// RWW
 	w.Header().Set("MS-Author-Via", "DAV, SPARQL")
@@ -751,6 +751,8 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 				return r.respond(500, err)
 			}
 
+			onUpdateURI(resource.URI)
+
 			w.Header().Set("Triples", fmt.Sprintf("%d", g.Len()))
 			return r.respond(200)
 		}
@@ -1061,6 +1063,8 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 		if err != nil {
 			return r.respond(500, err)
 		}
+
+		w.Header().Set("Location", resource.URI)
 
 		onUpdateURI(resource.URI)
 		if isNew {
