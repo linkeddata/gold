@@ -353,6 +353,8 @@ func newCert(w http.ResponseWriter, req *httpRequest, s *Server) SystemReturn {
 		body := `<iframe width="0" height="0" style="display: none;" src="data:application/x-x509-user-cert;base64,` + base64.StdEncoding.EncodeToString(newSpkac) + `"></iframe>`
 
 		return SystemReturn{Status: 200, Body: body}
+	} else if strings.Contains(req.Header.Get("Accept"), "text/html") {
+		return SystemReturn{Status: 200, Body: Skins["newCert"]}
 	}
 	return SystemReturn{Status: 500, Body: "Your request could not be processed. Either no WebID or no SPKAC value was provided."}
 }

@@ -48,6 +48,18 @@ jQuery(document).ready(function() {
     </form>
 </body>
 </html>`,
+		"newCert": `<!DOCTYPE html>
+<html id="docHTML">
+<body>
+    <form method="POST">
+    <h2>Issue new certificate</h2>
+    Name: <input type="text" name="name">
+    WebID: <input type="text" name="webid">
+    <keygen id="spkacWebID" name="spkac" challenge="randomchars" keytype="rsa" hidden></keygen>
+    <input type="submit" value="Issue">
+    </form>
+</body>
+</html>`,
 	}
 	// SMTPTemplates contains a list of templates for sending emails
 	SMTPTemplates = map[string]string{
