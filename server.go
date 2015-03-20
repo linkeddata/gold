@@ -261,8 +261,8 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 	}
 
 	resource, _ := s.pathInfo(req.BaseURI())
-	s.debug.Println("Resource URI: " + resource.URI)
-	s.debug.Println("Resource Path: " + resource.File)
+	s.debug.Println(req.RemoteAddr + " requested resource URI: " + resource.URI)
+	s.debug.Println(req.RemoteAddr + " requested resource Path: " + resource.File)
 
 	dataMime := req.Header.Get(HCType)
 	dataMime = strings.Split(dataMime, ";")[0]
