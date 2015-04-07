@@ -99,27 +99,37 @@ func WebIDDigestAuth(req *httpRequest) (string, error) {
 
 	for _, keyT := range g.All(NewResource(webid), ns.cert.Get("key"), nil) {
 		for range g.All(keyT.Object, ns.rdf.Get("type"), ns.cert.Get("RSAPublicKey")) {
+			for _, pubP := range g.All(keyT.Object, ns.cert.Get("pem"), nil) {
+				keyP := term2C(pubP.Object).String()
+				// loop through all the PEM keys
+				parser, err := ParseRSAPublicPEMKey([]byte(keyP))
+				if err == nil {
+					err = parser.Verify([]byte(claim), signature)
+					if err == nil {
+						return webid, nil
+					}
+				}
+			}
+			// also loop through modulus/exp
 			for _, pubN := range g.All(keyT.Object, ns.cert.Get("modulus"), nil) {
 				keyN := term2C(pubN.Object).String()
 				for _, pubE := range g.All(keyT.Object, ns.cert.Get("exponent"), nil) {
 					keyE := term2C(pubE.Object).String()
 					// println(keyN, keyE)
 					parser, err := ParseRSAPublicKeyNE("RSAPublicKey", keyN, keyE)
-					if err != nil {
-						return "", err
+					if err == nil {
+						err = parser.Verify([]byte(claim), signature)
+						if err != nil {
+							return "", err
+						}
+						return webid, nil
 					}
-					err = parser.Verify([]byte(claim), signature)
-					if err != nil {
-						return "", err
-					}
-					return webid, nil
 				}
 			}
 		}
 	}
-	// also loop through all the PEM keys
 
-	return "", nil
+	return "", err
 }
 
 // WebIDTLSAuth - performs WebID-TLS authentication
