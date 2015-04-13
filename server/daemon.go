@@ -81,12 +81,13 @@ func main() {
 	}
 
 	config := gold.NewServerConfig()
-	confLoaded := true
+	confLoaded := false
 	if len(*conf) > 0 {
 		err = config.LoadJSONFile(*conf)
-		if err != nil {
+		if err == nil {
+			confLoaded = true
+		} else {
 			log.Println(err)
-			confLoaded = false
 		}
 	}
 	if !confLoaded {
