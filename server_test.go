@@ -1021,7 +1021,7 @@ func TestRawContent(t *testing.T) {
 		response = r.Get("/test.raw")
 		assert.Equal(t, response.StatusCode, 200)
 		assert.Equal(t, response.RawResponse.Header.Get(HCType), ctype)
-		assert.Equal(t, len(response.Body), stat.Size())
+		assert.Equal(t, int64(len(response.Body)), stat.Size())
 		assert.Equal(t, 200, r.Delete("/test.raw", "", "").StatusCode)
 	})
 }
