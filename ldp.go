@@ -161,11 +161,8 @@ func NewETag(path string) (string, error) {
 	}
 	if stat.IsDir() {
 		if files, err := ioutil.ReadDir(path); err == nil {
-			if !strings.HasSuffix(path, "/") {
-				path = path + "/"
-			}
 			if len(files) == 0 {
-				md5s += path + stat.ModTime().String()
+				md5s += stat.ModTime().String()
 			}
 			for _, file := range files {
 				md5s += file.ModTime().String() + fmt.Sprint("%d", file.Size())
