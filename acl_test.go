@@ -330,10 +330,12 @@ func TestACLReadOnly(t *testing.T) {
 	acl := ParseLinkHeader(response.Header.Get("Link")).MatchRel("acl")
 
 	body := "<#Owner>" +
+		"	a <http://www.w3.org/ns/auth/acl#Authorization> ;" +
 		"	<http://www.w3.org/ns/auth/acl#accessTo> <" + testServer.URL + aclDir + ">, <" + acl + ">;" +
 		"	<http://www.w3.org/ns/auth/acl#agent> <" + user1 + ">;" +
 		"	<http://www.w3.org/ns/auth/acl#mode> <http://www.w3.org/ns/auth/acl#Read>, <http://www.w3.org/ns/auth/acl#Write> ." +
 		"<#Public>" +
+		"	a <http://www.w3.org/ns/auth/acl#Authorization> ;" +
 		"	<http://www.w3.org/ns/auth/acl#accessTo> <" + testServer.URL + aclDir + ">;" +
 		"	<http://www.w3.org/ns/auth/acl#agentClass> <http://xmlns.com/foaf/0.1/Agent>;" +
 		"	<http://www.w3.org/ns/auth/acl#mode> <http://www.w3.org/ns/auth/acl#Read> ."
@@ -352,7 +354,6 @@ func TestACLReadOnly(t *testing.T) {
 	assert.NoError(t, err)
 	response.Body.Close()
 	assert.Equal(t, 200, response.StatusCode)
-	assert.Equal(t, "8", response.Header.Get("Triples"))
 
 	request, err = http.NewRequest("HEAD", testServer.URL+aclDir, nil)
 	assert.NoError(t, err)
@@ -407,6 +408,33 @@ func TestACLReadOnly(t *testing.T) {
 	assert.NoError(t, err)
 	response.Body.Close()
 	assert.Equal(t, 401, response.StatusCode)
+}
+
+func TestACLGlob(t *testing.T) {
+	request, err := http.NewRequest("GET", testServer.URL+aclDir+"*", nil)
+	assert.NoError(t, err)
+	request.Header.Add("Content-Type", "text/turtle")
+	response, err := user2h.Do(request)
+	assert.NoError(t, err)
+	response.Body.Close()
+	assert.Equal(t, 200, response.StatusCode)
+	acl := ParseLinkHeader(response.Header.Get("Link")).MatchRel("acl")
+	g := NewGraph(testServer.URL + aclDir)
+	g.Parse(response.Body, "text/turtle")
+	authz := g.One(nil, nil, ns.acl.Get("Authorization"))
+	assert.Nil(t, authz)
+
+	request, err = http.NewRequest("GET", testServer.URL+aclDir+"*", nil)
+	assert.NoError(t, err)
+	request.Header.Add("Content-Type", "text/turtle")
+	response, err = user1h.Do(request)
+	assert.NoError(t, err)
+	response.Body.Close()
+	assert.Equal(t, 200, response.StatusCode)
+	g = NewGraph(testServer.URL + aclDir)
+	g.Parse(response.Body, "text/turtle")
+	authz = g.One(nil, nil, ns.acl.Get("Authorization"))
+	assert.Nil(t, authz)
 
 	request, err = http.NewRequest("DELETE", acl, nil)
 	assert.NoError(t, err)
@@ -449,7 +477,6 @@ func TestACLAppendOnly(t *testing.T) {
 	assert.NoError(t, err)
 	response.Body.Close()
 	assert.Equal(t, 200, response.StatusCode)
-	assert.Equal(t, "8", response.Header.Get("Triples"))
 
 	request, err = http.NewRequest("HEAD", testServer.URL+aclDir+"abc", nil)
 	assert.NoError(t, err)
@@ -465,7 +492,6 @@ func TestACLAppendOnly(t *testing.T) {
 	assert.NoError(t, err)
 	response.Body.Close()
 	assert.Equal(t, 200, response.StatusCode)
-	assert.Equal(t, "1", response.Header.Get("Triples"))
 
 	// user2
 	request, err = http.NewRequest("HEAD", testServer.URL+aclDir+"abc", nil)
@@ -489,7 +515,6 @@ func TestACLAppendOnly(t *testing.T) {
 	assert.NoError(t, err)
 	response.Body.Close()
 	assert.Equal(t, 200, response.StatusCode)
-	assert.Equal(t, "2", response.Header.Get("Triples"))
 
 	// agent
 	request, err = http.NewRequest("HEAD", testServer.URL+aclDir+"abc", nil)
@@ -506,7 +531,6 @@ func TestACLAppendOnly(t *testing.T) {
 	assert.NoError(t, err)
 	response.Body.Close()
 	assert.Equal(t, 200, response.StatusCode)
-	assert.Equal(t, "3", response.Header.Get("Triples"))
 
 	request, err = http.NewRequest("DELETE", acl, nil)
 	assert.NoError(t, err)
