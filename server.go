@@ -465,7 +465,7 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 									if err != nil {
 										return r.respond(500, err)
 									}
-									aclStatus, err = acl.AllowRead(resource.URI)
+									aclStatus, err = acl.AllowRead(res.URI)
 									if aclStatus == 200 && err == nil {
 										g.AppendFile(res.File, res.URI)
 										g.AddTriple(root, NewResource("http://www.w3.org/ns/ldp#contains"), NewResource(res.URI))
