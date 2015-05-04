@@ -163,7 +163,7 @@ func WebIDTLSAuth(tls *tls.ConnectionState) (uri string, err error) {
 				claim = string(v.Bytes[2:])
 			}
 		}
-		if len(claim) == 0 {
+		if len(claim) == 0 || claim[:4] != "http" {
 			continue
 		}
 
