@@ -13,22 +13,24 @@ import (
 )
 
 func TestParseDigestAuthorizationHeader(t *testing.T) {
-	h := `WebID-RSA username="http://example.org/", nonce="string1", sig="string2"`
+	h := `WebID-RSA source="http://server.org/", username="http://example.org/", nonce="string1", sig="string2"`
 	p, err := ParseDigestAuthorizationHeader(h)
 	assert.NoError(t, err)
 	assert.Equal(t, "WebID-RSA", p.Type)
+	assert.Equal(t, "http://server.org/", p.Source)
 	assert.Equal(t, "http://example.org/", p.Username)
 	assert.Equal(t, "string1", p.Nonce)
 	assert.Equal(t, "string2", p.Signature)
 }
 
 func TestParseDigestAuthenticateHeader(t *testing.T) {
-	h := `WebID-RSA nonce="string1"`
+	h := `WebID-RSA source="http://server.org/", nonce="string1"`
 
 	p, err := ParseDigestAuthenticateHeader(h)
 	assert.NoError(t, err)
 	assert.Equal(t, "WebID-RSA", p.Type)
 	assert.Equal(t, "string1", p.Nonce)
+	assert.Equal(t, "http://server.org/", p.Source)
 }
 
 func TestCookieAuth(t *testing.T) {
@@ -123,7 +125,7 @@ func TestWebIDRSAAuth(t *testing.T) {
 	signer, err := ParseRSAPrivatePEMKey(keyBytes)
 	assert.NoError(t, err)
 
-	claim := user1 + p.Nonce
+	claim := p.Source + user1 + p.Nonce
 
 	signed, err := signer.Sign([]byte(claim))
 	assert.NoError(t, err)
@@ -131,7 +133,7 @@ func TestWebIDRSAAuth(t *testing.T) {
 	b64Sig := base64.StdEncoding.EncodeToString(signed)
 	assert.NotEmpty(t, b64Sig)
 
-	authHeader := `WebID-RSA username="` + user1 + `", nonce="` + p.Nonce + `", sig="` + b64Sig + `"`
+	authHeader := `WebID-RSA source="` + p.Source + `", username="` + user1 + `", nonce="` + p.Nonce + `", sig="` + b64Sig + `"`
 
 	request, err = http.NewRequest("GET", testServer.URL+aclDir+"abc", nil)
 	request.Header.Add("Authorization", authHeader)
@@ -139,6 +141,23 @@ func TestWebIDRSAAuth(t *testing.T) {
 	response, err = httpClient.Do(request)
 	assert.NoError(t, err)
 	assert.Equal(t, 200, response.StatusCode)
+
+	claim = "http://baddude.org/" + user1 + p.Nonce
+
+	signed, err = signer.Sign([]byte(claim))
+	assert.NoError(t, err)
+
+	b64Sig = base64.StdEncoding.EncodeToString(signed)
+	assert.NotEmpty(t, b64Sig)
+
+	authHeader = `WebID-RSA source="http://baddude.org/", username="` + user1 + `", nonce="` + p.Nonce + `", sig="` + b64Sig + `"`
+
+	request, err = http.NewRequest("GET", testServer.URL+aclDir+"abc", nil)
+	request.Header.Add("Authorization", authHeader)
+	assert.NoError(t, err)
+	response, err = httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.Equal(t, 401, response.StatusCode)
 }
 
 func TestCleanupAuth(t *testing.T) {

@@ -9,10 +9,10 @@ import (
 )
 
 type DigestAuthentication struct {
-	Type, Username, Realm, Nonce, URI, QOP, NC, CNonce, Response, Opaque, Algorithm string
+	Type, Source, Username, Realm, Nonce, URI, QOP, NC, CNonce, Response, Opaque, Algorithm string
 }
 type DigestAuthorization struct {
-	Type, Username, Nonce, Signature string
+	Type, Source, Username, Nonce, Signature string
 }
 
 func (req *httpRequest) authn(w http.ResponseWriter) string {
@@ -111,6 +111,7 @@ func ParseDigestAuthenticateHeader(header string) (*DigestAuthentication, error)
 
 	auth = DigestAuthentication{
 		opts["type"],
+		opts["source"],
 		opts["username"],
 		opts["realm"],
 		opts["nonce"],
@@ -146,6 +147,7 @@ func ParseDigestAuthorizationHeader(header string) (*DigestAuthorization, error)
 
 	auth = DigestAuthorization{
 		opts["type"],
+		opts["source"],
 		opts["username"],
 		opts["nonce"],
 		opts["sig"],

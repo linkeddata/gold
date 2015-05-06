@@ -145,7 +145,7 @@ func (acl *WAC) allow(mode string, path string) (int, error) {
 					acl.srv.debug.Println("Error generating Auth token: ", err)
 					return 500, err
 				}
-				wwwAuth := `WebID-RSA nonce="` + token + `"`
+				wwwAuth := `WebID-RSA source="` + acl.req.BaseURI() + `", nonce="` + token + `"`
 				acl.w.Header().Set("WWW-Authenticate", wwwAuth)
 				return 401, errors.New("Access to " + p.URI + " requires authentication")
 			}

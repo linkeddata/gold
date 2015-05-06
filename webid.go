@@ -60,8 +60,13 @@ func WebIDDigestAuth(req *httpRequest) (string, error) {
 		return "", err
 	}
 
+	source := authH.Source
+	if len(source) == 0 || source != req.BaseURI() {
+		return "", errors.New("Bad source of auth token, possible MITM attack!")
+	}
+
 	webid := authH.Username
-	claim := authH.Username + authH.Nonce
+	claim := source + authH.Username + authH.Nonce
 	signature, err := base64.StdEncoding.DecodeString(authH.Signature)
 	if err != nil {
 		return "", err
