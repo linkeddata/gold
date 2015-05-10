@@ -757,6 +757,7 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 	case "POST":
 		unlock := lock(resource.File)
 		defer unlock()
+		updateURI := resource.URI
 
 		// check append first
 		aclAppend, err := acl.AllowAppend(resource.URI)
@@ -801,10 +802,11 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 				if strings.HasSuffix(slug, "/") {
 					slug = strings.TrimRight(slug, "/")
 				}
-				st, _ := os.Stat(resource.File + slug)
-				if st != nil {
-					s.debug.Println("POST LDP - A resource with the same name already exists: " + resource.Path + slug)
-					return r.respond(409, "409 - Conflict! A resource with the same name already exists.")
+				st, err := os.Stat(resource.File + slug)
+				//@@TODO append a random string
+
+				if st != nil && !os.IsNotExist(err) {
+					slug += "-" + uuid
 				}
 			} else {
 				slug = uuid
@@ -970,7 +972,7 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 				}
 			}
 
-			onUpdateURI(resource.URI)
+			onUpdateURI(updateURI)
 			if isNew {
 				return r.respond(201)
 			}

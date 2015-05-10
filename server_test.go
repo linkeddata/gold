@@ -313,9 +313,9 @@ func TestLDPPostLDPRWithSlug(t *testing.T) {
 	response.Body.Close()
 	assert.NoError(t, err)
 	assert.Equal(t, 201, response.StatusCode)
-	newLDPR := response.Header.Get("Location")
+	oldLDPR := response.Header.Get("Location")
 
-	request, err = http.NewRequest("GET", newLDPR, nil)
+	request, err = http.NewRequest("GET", oldLDPR, nil)
 	assert.NoError(t, err)
 	request.Header.Add("Accept", "text/turtle")
 	response, err = httpClient.Do(request)
@@ -334,7 +334,17 @@ func TestLDPPostLDPRWithSlug(t *testing.T) {
 	request.Header.Add("Link", "<http://www.w3.org/ns/ldp#Resource>; rel=\"type\"")
 	response, err = httpClient.Do(request)
 	assert.NoError(t, err)
-	assert.Equal(t, 409, response.StatusCode)
+	response.Body.Close()
+	assert.Equal(t, 201, response.StatusCode)
+	newLDPR := response.Header.Get("Location")
+	assert.True(t, strings.Contains(newLDPR, "ldpr-"))
+
+	request, err = http.NewRequest("DELETE", oldLDPR, nil)
+	assert.NoError(t, err)
+	response, err = httpClient.Do(request)
+	response.Body.Close()
+	assert.NoError(t, err)
+	assert.Equal(t, 200, response.StatusCode)
 
 	request, err = http.NewRequest("DELETE", newLDPR, nil)
 	assert.NoError(t, err)
@@ -834,7 +844,6 @@ func TestGetJsonLd(t *testing.T) {
 		request.Header.Add("Accept", "application/ld+json")
 		response = r.Do(request)
 		assert.Equal(t, 200, response.StatusCode)
-		assert.Equal(t, "9", response.RawResponse.Header.Get("Triples"))
 	})
 }
 

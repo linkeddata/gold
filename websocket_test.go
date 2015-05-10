@@ -70,6 +70,10 @@ func TestWebSocketSubPub(t *testing.T) {
 	wsCfg1.TlsConfig = &config
 	ws, err := websocket.DialConfig(wsCfg1)
 	assert.NoError(t, err)
+
+	_, err = ws.Write([]byte("sub " + testServerWs.URL + "/"))
+	assert.NoError(t, err)
+
 	_, err = ws.Write([]byte("sub " + resURL))
 	assert.NoError(t, err)
 
@@ -85,6 +89,20 @@ func TestWebSocketSubPub(t *testing.T) {
 	n, err = ws.Read(msg)
 	assert.NoError(t, err)
 	assert.Equal(t, "pub "+resURL, string(msg[:n]))
+
+	request, err = http.NewRequest("POST", testServerWs.URL+"/", nil)
+	assert.NoError(t, err)
+	request.Header.Add("Content-Type", "text/turtle")
+	request.Header.Add("Slug", "res")
+	response, err = httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.Equal(t, 201, response.StatusCode)
+	assert.True(t, strings.HasSuffix(response.Header.Get("Location"), "res"))
+
+	msg = make([]byte, 512)
+	n, err = ws.Read(msg)
+	assert.NoError(t, err)
+	assert.Equal(t, "pub "+testServerWs.URL+"/", string(msg[:n]))
 
 	err = os.RemoveAll("_test/")
 	assert.NoError(t, err)
