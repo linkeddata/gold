@@ -2,6 +2,7 @@ package gold
 
 import (
 	"crypto/tls"
+	"io/ioutil"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -9,6 +10,7 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/net/websocket"
@@ -70,6 +72,7 @@ func TestWebSocketSubPub(t *testing.T) {
 	wsCfg1.TlsConfig = &config
 	ws, err := websocket.DialConfig(wsCfg1)
 	assert.NoError(t, err)
+	ws.SetReadDeadline(time.Now().Add(2 * time.Second))
 
 	_, err = ws.Write([]byte("sub " + testServerWs.URL + "/"))
 	assert.NoError(t, err)
@@ -89,6 +92,35 @@ func TestWebSocketSubPub(t *testing.T) {
 	n, err = ws.Read(msg)
 	assert.NoError(t, err)
 	assert.Equal(t, "pub "+resURL, string(msg[:n]))
+
+	request, err = http.NewRequest("POST", testServerWs.URL+"/", nil)
+	assert.NoError(t, err)
+	request.Header.Add("Content-Type", "text/turtle")
+	request.Header.Add("Link", "<http://www.w3.org/ns/ldp#BasicContainer>; rel=\"type\"")
+	request.Header.Add("Slug", "dir")
+	response, err = httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.Equal(t, 201, response.StatusCode)
+
+	msg = make([]byte, 512)
+	n, err = ws.Read(msg)
+	assert.NoError(t, err)
+	assert.Equal(t, "pub "+testServerWs.URL+"/", string(msg[:n]))
+
+	request, err = http.NewRequest("DELETE", testServerWs.URL+"/dir/", nil)
+	assert.NoError(t, err)
+	response, err = httpClient.Do(request)
+	assert.NoError(t, err)
+	body, err := ioutil.ReadAll(response.Body)
+	assert.NoError(t, err)
+	response.Body.Close()
+	println(string(body))
+	assert.Equal(t, 200, response.StatusCode)
+
+	msg = make([]byte, 512)
+	n, err = ws.Read(msg)
+	assert.NoError(t, err)
+	assert.Equal(t, "pub "+testServerWs.URL+"/", string(msg[:n]))
 
 	request, err = http.NewRequest("POST", testServerWs.URL+"/", nil)
 	assert.NoError(t, err)

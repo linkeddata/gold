@@ -840,27 +840,30 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 					g := NewGraph(resource.URI)
 					mg := NewGraph(resource.URI)
 					mg.Parse(req.Body, dataMime)
-					for triple := range mg.IterTriples() {
-						subject := NewResource(".")
-						g.AddTriple(subject, triple.Predicate, triple.Object)
-					}
+					if mg.Len() > 0 {
+						for triple := range mg.IterTriples() {
+							subject := NewResource(".")
+							g.AddTriple(subject, triple.Predicate, triple.Object)
+						}
 
-					f, err := os.OpenFile(resource.MetaFile, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
-					if err != nil {
-						s.debug.Println("POST LDPC os.OpenFile err: " + err.Error())
-						return r.respond(500, err)
-					}
-					defer f.Close()
-
-					if g.Len() > 0 {
-						if err = g.WriteFile(f, ""); err != nil {
-							s.debug.Println("POST LDPC g.WriteFile err: " + err.Error())
+						f, err := os.OpenFile(resource.MetaFile, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
+						if err != nil {
+							s.debug.Println("POST LDPC os.OpenFile err: " + err.Error())
 							return r.respond(500, err)
+						}
+						defer f.Close()
+
+						if g.Len() > 0 {
+							if err = g.WriteFile(f, ""); err != nil {
+								s.debug.Println("POST LDPC g.WriteFile err: " + err.Error())
+								return r.respond(500, err)
+							}
 						}
 					}
 				}
 				w.Header().Set("Location", resource.URI)
 				onUpdateURI(resource.URI)
+				onUpdateURI(resource.ParentURI)
 				return r.respond(201)
 			}
 			resource, err = s.pathInfo(resource.Base + "/" + resource.Path)
@@ -973,6 +976,7 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 			}
 
 			onUpdateURI(updateURI)
+			onUpdateURI(resource.ParentURI)
 			if isNew {
 				return r.respond(201)
 			}
@@ -1019,6 +1023,7 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 			w.Header().Add("Link", brack("http://www.w3.org/ns/ldp#Resource")+"; rel=\"type\"")
 
 			onUpdateURI(resource.URI)
+			onUpdateURI(resource.ParentURI)
 			return r.respond(201)
 		}
 		err = os.MkdirAll(_path.Dir(resource.File), 0755)
@@ -1065,6 +1070,7 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 		w.Header().Set("Location", resource.URI)
 
 		onUpdateURI(resource.URI)
+		onUpdateURI(resource.ParentURI)
 		if isNew {
 			return r.respond(201)
 		}
@@ -1094,6 +1100,7 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 			return r.respond(409, err)
 		}
 		onDeleteURI(resource.URI)
+		onUpdateURI(resource.ParentURI)
 		return
 
 	case "MKCOL":
@@ -1120,6 +1127,7 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 			}
 		}
 		onUpdateURI(resource.URI)
+		onUpdateURI(resource.ParentURI)
 		return r.respond(201)
 
 	case "COPY", "MOVE", "LOCK", "UNLOCK":

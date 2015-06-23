@@ -5,22 +5,24 @@ import (
 	"net"
 	"net/url"
 	"os"
+	"path/filepath"
 	"strings"
 )
 
 type pathInfo struct {
-	Obj      *url.URL
-	URI      string
-	Base     string
-	Path     string
-	Root     string
-	File     string
-	FileType string
-	AclURI   string
-	AclFile  string
-	MetaURI  string
-	MetaFile string
-	Exists   bool
+	Obj       *url.URL
+	URI       string
+	Base      string
+	Path      string
+	Root      string
+	File      string
+	FileType  string
+	ParentURI string
+	AclURI    string
+	AclFile   string
+	MetaURI   string
+	MetaFile  string
+	Exists    bool
 }
 
 func (s *Server) pathInfo(path string) (*pathInfo, error) {
@@ -90,6 +92,16 @@ func (s *Server) pathInfo(path string) (*pathInfo, error) {
 		res.File = s.Config.DataRoot + p.Path
 	}
 
+	if strings.HasSuffix(res.Path, "/") {
+		if filepath.Dir(filepath.Dir(res.Path)) == "." {
+			res.ParentURI = res.Base + "/"
+		} else {
+			res.ParentURI = res.Base + "/" + filepath.Dir(filepath.Dir(res.Path)) + "/"
+		}
+	} else {
+		res.ParentURI = res.Base + "/" + filepath.Dir(res.Path) + "/"
+	}
+
 	if strings.HasSuffix(p.Path, ",acl") {
 		res.AclURI = res.URI
 		res.AclFile = res.File
@@ -103,7 +115,6 @@ func (s *Server) pathInfo(path string) (*pathInfo, error) {
 	} else {
 		res.AclURI = res.URI + ACLSuffix
 		res.AclFile = res.File + ACLSuffix
-		// println("s.Config.Vhosts: res.File=" + res.File + " / res.AclFile=" + res.AclFile)
 		res.MetaURI = res.URI + METASuffix
 		res.MetaFile = res.File + METASuffix
 	}
