@@ -749,6 +749,7 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 			}
 
 			onUpdateURI(resource.URI)
+			onUpdateURI(resource.ParentURI)
 
 			w.Header().Set("Triples", fmt.Sprintf("%d", g.Len()))
 			return r.respond(200)
