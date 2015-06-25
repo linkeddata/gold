@@ -15,6 +15,14 @@ func TestSPARQLInsert(t *testing.T) {
 		assert.Equal(t, sparql.queries[0].verb, "INSERT DATA")
 		assert.Equal(t, sparql.queries[0].body, " <a> <b> <c> . ")
 	}
+
+	sparql = NewSPARQLUpdate("https://test/")
+	sparql.Parse(strings.NewReader("INSERT DATA { <a> <b> <data:image/jpeg;base64,/9j/4AAQSkZ=> . }"))
+	assert.Equal(t, len(sparql.queries), 1)
+	if len(sparql.queries) > 0 {
+		assert.Equal(t, sparql.queries[0].verb, "INSERT DATA")
+		assert.Equal(t, sparql.queries[0].body, " <a> <b> <data:image/jpeg;base64,/9j/4AAQSkZ=> . ")
+	}
 }
 
 func TestSPARQLInsertDeleteUri(t *testing.T) {

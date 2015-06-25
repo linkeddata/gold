@@ -69,7 +69,9 @@ func (sparql *SPARQLUpdate) Parse(src io.Reader) error {
 			}
 
 		case 59: // ;
-			verb = ""
+			if level == 0 {
+				verb = ""
+			}
 		}
 
 		tok = s.Scan()
