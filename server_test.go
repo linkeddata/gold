@@ -777,7 +777,7 @@ func TestIfNoneMatch(t *testing.T) {
 		request, _ = http.NewRequest("HEAD", "/_test/", nil)
 		request.Header.Add("If-None-Match", ETag)
 		response = r.Do(request)
-		assert.Equal(t, 200, response.StatusCode)
+		assert.Equal(t, 304, response.StatusCode)
 
 		request, _ = http.NewRequest("HEAD", "/_test/", nil)
 		request.Header.Add("If-None-Match", ETag)
