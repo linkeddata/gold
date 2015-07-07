@@ -31,6 +31,8 @@ const (
 	SystemPrefix = ",system"
 	// ProxyPath provides CORS proxy (empty to disable)
 	ProxyPath = ",proxy"
+	// RDFExtension is the default extension for RDF documents (i.e. turtle for now)
+	RDFExtension = ".ttl"
 )
 
 var (
@@ -229,7 +231,7 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 
 	// CORS
 	w.Header().Set("Access-Control-Allow-Credentials", "true")
-	w.Header().Set("Access-Control-Expose-Headers", "User, Triples, Location, Link, Vary, Last-Modified, Content-Length")
+	w.Header().Set("Access-Control-Expose-Headers", "User, Location, Link, Vary, Last-Modified, Content-Length")
 	w.Header().Set("Access-Control-Max-Age", "1728000")
 
 	// RWW
@@ -627,7 +629,6 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 				maybeRDF = false
 			} else {
 				w.Header().Set(HCType, contentType)
-				w.Header().Set("Triples", fmt.Sprintf("%d", g.Len()))
 			}
 		}
 
@@ -751,7 +752,6 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 			onUpdateURI(resource.URI)
 			onUpdateURI(resource.ParentURI)
 
-			w.Header().Set("Triples", fmt.Sprintf("%d", g.Len()))
 			return r.respond(200)
 		}
 
@@ -836,37 +836,27 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 				}
 				s.debug.Println("Created dir " + resource.File)
 
-				//Replace the subject with the dir path instead of the meta file path
-				if dataHasParser {
-					g := NewGraph(resource.URI)
-					mg := NewGraph(resource.URI)
-					mg.Parse(req.Body, dataMime)
-					if mg.Len() > 0 {
-						for triple := range mg.IterTriples() {
-							subject := NewResource(".")
-							g.AddTriple(subject, triple.Predicate, triple.Object)
-						}
-
-						f, err := os.OpenFile(resource.MetaFile, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
-						if err != nil {
-							s.debug.Println("POST LDPC os.OpenFile err: " + err.Error())
-							return r.respond(500, err)
-						}
-						defer f.Close()
-
-						if g.Len() > 0 {
-							if err = g.WriteFile(f, ""); err != nil {
-								s.debug.Println("POST LDPC g.WriteFile err: " + err.Error())
-								return r.respond(500, err)
-							}
-						}
+				buf := new(bytes.Buffer)
+				buf.ReadFrom(req.Body)
+				if buf.Len() > 0 {
+					f, err := os.OpenFile(resource.MetaFile, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
+					if err != nil {
+						s.debug.Println("POST LDPC os.OpenFile err: " + err.Error())
+						return r.respond(500, err)
+					}
+					defer f.Close()
+					_, err = io.Copy(f, buf)
+					if err != nil {
+						s.debug.Println("PUT io.Copy err: " + err.Error())
 					}
 				}
+
 				w.Header().Set("Location", resource.URI)
 				onUpdateURI(resource.URI)
 				onUpdateURI(resource.ParentURI)
 				return r.respond(201)
 			}
+
 			resource, err = s.pathInfo(resource.Base + "/" + resource.Path)
 			if err != nil {
 				s.debug.Println("POST LDPR s.pathInfo err: " + err.Error())
@@ -961,7 +951,6 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 						s.debug.Println("Wrote resource file: " + resource.File)
 					}
 				}
-				w.Header().Set("Triples", fmt.Sprintf("%d", g.Len()))
 			} else {
 				f, err := os.OpenFile(resource.File, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
 				if err != nil {
@@ -1050,15 +1039,6 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 		}
 		defer f.Close()
 
-		if dataHasParser {
-			g := NewGraph(resource.URI)
-			g.Parse(req.Body, dataMime)
-			err = g.WriteFile(f, "text/turtle")
-			if err != nil {
-				s.debug.Println("PUT g.WriteFile err: " + err.Error())
-			}
-			w.Header().Set("Triples", fmt.Sprintf("%d", g.Len()))
-		}
 		_, err = io.Copy(f, req.Body)
 		if err != nil {
 			s.debug.Println("PUT io.Copy err: " + err.Error())

@@ -412,7 +412,6 @@ func TestLDPPostLDPRNoSlug(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, 200, response.StatusCode)
 	assert.Equal(t, 6, len(filepath.Base(newLDPR)))
-	assert.Equal(t, "1", response.Header.Get("Triples"))
 	body, err := ioutil.ReadAll(response.Body)
 	response.Body.Close()
 	assert.Equal(t, "@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n\n<>\n    a <http://example.org/two> .\n\n", string(body))
