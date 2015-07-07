@@ -10,7 +10,6 @@ import (
 	"strings"
 	"testing"
 
-	// "github.com/drewolson/testflight"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -174,7 +173,6 @@ func TestACLOrigin(t *testing.T) {
 	assert.NoError(t, err)
 	response.Body.Close()
 	assert.Equal(t, 201, response.StatusCode)
-	assert.Equal(t, "10", response.Header.Get("Triples"))
 
 	// user1
 	request, err = http.NewRequest("HEAD", testServer.URL+aclDir, nil)
@@ -253,7 +251,6 @@ func TestACLOwnerOnly(t *testing.T) {
 	assert.NoError(t, err)
 	response.Body.Close()
 	assert.Equal(t, 201, response.StatusCode)
-	assert.Equal(t, "4", response.Header.Get("Triples"))
 
 	// user1
 	request, err = http.NewRequest("HEAD", acl, nil)
@@ -262,7 +259,6 @@ func TestACLOwnerOnly(t *testing.T) {
 	assert.NoError(t, err)
 	response.Body.Close()
 	assert.Equal(t, 200, response.StatusCode)
-	assert.Equal(t, "4", response.Header.Get("Triples"))
 
 	request, err = http.NewRequest("HEAD", testServer.URL+aclDir, nil)
 	assert.NoError(t, err)
@@ -573,7 +569,6 @@ func TestACLRestricted(t *testing.T) {
 	assert.NoError(t, err)
 	response.Body.Close()
 	assert.Equal(t, 200, response.StatusCode)
-	assert.Equal(t, "9", response.Header.Get("Triples"))
 
 	request, err = http.NewRequest("HEAD", testServer.URL+aclDir+"abc", nil)
 	assert.NoError(t, err)
@@ -589,7 +584,6 @@ func TestACLRestricted(t *testing.T) {
 	assert.NoError(t, err)
 	response.Body.Close()
 	assert.Equal(t, 201, response.StatusCode)
-	assert.Equal(t, "1", response.Header.Get("Triples"))
 
 	// user2
 	request, err = http.NewRequest("HEAD", testServer.URL+aclDir+"abc", nil)
@@ -613,7 +607,6 @@ func TestACLRestricted(t *testing.T) {
 	assert.NoError(t, err)
 	response.Body.Close()
 	assert.Equal(t, 200, response.StatusCode)
-	assert.Equal(t, "2", response.Header.Get("Triples"))
 
 	// agent
 	request, err = http.NewRequest("HEAD", testServer.URL+aclDir+"abc", nil)
@@ -685,7 +678,6 @@ func TestACLGroup(t *testing.T) {
 	assert.NoError(t, err)
 	response.Body.Close()
 	assert.Equal(t, 200, response.StatusCode)
-	assert.Equal(t, "9", response.Header.Get("Triples"))
 
 	request, err = http.NewRequest("PUT", testServer.URL+aclDir+"abc", strings.NewReader("<a> <b> <c> ."))
 	assert.NoError(t, err)
@@ -694,7 +686,6 @@ func TestACLGroup(t *testing.T) {
 	assert.NoError(t, err)
 	response.Body.Close()
 	assert.Equal(t, 201, response.StatusCode)
-	assert.Equal(t, "1", response.Header.Get("Triples"))
 
 	request, err = http.NewRequest("HEAD", testServer.URL+aclDir+"abc", nil)
 	assert.NoError(t, err)
@@ -790,7 +781,6 @@ func TestACLDefaultForNew(t *testing.T) {
 	assert.NoError(t, err)
 	response.Body.Close()
 	assert.Equal(t, 200, response.StatusCode)
-	assert.Equal(t, "10", response.Header.Get("Triples"))
 
 	request, err = http.NewRequest("PUT", testServer.URL+aclDir+"abcd", strings.NewReader("<a> <b> <c> ."))
 	assert.NoError(t, err)
@@ -799,7 +789,6 @@ func TestACLDefaultForNew(t *testing.T) {
 	assert.NoError(t, err)
 	response.Body.Close()
 	assert.Equal(t, 201, response.StatusCode)
-	assert.Equal(t, "1", response.Header.Get("Triples"))
 
 	request, err = http.NewRequest("HEAD", testServer.URL+aclDir+"abcd", nil)
 	assert.NoError(t, err)
@@ -896,12 +885,3 @@ func TestACLCleanUp(t *testing.T) {
 	response.Body.Close()
 	assert.Equal(t, 200, response.StatusCode)
 }
-
-// func TestACLCleanUsers(t *testing.T) {
-// 	testflight.WithServer(handler, func(r *testflight.Requester) {
-// 		response := r.Delete("/_test/user1", "", "")
-// 		assert.Equal(t, 200, response.StatusCode)
-// 		response = r.Delete("/_test/user2", "", "")
-// 		assert.Equal(t, 200, response.StatusCode)
-// 	})
-// }

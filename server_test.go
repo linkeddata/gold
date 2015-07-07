@@ -13,7 +13,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/drewolson/testflight"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -23,44 +22,58 @@ var (
 )
 
 func TestMKCOL(t *testing.T) {
-	testflight.WithServer(handler, func(r *testflight.Requester) {
-		request, _ := http.NewRequest("MKCOL", "/_test", nil)
-		response := r.Do(request)
-		assert.Equal(t, 201, response.StatusCode)
+	request, err := http.NewRequest("MKCOL", testServer.URL+"/_test", nil)
+	assert.NoError(t, err)
+	response, err := httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.Equal(t, 201, response.StatusCode)
 
-		response = r.Put("/_test/abc", "text/turtle", "<a> <b> <c>.")
-		assert.Equal(t, 201, response.StatusCode)
+	request, err = http.NewRequest("PUT", testServer.URL+"/_test/abc", strings.NewReader("<a> <b> <c>."))
+	assert.NoError(t, err)
+	request.Header.Add("Content-Type", "text/turtle")
+	response, err = httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.Equal(t, 201, response.StatusCode)
 
-		request, _ = http.NewRequest("MKCOL", "/_test/abc", nil)
-		response = r.Do(request)
-		assert.Equal(t, 409, response.StatusCode)
+	request, err = http.NewRequest("MKCOL", testServer.URL+"/_test/abc", nil)
+	assert.NoError(t, err)
+	response, err = httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.Equal(t, 409, response.StatusCode)
 
-		request, _ = http.NewRequest("GET", "/_test", nil)
-		response = r.Do(request)
-		assert.Equal(t, 200, response.StatusCode)
-	})
+	request, err = http.NewRequest("GET", testServer.URL+"/_test", nil)
+	assert.NoError(t, err)
+	response, err = httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, response.StatusCode)
 }
 
 func TestSkin(t *testing.T) {
-	testflight.WithServer(handler, func(r *testflight.Requester) {
-		request, _ := http.NewRequest("GET", "/_test/", nil)
-		request.Header.Add("Accept", "text/html")
-		response := r.Do(request)
-		assert.Equal(t, 200, response.StatusCode)
-		assert.Contains(t, response.RawResponse.Header.Get("Content-Type"), "text/html")
+	request, err := http.NewRequest("GET", testServer.URL+"/_test/", nil)
+	assert.NoError(t, err)
+	request.Header.Add("Accept", "text/html")
+	response, err := httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, response.StatusCode)
+	assert.Contains(t, response.Header.Get("Content-Type"), "text/html")
 
-		request, _ = http.NewRequest("PUT", "/_test/index.html", strings.NewReader("<html>Hello world!</html>"))
-		request.Header.Add("Content-Type", "text/html")
-		response = r.Do(request)
-		assert.Equal(t, 201, response.StatusCode)
+	request, err = http.NewRequest("PUT", testServer.URL+"/_test/index.html", strings.NewReader("<html>Hello world!</html>"))
+	assert.NoError(t, err)
+	request.Header.Add("Content-Type", "text/html")
+	response, err = httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.Equal(t, 201, response.StatusCode)
 
-		request, _ = http.NewRequest("GET", "/_test/index.html", nil)
-		request.Header.Add("Accept", "text/html")
-		response = r.Do(request)
-		assert.Equal(t, 200, response.StatusCode)
-		assert.Contains(t, response.RawResponse.Header.Get("Content-Type"), "text/html")
-		assert.Contains(t, response.Body, "<html")
-	})
+	request, err = http.NewRequest("GET", testServer.URL+"/_test/index.html", nil)
+	assert.NoError(t, err)
+	request.Header.Add("Accept", "text/html")
+	response, err = httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, response.StatusCode)
+	assert.Contains(t, response.Header.Get("Content-Type"), "text/html")
+	body, err := ioutil.ReadAll(response.Body)
+	response.Body.Close()
+	assert.Contains(t, string(body), "<html")
 }
 
 func TestRedirectSignUpWithVhosts(t *testing.T) {
@@ -98,91 +111,121 @@ func TestRedirectSignUpWithVhosts(t *testing.T) {
 }
 
 func TestWebContent(t *testing.T) {
-	testflight.WithServer(handler, func(r *testflight.Requester) {
-		request, _ := http.NewRequest("PUT", "/_test/alert.js", strings.NewReader("alert('test');"))
-		request.Header.Add("Content-Type", "application/javascript")
-		response := r.Do(request)
-		assert.Equal(t, 201, response.StatusCode)
+	request, err := http.NewRequest("PUT", testServer.URL+"/_test/alert.js", strings.NewReader("alert('test');"))
+	assert.NoError(t, err)
+	request.Header.Add("Content-Type", "application/javascript")
+	response, err := httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.Equal(t, 201, response.StatusCode)
 
-		request, _ = http.NewRequest("PUT", "/_test/text.txt", strings.NewReader("foo bar"))
-		request.Header.Add("Content-Type", "text/txt")
-		response = r.Do(request)
-		assert.Equal(t, 201, response.StatusCode)
+	request, err = http.NewRequest("PUT", testServer.URL+"/_test/text.txt", strings.NewReader("foo bar"))
+	assert.NoError(t, err)
+	request.Header.Add("Content-Type", "text/txt")
+	response, err = httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.Equal(t, 201, response.StatusCode)
 
-		request, _ = http.NewRequest("PUT", "/_test/reset.css", strings.NewReader("* { padding: 0; }"))
-		request.Header.Add("Content-Type", "text/css")
-		response = r.Do(request)
-		assert.Equal(t, 201, response.StatusCode)
+	request, err = http.NewRequest("PUT", testServer.URL+"/_test/reset.css", strings.NewReader("* { padding: 0; }"))
+	assert.NoError(t, err)
+	request.Header.Add("Content-Type", "text/css")
+	response, err = httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.Equal(t, 201, response.StatusCode)
 
-		request, _ = http.NewRequest("GET", "/_test/alert.js", nil)
-		response = r.Do(request)
-		assert.Equal(t, 200, response.StatusCode)
-		assert.Contains(t, response.RawResponse.Header.Get("Content-Type"), "application/javascript")
+	request, err = http.NewRequest("GET", testServer.URL+"/_test/alert.js", nil)
+	assert.NoError(t, err)
+	response, err = httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, response.StatusCode)
+	assert.Contains(t, response.Header.Get("Content-Type"), "application/javascript")
 
-		request, _ = http.NewRequest("GET", "/_test/text.txt", nil)
-		response = r.Do(request)
-		assert.Equal(t, 200, response.StatusCode)
-		assert.Contains(t, response.RawResponse.Header.Get("Content-Type"), "text/plain")
+	request, err = http.NewRequest("GET", testServer.URL+"/_test/text.txt", nil)
+	assert.NoError(t, err)
+	response, err = httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, response.StatusCode)
+	assert.Contains(t, response.Header.Get("Content-Type"), "text/plain")
 
-		request, _ = http.NewRequest("GET", "/_test/reset.css", nil)
-		response = r.Do(request)
-		assert.Equal(t, 200, response.StatusCode)
-		assert.Contains(t, response.RawResponse.Header.Get("Content-Type"), "text/css; charset=utf-8")
+	request, err = http.NewRequest("GET", testServer.URL+"/_test/reset.css", nil)
+	assert.NoError(t, err)
+	response, err = httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, response.StatusCode)
+	assert.Contains(t, response.Header.Get("Content-Type"), "text/css; charset=utf-8")
 
-		assert.Equal(t, 200, r.Delete("/_test/alert.js", "", "").StatusCode)
-		assert.Equal(t, 200, r.Delete("/_test/reset.css", "", "").StatusCode)
-		assert.Equal(t, 200, r.Delete("/_test/text.txt", "", "").StatusCode)
-	})
+	request, err = http.NewRequest("DELETE", testServer.URL+"/_test/alert.js", nil)
+	assert.NoError(t, err)
+	response, err = httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, response.StatusCode)
+
+	request, err = http.NewRequest("DELETE", testServer.URL+"/_test/reset.css", nil)
+	assert.NoError(t, err)
+	response, err = httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, response.StatusCode)
+
+	request, err = http.NewRequest("DELETE", testServer.URL+"/_test/text.txt", nil)
+	assert.NoError(t, err)
+	response, err = httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, response.StatusCode)
 }
 
 func TestHTMLIndex(t *testing.T) {
-	testflight.WithServer(handler, func(r *testflight.Requester) {
-		request, _ := http.NewRequest("HEAD", "/_test/index.html", nil)
-		request.Header.Add("Accept", "text/html")
-		response := r.Do(request)
-		assert.Equal(t, 200, response.StatusCode)
+	request, err := http.NewRequest("HEAD", testServer.URL+"/_test/index.html", nil)
+	assert.NoError(t, err)
+	request.Header.Add("Accept", "text/html")
+	response, err := httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, response.StatusCode)
 
-		request, _ = http.NewRequest("GET", "/_test/", nil)
-		request.Header.Add("Accept", "text/html")
-		response = r.Do(request)
-		assert.Equal(t, 200, response.StatusCode)
-		//		assert.Contains(t, response.RawResponse.Header.Get("Content-Type"), "text/html")
-		//		assert.Equal(t, response.Body, "<html>Hello world!</html>")
+	request, err = http.NewRequest("GET", testServer.URL+"/_test/", nil)
+	assert.NoError(t, err)
+	request.Header.Add("Accept", "text/html")
+	response, err = httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, response.StatusCode)
 
-		request, _ = http.NewRequest("HEAD", "/_test/", nil)
-		request.Header.Add("Accept", "text/html")
-		response = r.Do(request)
-		assert.Equal(t, 200, response.StatusCode)
-		assert.Equal(t, request.URL.String()+"index.html,meta", ParseLinkHeader(response.RawResponse.Header.Get("Link")).MatchRel("meta"))
-		assert.Equal(t, request.URL.String()+"index.html,acl", ParseLinkHeader(response.RawResponse.Header.Get("Link")).MatchRel("acl"))
+	request, err = http.NewRequest("HEAD", testServer.URL+"/_test/", nil)
+	assert.NoError(t, err)
+	request.Header.Add("Accept", "text/html")
+	response, err = httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, response.StatusCode)
+	assert.Equal(t, request.URL.String()+"index.html,meta", ParseLinkHeader(response.Header.Get("Link")).MatchRel("meta"))
+	assert.Equal(t, request.URL.String()+"index.html,acl", ParseLinkHeader(response.Header.Get("Link")).MatchRel("acl"))
 
-		assert.Equal(t, 200, r.Delete("/_test/index.html", "", "").StatusCode)
-	})
+	request, err = http.NewRequest("DELETE", testServer.URL+"/_test/index.html", nil)
+	assert.NoError(t, err)
+	response, err = httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, response.StatusCode)
 }
 
 func TestOPTIONS(t *testing.T) {
-	testflight.WithServer(handler, func(r *testflight.Requester) {
-		request, _ := http.NewRequest("OPTIONS", "/", nil)
-		request.Header.Add("Accept", "text/turtle")
-		request.Header.Add("Access-Control-Request-Headers", "Triples")
-		request.Header.Add("Access-Control-Request-Method", "PATCH")
-		response := r.Do(request)
-		assert.Empty(t, response.Body)
-		assert.Equal(t, 200, response.StatusCode)
-	})
+	request, err := http.NewRequest("OPTIONS", testServer.URL+"/", nil)
+	assert.NoError(t, err)
+	request.Header.Add("Accept", "text/turtle")
+	request.Header.Add("Access-Control-Request-Method", "PATCH")
+	response, err := httpClient.Do(request)
+	assert.NoError(t, err)
+	body, err := ioutil.ReadAll(response.Body)
+	response.Body.Close()
+	assert.Empty(t, string(body))
+	assert.Equal(t, 200, response.StatusCode)
 }
 
 func TestOPTIONSOrigin(t *testing.T) {
 	origin := "http://localhost:1234"
-	testflight.WithServer(handler, func(r *testflight.Requester) {
-		request, _ := http.NewRequest("OPTIONS", "/", nil)
-		request.Header.Add("Accept", "text/turtle")
-		request.Header.Add("Origin", origin)
-		response := r.Do(request)
-		assert.Empty(t, response.Body)
-		assert.Equal(t, 200, response.StatusCode)
-		assert.Equal(t, response.RawResponse.Header.Get("Access-Control-Allow-Origin"), origin)
-	})
+	request, err := http.NewRequest("OPTIONS", testServer.URL+"/", nil)
+	assert.NoError(t, err)
+	request.Header.Add("Accept", "text/turtle")
+	request.Header.Add("Origin", origin)
+	response, err := httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, response.StatusCode)
+	assert.Equal(t, response.Header.Get("Access-Control-Allow-Origin"), origin)
 }
 
 func TestURIwithSpaces(t *testing.T) {
@@ -273,18 +316,18 @@ func TestLDPPostLDPC(t *testing.T) {
 	body, err = ioutil.ReadAll(response.Body)
 	assert.NoError(t, err)
 	response.Body.Close()
+
 	g := NewGraph(testServer.URL + "/_test/")
 	g.Parse(strings.NewReader(string(body)), "text/turtle")
 	assert.NotNil(t, g.One(NewResource(testServer.URL+"/_test/"), NewResource("http://www.w3.org/ns/ldp#contains"), NewResource(newLDPC)))
 	assert.NotNil(t, g.One(NewResource(newLDPC), NewResource("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), NewResource("http://example.org/ldpc")))
 	assert.NotNil(t, g.One(NewResource(newLDPC), NewResource("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), NewResource("http://www.w3.org/ns/ldp#BasicContainer")))
-
-	request, err = http.NewRequest("GET", metaURI, nil)
+	request, err = http.NewRequest("HEAD", metaURI, nil)
 	assert.NoError(t, err)
 	request.Header.Add("Accept", "text/turtle")
 	response, err = httpClient.Do(request)
 	response.Body.Close()
-	assert.Equal(t, response.Header.Get("Triples"), "1")
+	assert.Equal(t, 200, response.StatusCode)
 
 	request, err = http.NewRequest("DELETE", metaURI, nil)
 	assert.NoError(t, err)
@@ -321,7 +364,6 @@ func TestLDPPostLDPRWithSlug(t *testing.T) {
 	response, err = httpClient.Do(request)
 	assert.NoError(t, err)
 	assert.Equal(t, 200, response.StatusCode)
-	assert.Equal(t, response.Header.Get("Triples"), "1")
 	body, err := ioutil.ReadAll(response.Body)
 	assert.NoError(t, err)
 	response.Body.Close()
@@ -383,17 +425,19 @@ func TestLDPPostLDPRNoSlug(t *testing.T) {
 }
 
 func TestLDPGetLDPC(t *testing.T) {
-	testflight.WithServer(handler, func(r *testflight.Requester) {
-		request, err := http.NewRequest("GET", "/_test/", nil)
-		request.Header.Add("Accept", "text/turtle")
-		response := r.Do(request)
-		assert.NoError(t, err)
-		assert.Equal(t, 200, response.StatusCode)
+	request, err := http.NewRequest("GET", testServer.URL+"/_test/", nil)
+	assert.NoError(t, err)
+	request.Header.Add("Accept", "text/turtle")
+	response, err := httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, response.StatusCode)
 
-		g := NewGraph(testServer.URL + "/_test/")
-		g.Parse(strings.NewReader(response.Body), "text/turtle")
-		assert.NotNil(t, g.One(NewResource(testServer.URL+"/_test/"), NewResource("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), NewResource("http://www.w3.org/ns/ldp#BasicContainer")))
-	})
+	body, err := ioutil.ReadAll(response.Body)
+	response.Body.Close()
+
+	g := NewGraph(testServer.URL + "/_test/")
+	g.Parse(strings.NewReader(string(body)), "text/turtle")
+	assert.NotNil(t, g.One(NewResource(testServer.URL+"/_test/"), NewResource("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), NewResource("http://www.w3.org/ns/ldp#BasicContainer")))
 }
 
 func TestLDPPreferContainmentHeader(t *testing.T) {
@@ -540,324 +584,368 @@ func TestStreaming(t *testing.T) {
 	defer func() {
 		Streaming = false
 	}()
-	testflight.WithServer(handler, func(r *testflight.Requester) {
-		request, _ := http.NewRequest("PUT", "/_test/abc", strings.NewReader("<a> <b> <c> ."))
-		request.Header.Add("Content-Type", "text/turtle")
-		response := r.Do(request)
-		assert.Equal(t, 201, response.StatusCode)
+	request, err := http.NewRequest("PUT", testServer.URL+"/_test/abc", strings.NewReader("<a> <b> <c> ."))
+	assert.NoError(t, err)
+	request.Header.Add("Content-Type", "text/turtle")
+	response, err := httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.Equal(t, 201, response.StatusCode)
 
-		response = r.Get("/_test/abc")
-		assert.Equal(t, 200, response.StatusCode)
-		assert.Equal(t, "@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n\n<a>\n    <b> <c> .\n\n", response.Body)
+	request, err = http.NewRequest("GET", testServer.URL+"/_test/abc", nil)
+	assert.NoError(t, err)
+	request.Header.Add("Content-Type", "text/turtle")
+	response, err = httpClient.Do(request)
+	assert.NoError(t, err)
+	body, err := ioutil.ReadAll(response.Body)
+	response.Body.Close()
+	assert.Equal(t, 200, response.StatusCode)
+	assert.Equal(t, "@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n\n<a>\n    <b> <c> .\n\n", string(body))
 
-		request, _ = http.NewRequest("PUT", "/_test/abc", nil)
-		response = r.Do(request)
-		assert.Equal(t, 201, response.StatusCode)
-	})
+	request, err = http.NewRequest("PUT", testServer.URL+"/_test/abc", nil)
+	assert.NoError(t, err)
+	response, err = httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.Equal(t, 201, response.StatusCode)
 }
 
 func TestPOSTSPARQL(t *testing.T) {
-	testflight.WithServer(handler, func(r *testflight.Requester) {
-		request, _ := http.NewRequest("POST", "/_test/abc", strings.NewReader("INSERT DATA { <a> <b> <c>, <c0> . }"))
-		request.Header.Add("Content-Type", "application/sparql-update")
-		response := r.Do(request)
-		assert.Empty(t, response.Body)
-		assert.Equal(t, 200, response.StatusCode)
-		assert.Equal(t, "2", response.RawResponse.Header.Get("Triples"))
+	request, err := http.NewRequest("POST", testServer.URL+"/_test/abc", strings.NewReader("INSERT DATA { <a> <b> <c>, <c0> . }"))
+	assert.NoError(t, err)
+	request.Header.Add("Content-Type", "application/sparql-update")
+	response, err := httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, response.StatusCode)
 
-		request, _ = http.NewRequest("POST", "/_test/abc", strings.NewReader("DELETE DATA { <a> <b> <c> . }"))
-		request.Header.Add("Content-Type", "application/sparql-update")
-		response = r.Do(request)
-		assert.Empty(t, response.Body)
-		assert.Equal(t, 200, response.StatusCode)
-		assert.Equal(t, "1", response.RawResponse.Header.Get("Triples"))
-	})
+	// body, err := ioutil.ReadAll(response.Body)
+	// response.Body.Close()
+
+	request, err = http.NewRequest("POST", testServer.URL+"/_test/abc", strings.NewReader("DELETE DATA { <a> <b> <c> . }"))
+	assert.NoError(t, err)
+	request.Header.Add("Content-Type", "application/sparql-update")
+	response, err = httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, response.StatusCode)
 }
 
 func TestPOSTTurtle(t *testing.T) {
-	testflight.WithServer(handler, func(r *testflight.Requester) {
-		response := r.Post("/_test/abc", "text/turtle", "<a> <b> <c1> .")
-		assert.Empty(t, response.Body)
-		assert.Equal(t, 200, response.StatusCode)
-		assert.Equal(t, "2", response.RawResponse.Header.Get("Triples"))
+	request, err := http.NewRequest("POST", testServer.URL+"/_test/abc", strings.NewReader("<a> <b> <c1> ."))
+	assert.NoError(t, err)
+	request.Header.Add("Content-Type", "text/turtle")
+	response, err := httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, response.StatusCode)
 
-		response = r.Post("/_test/abc", "text/turtle", "<a> <b> <c2> .")
-		assert.Empty(t, response.Body)
-		assert.Equal(t, 200, response.StatusCode)
-		assert.Equal(t, "3", response.RawResponse.Header.Get("Triples"))
+	request, err = http.NewRequest("POST", testServer.URL+"/_test/abc", strings.NewReader("<a> <b> <c2> ."))
+	assert.NoError(t, err)
+	request.Header.Add("Content-Type", "text/turtle")
+	response, err = httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, response.StatusCode)
 
-		request, _ := http.NewRequest("GET", "/_test/abc", nil)
-		request.Header.Add("Accept", "text/turtle")
-		response = r.Do(request)
-		assert.Equal(t, 200, response.StatusCode)
-		assert.Equal(t, "3", response.RawResponse.Header.Get("Triples"))
-		assert.Equal(t, response.Body, "@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n\n<a>\n    <b> <c0>, <c1>, <c2> .\n\n")
-	})
+	request, err = http.NewRequest("GET", testServer.URL+"/_test/abc", nil)
+	assert.NoError(t, err)
+	request.Header.Add("Accept", "text/turtle")
+	response, err = httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, response.StatusCode)
+	body, err := ioutil.ReadAll(response.Body)
+	response.Body.Close()
+	assert.Equal(t, "@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n\n<a>\n    <b> <c0>, <c1>, <c2> .\n\n", string(body))
 }
 
 func TestPATCHJson(t *testing.T) {
-	testflight.WithServer(handler, func(r *testflight.Requester) {
-		request, _ := http.NewRequest("PATCH", "/_test/abc", strings.NewReader(`{"a":{"b":[{"type":"uri","value":"c"}]}}`))
-		request.Header.Add("Content-Type", "application/json")
-		response := r.Do(request)
-		assert.Empty(t, response.Body)
-		assert.Equal(t, 200, response.StatusCode)
+	request, err := http.NewRequest("PATCH", testServer.URL+"/_test/abc", strings.NewReader(`{"a":{"b":[{"type":"uri","value":"c"}]}}`))
+	assert.NoError(t, err)
+	request.Header.Add("Content-Type", "application/json")
+	response, err := httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, response.StatusCode)
 
-		request, _ = http.NewRequest("GET", "/_test/abc", nil)
-		request.Header.Add("Accept", "text/turtle")
-		response = r.Do(request)
-		assert.Equal(t, 200, response.StatusCode)
-		assert.Equal(t, response.Body, "@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n\n<a>\n    <b> <c> .\n\n")
-		assert.Equal(t, response.RawResponse.Header.Get("Triples"), "1")
-	})
+	request, err = http.NewRequest("GET", testServer.URL+"/_test/abc", nil)
+	assert.NoError(t, err)
+	request.Header.Add("Accept", "text/turtle")
+	response, err = httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, response.StatusCode)
+	body, err := ioutil.ReadAll(response.Body)
+	response.Body.Close()
+	assert.Equal(t, "@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n\n<a>\n    <b> <c> .\n\n", string(body))
 }
 
 func TestPATCHSPARQL(t *testing.T) {
-	testflight.WithServer(handler, func(r *testflight.Requester) {
-		sparqlData := `INSERT DATA { <a> <b> <c> . } ; INSERT DATA { <a> <d> "123"^^<http://www.w3.org/2001/XMLSchema#int> . } ;
-						DELETE DATA { <a> <b> <c> . }; DELETE DATA { <a> <d> "123"^^<http://www.w3.org/2001/XMLSchema#int> . }`
-		request, _ := http.NewRequest("PATCH", "/_test/abc", strings.NewReader(sparqlData))
-		request.Header.Add("Content-Type", "application/sparql-update")
-		response := r.Do(request)
-		assert.Empty(t, response.Body)
-		assert.Equal(t, 200, response.StatusCode)
-		assert.Equal(t, "0", response.RawResponse.Header.Get("Triples"))
+	sparqlData := `INSERT DATA { <a> <b> <c> . } ; INSERT DATA { <a> <d> "123"^^<http://www.w3.org/2001/XMLSchema#int> . } ;
+					DELETE DATA { <a> <b> <c> . }; DELETE DATA { <a> <d> "123"^^<http://www.w3.org/2001/XMLSchema#int> . }`
+	request, err := http.NewRequest("PATCH", testServer.URL+"/_test/abc", strings.NewReader(sparqlData))
+	assert.NoError(t, err)
+	request.Header.Add("Content-Type", "application/sparql-update")
+	response, err := httpClient.Do(request)
+	assert.NoError(t, err)
+	body, err := ioutil.ReadAll(response.Body)
+	response.Body.Close()
+	assert.Empty(t, string(body))
+	assert.Equal(t, 200, response.StatusCode)
 
-		request, _ = http.NewRequest("GET", "/_test/abc", nil)
-		request.Header.Add("Accept", "text/turtle")
-		response = r.Do(request)
-		assert.Equal(t, 200, response.StatusCode)
-	})
+	request, err = http.NewRequest("GET", testServer.URL+"/_test/abc", nil)
+	assert.NoError(t, err)
+	request.Header.Add("Accept", "text/turtle")
+	response, err = httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, response.StatusCode)
 }
 
 func TestPATCHFailParse(t *testing.T) {
-	testflight.WithServer(handler, func(r *testflight.Requester) {
-		sparqlData := `I { <a> <b> <c> . }`
-		request, _ := http.NewRequest("PATCH", "/_test/abc", strings.NewReader(sparqlData))
-		request.Header.Add("Content-Type", "application/sparql-update")
-		response := r.Do(request)
-		assert.Empty(t, response.Body)
-		assert.Equal(t, 200, response.StatusCode)
-		assert.Equal(t, "0", response.RawResponse.Header.Get("Triples"))
-	})
+	sparqlData := `I { <a> <b> <c> . }`
+	request, err := http.NewRequest("PATCH", testServer.URL+"/_test/abc", strings.NewReader(sparqlData))
+	assert.NoError(t, err)
+	request.Header.Add("Content-Type", "application/sparql-update")
+	response, err := httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, response.StatusCode)
 }
 
 func TestPUTTurtle(t *testing.T) {
-	testflight.WithServer(handler, func(r *testflight.Requester) {
-		response := r.Put("/_test/abc", "text/turtle", "<d> <e> <f> ; <h> <i> .")
-		assert.Empty(t, response.Body)
-		assert.Equal(t, 201, response.StatusCode)
-		assert.NotEmpty(t, response.RawResponse.Header.Get("Location"))
+	request, err := http.NewRequest("PUT", testServer.URL+"/_test/abc", strings.NewReader("<d> <e> <f> ; <h> <i> ."))
+	assert.NoError(t, err)
+	request.Header.Add("Content-Type", "text/turtle")
+	response, err := httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.Equal(t, 201, response.StatusCode)
+	body, err := ioutil.ReadAll(response.Body)
+	response.Body.Close()
+	assert.Empty(t, string(body))
+	assert.NotEmpty(t, response.Header.Get("Location"))
 
-		request, _ := http.NewRequest("GET", "/_test/abc", nil)
-		request.Header.Add("Accept", "text/turtle")
-		response = r.Do(request)
-		assert.Equal(t, 200, response.StatusCode)
-		assert.Equal(t, response.Body, "@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n\n<d>\n    <e> <f> ;\n    <h> <i> .\n\n")
-	})
+	request, err = http.NewRequest("GET", testServer.URL+"/_test/abc", nil)
+	request.Header.Add("Accept", "text/turtle")
+	response, err = httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, response.StatusCode)
+	body, err = ioutil.ReadAll(response.Body)
+	response.Body.Close()
+	assert.Equal(t, "@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n\n<d>\n    <e> <f> ;\n    <h> <i> .\n\n", string(body))
 }
 
 func TestHEAD(t *testing.T) {
-	testflight.WithServer(handler, func(r *testflight.Requester) {
-		request, _ := http.NewRequest("HEAD", "/_test/abc", nil)
-		response := r.Do(request)
-		assert.Empty(t, response.Body)
-		assert.Equal(t, 200, response.StatusCode)
-		assert.Equal(t, "2", response.RawResponse.Header.Get("Triples"))
-		assert.NotEmpty(t, response.RawResponse.Header.Get("Content-Length"))
-	})
-}
-
-func TestHEADUnsupportedMediaType(t *testing.T) {
-	testflight.WithServer(handler, func(r *testflight.Requester) {
-		request, _ := http.NewRequest("HEAD", "/_test/", nil)
-		request.Header.Add("Content-Type", "application/x-www-form-urlencoded")
-		response := r.Do(request)
-		assert.Empty(t, response.Body)
-		assert.Equal(t, 200, response.StatusCode)
-	})
-}
-
-func TestOPTIONSUnsupportedMediaType(t *testing.T) {
-	testflight.WithServer(handler, func(r *testflight.Requester) {
-		request, _ := http.NewRequest("OPTIONS", "/_test/", nil)
-		request.Header.Add("Content-Type", "application/x-www-form-urlencoded")
-		response := r.Do(request)
-		assert.Equal(t, 200, response.StatusCode)
-	})
+	request, err := http.NewRequest("HEAD", testServer.URL+"/_test/abc", nil)
+	assert.NoError(t, err)
+	response, err := httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, response.StatusCode)
+	body, err := ioutil.ReadAll(response.Body)
+	response.Body.Close()
+	assert.Empty(t, string(body))
+	assert.NotEmpty(t, response.Header.Get("Content-Length"))
 }
 
 func TestGetUnsupportedMediaType(t *testing.T) {
-	testflight.WithServer(handler, func(r *testflight.Requester) {
-		request, _ := http.NewRequest("GET", "/_test/", nil)
-		request.Header.Add("Content-Type", "application/x-www-form-urlencoded")
-		response := r.Do(request)
-		assert.NotEmpty(t, response.Body)
-		assert.Equal(t, 415, response.StatusCode)
-	})
+	request, err := http.NewRequest("GET", testServer.URL+"/_test/", nil)
+	assert.NoError(t, err)
+	request.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+	response, err := httpClient.Do(request)
+	assert.NoError(t, err)
+	response.Body.Close()
+	assert.Equal(t, 415, response.StatusCode)
 }
 
 func TestAcceptHeaderWildcard(t *testing.T) {
-	testflight.WithServer(handler, func(r *testflight.Requester) {
-		request, _ := http.NewRequest("GET", "/_test/", nil)
-		request.Header.Add("Accept", "*/*")
-		response := r.Do(request)
-		assert.NotEmpty(t, response.Body)
-		assert.Equal(t, 200, response.StatusCode)
-	})
+	request, err := http.NewRequest("GET", testServer.URL+"/_test/", nil)
+	assert.NoError(t, err)
+	request.Header.Add("Accept", "*/*")
+	response, err := httpClient.Do(request)
+	assert.NoError(t, err)
+	body, err := ioutil.ReadAll(response.Body)
+	response.Body.Close()
+	assert.NotEmpty(t, string(body))
+	assert.Equal(t, 200, response.StatusCode)
 }
 
 func TestCTypeServeDefault(t *testing.T) {
-	testflight.WithServer(handler, func(r *testflight.Requester) {
-		request, _ := http.NewRequest("GET", "/_test/abc", nil)
-		response := r.Do(request)
-		assert.NotEmpty(t, response.Body)
-		assert.Equal(t, 200, response.StatusCode)
-		assert.Contains(t, "text/turtle", response.RawResponse.Header.Get("Content-Type"))
-		assert.Equal(t, "2", response.RawResponse.Header.Get("Triples"))
-		assert.NotEmpty(t, response.RawResponse.Header.Get("Content-Length"))
-	})
+	request, err := http.NewRequest("GET", testServer.URL+"/_test/abc", nil)
+	assert.NoError(t, err)
+	response, err := httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.NotEmpty(t, response.Body)
+	assert.Equal(t, 200, response.StatusCode)
+	assert.Contains(t, "text/turtle", response.Header.Get("Content-Type"))
+	assert.NotEqual(t, "0", response.Header.Get("Content-Length"))
 }
 
 func TestCTypeFailForXHTMLXML(t *testing.T) {
-	testflight.WithServer(handler, func(r *testflight.Requester) {
-		request, _ := http.NewRequest("GET", "/_test/abc", nil)
-		request.Header.Add("Accept", "text/xml,application/xml,application/xhtml+xml,text/html;q=0.5,text/plain,image/png,/;q=0.1,application/rdf+xml,text/n3,text/turtle")
-		response := r.Do(request)
-		assert.NotEmpty(t, response.Body)
-		assert.Equal(t, 200, response.StatusCode)
-		assert.NotContains(t, "application/xhtml+xml", response.RawResponse.Header.Get("Content-Type"))
-	})
+	request, err := http.NewRequest("GET", testServer.URL+"/_test/abc", nil)
+	assert.NoError(t, err)
+	request.Header.Add("Accept", "text/xml,application/xml,application/xhtml+xml,text/html;q=0.5,text/plain,image/png,/;q=0.1,application/rdf+xml,text/n3,text/turtle")
+	response, err := httpClient.Do(request)
+	assert.NoError(t, err)
+	body, err := ioutil.ReadAll(response.Body)
+	response.Body.Close()
+	assert.NotEmpty(t, string(body))
+	assert.Equal(t, 200, response.StatusCode)
+	assert.NotContains(t, "application/xhtml+xml", response.Header.Get("Content-Type"))
 }
 
 func TestIfMatch(t *testing.T) {
-	testflight.WithServer(handler, func(r *testflight.Requester) {
-		request, _ := http.NewRequest("HEAD", "/_test/abc", nil)
-		response := r.Do(request)
+	request, err := http.NewRequest("HEAD", testServer.URL+"/_test/abc", nil)
+	assert.NoError(t, err)
+	response, err := httpClient.Do(request)
+	assert.NoError(t, err)
 
-		ETag := response.RawResponse.Header.Get("ETag")
-		newTag := ETag[:len(ETag)-1] + "1\""
+	ETag := response.Header.Get("ETag")
+	newTag := ETag[:len(ETag)-1] + "1\""
 
-		request, _ = http.NewRequest("HEAD", "/_test/abc", nil)
-		request.Header.Add("If-Match", ETag+", "+newTag)
-		response = r.Do(request)
-		assert.Equal(t, 200, response.StatusCode)
+	request, err = http.NewRequest("HEAD", testServer.URL+"/_test/abc", nil)
+	assert.NoError(t, err)
+	request.Header.Add("If-Match", ETag+", "+newTag)
+	response, err = httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, response.StatusCode)
 
-		request, _ = http.NewRequest("HEAD", "/_test/abc", nil)
-		request.Header.Add("If-Match", newTag)
-		response = r.Do(request)
-		assert.Equal(t, 412, response.StatusCode)
+	request, err = http.NewRequest("HEAD", testServer.URL+"/_test/abc", nil)
+	assert.NoError(t, err)
+	request.Header.Add("If-Match", newTag)
+	response, err = httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.Equal(t, 412, response.StatusCode)
 
-		request, _ = http.NewRequest("PATCH", "/_test/abc", strings.NewReader("<d> <e> <f> ."))
-		request.Header.Add("Content-Type", "text/turtle")
-		request.Header.Add("If-Match", newTag)
-		response = r.Do(request)
-		assert.Equal(t, 412, response.StatusCode)
+	request, err = http.NewRequest("PATCH", testServer.URL+"/_test/abc", strings.NewReader("<d> <e> <f> ."))
+	assert.NoError(t, err)
+	request.Header.Add("Content-Type", "text/turtle")
+	request.Header.Add("If-Match", newTag)
+	response, err = httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.Equal(t, 412, response.StatusCode)
 
-		request, _ = http.NewRequest("POST", "/_test/abc", strings.NewReader("<d> <e> <f> ."))
-		request.Header.Add("Content-Type", "text/turtle")
-		request.Header.Add("If-Match", newTag)
-		response = r.Do(request)
-		assert.Equal(t, 412, response.StatusCode)
+	request, err = http.NewRequest("POST", testServer.URL+"/_test/abc", strings.NewReader("<d> <e> <f> ."))
+	assert.NoError(t, err)
+	request.Header.Add("Content-Type", "text/turtle")
+	request.Header.Add("If-Match", newTag)
+	response, err = httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.Equal(t, 412, response.StatusCode)
 
-		response = r.Put("/_test/abc", "text/turtle", "<d> <e> <f> .")
-		assert.Empty(t, response.Body)
-		assert.Equal(t, 201, response.StatusCode)
-	})
+	request, err = http.NewRequest("PUT", testServer.URL+"/_test/abc", strings.NewReader("<d> <e> <f> ."))
+	assert.NoError(t, err)
+	request.Header.Add("Content-Type", "text/turtle")
+	response, err = httpClient.Do(request)
+	assert.NoError(t, err)
+	body, err := ioutil.ReadAll(response.Body)
+	response.Body.Close()
+	assert.Empty(t, string(body))
+	assert.Equal(t, 201, response.StatusCode)
 }
 
 func TestIfNoneMatch(t *testing.T) {
-	testflight.WithServer(handler, func(r *testflight.Requester) {
-		request, _ := http.NewRequest("HEAD", "/_test/", nil)
-		response := r.Do(request)
-		assert.Equal(t, 200, response.StatusCode)
+	request, err := http.NewRequest("HEAD", testServer.URL+"/_test/", nil)
+	assert.NoError(t, err)
+	response, err := httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, response.StatusCode)
 
-		ETag := response.RawResponse.Header.Get("ETag")
+	ETag := response.Header.Get("ETag")
 
-		request, _ = http.NewRequest("HEAD", "/_test/", nil)
-		request.Header.Add("If-None-Match", ETag)
-		response = r.Do(request)
-		assert.Equal(t, 304, response.StatusCode)
+	request, err = http.NewRequest("HEAD", testServer.URL+"/_test/", nil)
+	assert.NoError(t, err)
+	request.Header.Add("If-None-Match", ETag)
+	response, err = httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.Equal(t, 304, response.StatusCode)
 
-		request, _ = http.NewRequest("HEAD", "/_test/", nil)
-		request.Header.Add("If-None-Match", ETag)
-		request.Header.Add("Accept", "text/html")
-		response = r.Do(request)
-		assert.Equal(t, 200, response.StatusCode)
+	request, err = http.NewRequest("HEAD", testServer.URL+"/_test/", nil)
+	assert.NoError(t, err)
+	request.Header.Add("If-None-Match", ETag)
+	request.Header.Add("Accept", "text/html")
+	response, err = httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, response.StatusCode)
 
-		request, _ = http.NewRequest("HEAD", "/_test/abc", nil)
-		response = r.Do(request)
-		assert.Equal(t, 200, response.StatusCode)
+	request, err = http.NewRequest("HEAD", testServer.URL+"/_test/abc", nil)
+	assert.NoError(t, err)
+	response, err = httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, response.StatusCode)
 
-		ETag = response.RawResponse.Header.Get("ETag")
-		newTag := ETag[:len(ETag)-1] + "1\""
+	ETag = response.Header.Get("ETag")
+	newTag := ETag[:len(ETag)-1] + "1\""
 
-		request, _ = http.NewRequest("HEAD", "/_test/abc", nil)
-		request.Header.Add("If-None-Match", ETag)
-		response = r.Do(request)
-		assert.Equal(t, 304, response.StatusCode)
+	request, err = http.NewRequest("HEAD", testServer.URL+"/_test/abc", nil)
+	assert.NoError(t, err)
+	request.Header.Add("If-None-Match", ETag)
+	response, err = httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.Equal(t, 304, response.StatusCode)
 
-		request, _ = http.NewRequest("HEAD", "/_test/abc", nil)
-		request.Header.Add("If-None-Match", ETag+", "+newTag)
-		response = r.Do(request)
-		assert.Equal(t, 200, response.StatusCode)
+	request, err = http.NewRequest("HEAD", testServer.URL+"/_test/abc", nil)
+	assert.NoError(t, err)
+	request.Header.Add("If-None-Match", ETag+", "+newTag)
+	response, err = httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, response.StatusCode)
 
-		request, _ = http.NewRequest("PUT", "/_test/abc", strings.NewReader("<d> <e> <f> ."))
-		request.Header.Add("Accept", "text/turtle")
-		request.Header.Add("If-None-Match", ETag)
-		response = r.Do(request)
-		assert.Equal(t, 412, response.StatusCode)
+	request, err = http.NewRequest("PUT", testServer.URL+"/_test/abc", strings.NewReader("<d> <e> <f> ."))
+	assert.NoError(t, err)
+	request.Header.Add("Accept", "text/turtle")
+	request.Header.Add("If-None-Match", ETag)
+	response, err = httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.Equal(t, 412, response.StatusCode)
 
-		request, _ = http.NewRequest("POST", "/_test/abc", strings.NewReader("<d> <e> <f> ."))
-		request.Header.Add("Accept", "text/turtle")
-		request.Header.Add("If-None-Match", ETag)
-		response = r.Do(request)
-		assert.Equal(t, 412, response.StatusCode)
+	request, err = http.NewRequest("POST", testServer.URL+"/_test/abc", strings.NewReader("<d> <e> <f> ."))
+	assert.NoError(t, err)
+	request.Header.Add("Accept", "text/turtle")
+	request.Header.Add("If-None-Match", ETag)
+	response, err = httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.Equal(t, 412, response.StatusCode)
 
-		request, _ = http.NewRequest("PATCH", "/_test/abc", strings.NewReader("<d> <e> <f> ."))
-		request.Header.Add("Accept", "text/turtle")
-		request.Header.Add("If-None-Match", ETag)
-		response = r.Do(request)
-		assert.Equal(t, 412, response.StatusCode)
+	request, err = http.NewRequest("PATCH", testServer.URL+"/_test/abc", strings.NewReader("<d> <e> <f> ."))
+	assert.NoError(t, err)
+	request.Header.Add("Accept", "text/turtle")
+	request.Header.Add("If-None-Match", ETag)
+	response, err = httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.Equal(t, 412, response.StatusCode)
 
-		request, _ = http.NewRequest("PUT", "/_test/abc", strings.NewReader("<d> <e> <f> ."))
-		request.Header.Add("Accept", "text/turtle")
-		request.Header.Add("If-None-Match", newTag)
-		response = r.Do(request)
-		assert.Equal(t, 201, response.StatusCode)
-	})
+	request, err = http.NewRequest("PUT", testServer.URL+"/_test/abc", strings.NewReader("<d> <e> <f> ."))
+	assert.NoError(t, err)
+	request.Header.Add("Accept", "text/turtle")
+	request.Header.Add("If-None-Match", newTag)
+	response, err = httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.Equal(t, 201, response.StatusCode)
 }
 
 func TestGetJsonLd(t *testing.T) {
-	testflight.WithServer(handler, func(r *testflight.Requester) {
-		request, _ := http.NewRequest("GET", "/_test/abc", nil)
-		request.Header.Add("Accept", "application/ld+json")
-		response := r.Do(request)
-		assert.Equal(t, 200, response.StatusCode)
-		assert.Equal(t, "1", response.RawResponse.Header.Get("Triples"))
-		d := r.Url("/_test/d")
-		e := r.Url("/_test/e")
-		f := r.Url("/_test/f")
-		assert.Equal(t, fmt.Sprintf(`[{"@id":"http://%s","http://%s":[{"@id":"http://%s"}]}]`, d, e, f), response.Body)
+	request, err := http.NewRequest("GET", testServer.URL+"/_test/abc", nil)
+	assert.NoError(t, err)
+	request.Header.Add("Accept", "application/ld+json")
+	response, err := httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, response.StatusCode)
+	body, err := ioutil.ReadAll(response.Body)
+	response.Body.Close()
 
-		request, _ = http.NewRequest("GET", "/_test/", nil)
-		request.Header.Add("Accept", "application/ld+json")
-		response = r.Do(request)
-		assert.Equal(t, 200, response.StatusCode)
-	})
+	d := testServer.URL + "/_test/d"
+	e := testServer.URL + "/_test/e"
+	f := testServer.URL + "/_test/f"
+	assert.Equal(t, fmt.Sprintf(`[{"@id":"%s","%s":[{"@id":"%s"}]}]`, d, e, f), string(body))
+
+	request, err = http.NewRequest("GET", testServer.URL+"/_test/", nil)
+	assert.NoError(t, err)
+	request.Header.Add("Accept", "application/ld+json")
+	response, err = httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, response.StatusCode)
 }
 
 func TestPOSTForm(t *testing.T) {
-	testflight.WithServer(handler, func(r *testflight.Requester) {
-		request, _ := http.NewRequest("POST", "/_test/abc", nil)
-		request.Header.Add("Content-Type", "application/x-www-form-urlencoded")
-		response := r.Do(request)
-		assert.Equal(t, 415, response.StatusCode)
-	})
+	request, err := http.NewRequest("POST", testServer.URL+"/_test/abc", nil)
+	assert.NoError(t, err)
+	request.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+	response, err := httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.Equal(t, 415, response.StatusCode)
 }
 
 func TestPOSTMultiForm(t *testing.T) {
-
 	path := "tests/img.jpg"
 	file, err := os.Open(path)
 	defer file.Close()
@@ -937,114 +1025,160 @@ func TestLISTDIR(t *testing.T) {
 }
 
 func TestGlob(t *testing.T) {
-	testflight.WithServer(handler, func(r *testflight.Requester) {
-		response := r.Post("/_test/1", "text/turtle", "@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n\n<> a <http://example.org/one>;\n"+
-			"    <http://example.org/b> <#c> .\n    <#c> a <http://example.org/e> .")
-		assert.Equal(t, 201, response.StatusCode)
+	request, err := http.NewRequest("POST", testServer.URL+"/_test/1", strings.NewReader("@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n\n<> a <http://example.org/one>;\n"+
+		"    <http://example.org/b> <#c> .\n    <#c> a <http://example.org/e> ."))
+	assert.NoError(t, err)
+	request.Header.Add("Content-Type", "text/turtle")
+	response, err := httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.Equal(t, 201, response.StatusCode)
 
-		response = r.Post("/_test/2", "text/turtle", "@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n\n<> a <http://example.org/two>.")
-		assert.Equal(t, 201, response.StatusCode)
+	request, err = http.NewRequest("POST", testServer.URL+"/_test/2", strings.NewReader("@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n\n<> a <http://example.org/two>."))
+	assert.NoError(t, err)
+	request.Header.Add("Content-Type", "text/turtle")
+	response, err = httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.Equal(t, 201, response.StatusCode)
 
-		request, _ := http.NewRequest("GET", "/_test/*", nil)
-		response = r.Do(request)
-		assert.Equal(t, 200, response.StatusCode)
+	request, err = http.NewRequest("GET", testServer.URL+"/_test/*", nil)
+	assert.NoError(t, err)
+	request.Header.Add("Content-Type", "text/turtle")
+	response, err = httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, response.StatusCode)
 
-		g := NewGraph(testServer.URL + "/_test/")
-		g.Parse(strings.NewReader(response.Body), "text/turtle")
+	body, err := ioutil.ReadAll(response.Body)
+	response.Body.Close()
 
-		assert.NotEmpty(t, g)
-		assert.Equal(t, g.One(NewResource(testServer.URL+"/_test/1"), ns.rdf.Get("type"), NewResource("http://example.org/one")).Object, NewResource("http://example.org/one"))
-		assert.Equal(t, g.One(NewResource(testServer.URL+"/_test/1#c"), ns.rdf.Get("type"), NewResource("http://example.org/e")).Object, NewResource("http://example.org/e"))
-		assert.Equal(t, g.One(NewResource(testServer.URL+"/_test/2"), ns.rdf.Get("type"), NewResource("http://example.org/two")).Object, NewResource("http://example.org/two"))
+	g := NewGraph(testServer.URL + "/_test/")
+	g.Parse(strings.NewReader(string(body)), "text/turtle")
+	assert.NotEmpty(t, g)
+	assert.Equal(t, g.One(NewResource(testServer.URL+"/_test/1"), ns.rdf.Get("type"), NewResource("http://example.org/one")).Object, NewResource("http://example.org/one"))
+	assert.Equal(t, g.One(NewResource(testServer.URL+"/_test/1#c"), ns.rdf.Get("type"), NewResource("http://example.org/e")).Object, NewResource("http://example.org/e"))
+	assert.Equal(t, g.One(NewResource(testServer.URL+"/_test/2"), ns.rdf.Get("type"), NewResource("http://example.org/two")).Object, NewResource("http://example.org/two"))
 
-		assert.Equal(t, 200, r.Delete("/_test/1", "", "").StatusCode)
-		assert.Equal(t, 200, r.Delete("/_test/2", "", "").StatusCode)
-	})
+	request, err = http.NewRequest("DELETE", testServer.URL+"/_test/1", nil)
+	assert.NoError(t, err)
+	response, err = httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, response.StatusCode)
+
+	request, err = http.NewRequest("DELETE", testServer.URL+"/_test/2", nil)
+	assert.NoError(t, err)
+	response, err = httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, response.StatusCode)
 }
 
-func TestDELETEFiles(t *testing.T) {
-	testflight.WithServer(handler, func(r *testflight.Requester) {
-		assert.Equal(t, 200, r.Delete("/_test/abc", "", "").StatusCode)
-	})
+func TestDELETEFile(t *testing.T) {
+	request, err := http.NewRequest("DELETE", testServer.URL+"/_test/abc", nil)
+	assert.NoError(t, err)
+	response, err := httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, response.StatusCode)
 }
 
 func TestDELETEFolders(t *testing.T) {
-	testflight.WithServer(handler, func(r *testflight.Requester) {
-		response := r.Delete("/_test/dir", "", "")
-		assert.Empty(t, response.Body)
-		assert.Equal(t, 200, response.StatusCode)
+	request, err := http.NewRequest("DELETE", testServer.URL+"/_test/dir", nil)
+	assert.NoError(t, err)
+	response, err := httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, response.StatusCode)
 
-		response = r.Delete("/_test", "", "")
-		assert.Empty(t, response.Body)
-		assert.Equal(t, 200, response.StatusCode)
+	request, err = http.NewRequest("DELETE", testServer.URL+"/_test/", nil)
+	assert.NoError(t, err)
+	response, err = httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, response.StatusCode)
 
-		response = r.Get("/_test")
-		assert.Equal(t, 404, response.StatusCode)
+	request, err = http.NewRequest("GET", testServer.URL+"/_test/", nil)
+	assert.NoError(t, err)
+	response, err = httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.Equal(t, 404, response.StatusCode)
 
-		response = r.Delete("/_test", "", "")
-		assert.Equal(t, 404, response.StatusCode)
+	request, err = http.NewRequest("DELETE", testServer.URL+"/_test/", nil)
+	assert.NoError(t, err)
+	response, err = httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.Equal(t, 404, response.StatusCode)
 
-		response = r.Delete("/", "", "")
-		assert.Equal(t, 500, response.StatusCode)
-	})
+	request, err = http.NewRequest("DELETE", testServer.URL+"/", nil)
+	assert.NoError(t, err)
+	response, err = httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.Equal(t, 500, response.StatusCode)
 }
 
 func TestInvalidMethod(t *testing.T) {
-	testflight.WithServer(handler, func(r *testflight.Requester) {
-		request, _ := http.NewRequest("TEST", "/test", nil)
-		response := r.Do(request)
-		assert.Equal(t, 405, response.StatusCode)
-	})
+	request, err := http.NewRequest("TEST", testServer.URL+"/test", nil)
+	assert.NoError(t, err)
+	response, err := httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.Equal(t, 405, response.StatusCode)
 }
 
 func TestInvalidAccept(t *testing.T) {
-	testflight.WithServer(handler, func(r *testflight.Requester) {
-		request, _ := http.NewRequest("GET", "/test", nil)
-		request.Header.Add("Accept", "text/csv")
-		response := r.Do(request)
-		assert.Equal(t, 406, response.StatusCode)
-	})
+	request, err := http.NewRequest("GET", testServer.URL+"/test", nil)
+	assert.NoError(t, err)
+	request.Header.Add("Accept", "text/csv")
+	response, err := httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.Equal(t, 406, response.StatusCode)
 }
 
 func TestInvalidContent(t *testing.T) {
-	testflight.WithServer(handler, func(r *testflight.Requester) {
-		response := r.Post("/test", "text/csv", "a\tb\tc\n")
-		assert.Equal(t, 415, response.StatusCode)
-	})
+	request, err := http.NewRequest("POST", testServer.URL+"/test", strings.NewReader("a\tb\tc\n"))
+	assert.NoError(t, err)
+	request.Header.Add("Content-Type", "text/csv")
+	response, err := httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.Equal(t, 415, response.StatusCode)
 }
 
 func TestRawContent(t *testing.T) {
-	testflight.WithServer(handler, func(r *testflight.Requester) {
-		path := "./tests/img.jpg"
-		file, err := os.Open(path)
-		defer file.Close()
-		assert.NoError(t, err)
-		stat, err := os.Stat(path)
-		data := make([]byte, stat.Size())
-		_, err = file.Read(data)
-		assert.NoError(t, err)
-		ctype := "image/jpeg"
+	path := "./tests/img.jpg"
+	file, err := os.Open(path)
+	defer file.Close()
+	assert.NoError(t, err)
+	stat, err := os.Stat(path)
+	data := make([]byte, stat.Size())
+	_, err = file.Read(data)
+	assert.NoError(t, err)
 
-		response := r.Put("/test.raw", ctype, string(data))
-		assert.Equal(t, 201, response.StatusCode)
-		response = r.Get("/test.raw")
-		assert.Equal(t, response.StatusCode, 200)
-		assert.Equal(t, response.RawResponse.Header.Get(HCType), ctype)
-		assert.Equal(t, int64(len(response.Body)), stat.Size())
-		assert.Equal(t, 200, r.Delete("/test.raw", "", "").StatusCode)
-	})
+	request, err := http.NewRequest("PUT", testServer.URL+"/test.raw", strings.NewReader(string(data)))
+	assert.NoError(t, err)
+	request.Header.Add("Content-Type", "image/jpeg")
+	response, err := httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.Equal(t, 201, response.StatusCode)
+
+	request, err = http.NewRequest("GET", testServer.URL+"/test.raw", nil)
+	assert.NoError(t, err)
+	response, err = httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.Equal(t, response.StatusCode, 200)
+	assert.Equal(t, response.Header.Get(HCType), "image/jpeg")
+	body, err := ioutil.ReadAll(response.Body)
+	response.Body.Close()
+	assert.Equal(t, int64(len(string(body))), stat.Size())
+
+	request, err = http.NewRequest("DELETE", testServer.URL+"/test.raw", nil)
+	assert.NoError(t, err)
+	response, err = httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.Equal(t, response.StatusCode, 200)
 }
 
 func BenchmarkPUT(b *testing.B) {
 	e := 0
-	testflight.WithServer(handler, func(r *testflight.Requester) {
-		for i := 0; i < b.N; i++ {
-			x := r.Put("/_bench/test", "text/turtle", "<d> <e> <f> .")
-			if x.StatusCode != 201 {
-				e++
-			}
+	for i := 0; i < b.N; i++ {
+		request, _ := http.NewRequest("PUT", testServer.URL+"/_bench/test", strings.NewReader("<d> <e> <f> ."))
+		request.Header.Add("Content-Type", "text/turtle")
+		if response, _ := httpClient.Do(request); response.StatusCode != 201 {
+			e++
 		}
-	})
+	}
 	if e > 0 {
 		b.Log(fmt.Sprintf("%d/%d failed", e, b.N))
 		b.Fail()
@@ -1053,14 +1187,13 @@ func BenchmarkPUT(b *testing.B) {
 
 func BenchmarkPUTNew(b *testing.B) {
 	e := 0
-	testflight.WithServer(handler, func(r *testflight.Requester) {
-		for i := 0; i < b.N; i++ {
-			x := r.Put(fmt.Sprintf("/_bench/test%d", i), "text/turtle", "<d> <e> <f> .")
-			if x.StatusCode != 201 {
-				e++
-			}
+	for i := 0; i < b.N; i++ {
+		request, _ := http.NewRequest("PUT", testServer.URL+fmt.Sprintf("/_bench/test%d", i), strings.NewReader("<d> <e> <f> ."))
+		request.Header.Add("Content-Type", "text/turtle")
+		if response, _ := httpClient.Do(request); response.StatusCode != 201 {
+			e++
 		}
-	})
+	}
 	if e > 0 {
 		b.Log(fmt.Sprintf("%d/%d failed", e, b.N))
 		b.Fail()
@@ -1069,15 +1202,13 @@ func BenchmarkPUTNew(b *testing.B) {
 
 func BenchmarkPATCH(b *testing.B) {
 	e := 0
-	testflight.WithServer(handler, func(r *testflight.Requester) {
-		for i := 0; i < b.N; i++ {
-			request, _ := http.NewRequest("PATCH", "/_bench/test", strings.NewReader(`{"a":{"b":[{"type":"literal","value":"`+fmt.Sprintf("%d", b.N)+`"}]}}`))
-			request.Header.Add("Content-Type", "application/json")
-			if r := r.Do(request); r.StatusCode != 200 {
-				e++
-			}
+	for i := 0; i < b.N; i++ {
+		request, _ := http.NewRequest("PATCH", testServer.URL+"/_bench/test", strings.NewReader(`{"a":{"b":[{"type":"literal","value":"`+fmt.Sprintf("%d", b.N)+`"}]}}`))
+		request.Header.Add("Content-Type", "application/json")
+		if response, _ := httpClient.Do(request); response.StatusCode != 200 {
+			e++
 		}
-	})
+	}
 	if e > 0 {
 		b.Log(fmt.Sprintf("%d/%d failed", e, b.N))
 		b.Fail()
@@ -1086,15 +1217,13 @@ func BenchmarkPATCH(b *testing.B) {
 
 func BenchmarkGETjson(b *testing.B) {
 	e := 0
-	testflight.WithServer(handler, func(r *testflight.Requester) {
-		for i := 0; i < b.N; i++ {
-			request, _ := http.NewRequest("GET", "/_bench/test", nil)
-			request.Header.Add("Content-Type", "application/json")
-			if r := r.Do(request); r.StatusCode != 200 {
-				e++
-			}
+	for i := 0; i < b.N; i++ {
+		request, _ := http.NewRequest("GET", testServer.URL+"/_bench/test", nil)
+		request.Header.Add("Content-Type", "application/json")
+		if response, _ := httpClient.Do(request); response.StatusCode != 200 {
+			e++
 		}
-	})
+	}
 	if e > 0 {
 		b.Log(fmt.Sprintf("%d/%d failed", e, b.N))
 		b.Fail()
@@ -1103,15 +1232,13 @@ func BenchmarkGETjson(b *testing.B) {
 
 func BenchmarkGETturtle(b *testing.B) {
 	e := 0
-	testflight.WithServer(handler, func(r *testflight.Requester) {
-		for i := 0; i < b.N; i++ {
-			request, _ := http.NewRequest("GET", "/_bench/test", nil)
-			request.Header.Add("Content-Type", "text/turtle")
-			if r := r.Do(request); r.StatusCode != 200 {
-				e++
-			}
+	for i := 0; i < b.N; i++ {
+		request, _ := http.NewRequest("GET", testServer.URL+"/_bench/test", nil)
+		request.Header.Add("Content-Type", "text/turtle")
+		if response, _ := httpClient.Do(request); response.StatusCode != 200 {
+			e++
 		}
-	})
+	}
 	if e > 0 {
 		b.Log(fmt.Sprintf("%d/%d failed", e, b.N))
 		b.Fail()
@@ -1120,16 +1247,13 @@ func BenchmarkGETturtle(b *testing.B) {
 
 func BenchmarkGETxml(b *testing.B) {
 	e := 0
-	testflight.WithServer(handler, func(r *testflight.Requester) {
-		for i := 0; i < b.N; i++ {
-			request, _ := http.NewRequest("GET", "/_bench/test", nil)
-			request.Header.Add("Accept", "application/rdf+xml")
-			if r := r.Do(request); r.StatusCode != 200 {
-				fmt.Println(r.StatusCode)
-				e++
-			}
+	for i := 0; i < b.N; i++ {
+		request, _ := http.NewRequest("GET", testServer.URL+"/_bench/test", nil)
+		request.Header.Add("Accept", "application/rdf+xml")
+		if response, _ := httpClient.Do(request); response.StatusCode != 200 {
+			e++
 		}
-	})
+	}
 	if e > 0 {
 		b.Log(fmt.Sprintf("%d/%d failed", e, b.N))
 		b.Fail()

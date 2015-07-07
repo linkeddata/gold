@@ -48,7 +48,6 @@ Use the `go get` command to install the server and all the dependencies:
     
 Optionally, you can install some extra dependencies used by the tests:
 
-    go get github.com/drewolson/testflight
     go get github.com/stretchr/testify/assert
 
 Run the server:

@@ -8,7 +8,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/drewolson/testflight"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -191,10 +190,15 @@ func TestCleanupAuth(t *testing.T) {
 }
 
 func TestACLCleanUsers(t *testing.T) {
-	testflight.WithServer(handler, func(r *testflight.Requester) {
-		response := r.Delete("/_test/user1", "", "")
-		assert.Equal(t, 200, response.StatusCode)
-		response = r.Delete("/_test/user2", "", "")
-		assert.Equal(t, 200, response.StatusCode)
-	})
+	request, err := http.NewRequest("DELETE", testServer.URL+"/_test/user1", nil)
+	assert.NoError(t, err)
+	response, err := user1h.Do(request)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, response.StatusCode)
+
+	request, err = http.NewRequest("DELETE", testServer.URL+"/_test/user2", nil)
+	assert.NoError(t, err)
+	response, err = user1h.Do(request)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, response.StatusCode)
 }
