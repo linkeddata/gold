@@ -45,13 +45,8 @@ func (acl *WAC) allow(mode string, path string) (int, error) {
 			return 500, err
 		}
 
-		if !p.Exists {
-			continue
-		}
-
 		acl.srv.debug.Println("Checking " + accessType + " <" + mode + "> to " + p.URI + " for WebID: " + acl.user)
 		acl.srv.debug.Println("Looking for policies in " + p.AclFile)
-		acl.srv.debug.Printf("%+v\n", p)
 
 		aclGraph := NewGraph(p.AclURI)
 		aclGraph.ReadFile(p.AclFile)
