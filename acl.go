@@ -37,7 +37,7 @@ func (acl *WAC) allow(mode string, path string) (int, error) {
 	if err != nil {
 		return 500, err
 	}
-	depth := strings.Split(p.Path, "/")
+	depth := strings.Split("/"+p.Path, "/")
 
 	for i := 0; i < len(depth); i++ {
 		p, err := acl.srv.pathInfo(path)
@@ -51,6 +51,7 @@ func (acl *WAC) allow(mode string, path string) (int, error) {
 
 		acl.srv.debug.Println("Checking " + accessType + " <" + mode + "> to " + p.URI + " for WebID: " + acl.user)
 		acl.srv.debug.Println("Looking for policies in " + p.AclFile)
+		acl.srv.debug.Printf("%+v\n", p)
 
 		aclGraph := NewGraph(p.AclURI)
 		aclGraph.ReadFile(p.AclFile)
@@ -156,12 +157,10 @@ func (acl *WAC) allow(mode string, path string) (int, error) {
 		accessType = "defaultForNew"
 
 		if i == 0 {
-			if strings.HasSuffix(p.Path, "/") {
-				if filepath.Dir(filepath.Dir(p.Path)) == "." {
-					path = p.Base
-				} else {
-					path = p.Base + "/" + filepath.Dir(filepath.Dir(p.Path))
-				}
+			if filepath.Dir(filepath.Dir(p.Path)) == "." {
+				path = p.Base
+			} else if strings.HasSuffix(p.Path, "/") {
+				path = p.Base + "/" + filepath.Dir(filepath.Dir(p.Path))
 			} else {
 				path = p.Base + "/" + filepath.Dir(p.Path)
 			}
