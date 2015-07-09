@@ -147,7 +147,7 @@ func main() {
 	}
 
 	var (
-		srv  *http.Server = &http.Server{Addr: config.ListenHTTPS, Handler: handler}
+		srv  = &http.Server{Addr: config.ListenHTTPS, Handler: handler}
 		tcpL net.Listener
 		tlsL net.Listener
 	)
