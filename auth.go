@@ -8,9 +8,12 @@ import (
 	"time"
 )
 
+// DigestAuthentication structure
 type DigestAuthentication struct {
 	Type, Source, Username, Realm, Nonce, URI, QOP, NC, CNonce, Response, Opaque, Algorithm string
 }
+
+// DigestAuthorization structure
 type DigestAuthorization struct {
 	Type, Source, Username, Nonce, Signature string
 }
@@ -90,6 +93,7 @@ func (srv *Server) userCookieDelete(w http.ResponseWriter) {
 	})
 }
 
+// ParseDigestAuthenticateHeader parses an Authenticate header and returns a DigestAuthentication object
 func ParseDigestAuthenticateHeader(header string) (*DigestAuthentication, error) {
 	auth := DigestAuthentication{}
 
@@ -126,6 +130,7 @@ func ParseDigestAuthenticateHeader(header string) (*DigestAuthentication, error)
 	return &auth, nil
 }
 
+// ParseDigestAuthorizationHeader parses an Authorization header and returns a DigestAuthorization object
 func ParseDigestAuthorizationHeader(header string) (*DigestAuthorization, error) {
 	auth := DigestAuthorization{}
 
@@ -167,6 +172,7 @@ func NewSecureToken(tokenType string, values map[string]string, duration time.Du
 	return token, nil
 }
 
+// ValidateSecureToken returns the values of a secure cookie
 func ValidateSecureToken(tokenType string, token string, s *Server) (map[string]string, error) {
 	values := make(map[string]string)
 	err := s.cookie.Decode(tokenType, token, &values)

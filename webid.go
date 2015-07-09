@@ -50,6 +50,7 @@ func pkeyTypeNE(pkey interface{}) (t, n, e string) {
 	return
 }
 
+// WebIDDigestAuth performs a digest authentication using WebID-RSA
 func WebIDDigestAuth(req *httpRequest) (string, error) {
 	if len(req.Header.Get("Authorization")) == 0 {
 		return "", nil

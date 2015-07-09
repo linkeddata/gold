@@ -165,11 +165,11 @@ func NewETag(path string) (string, error) {
 				md5s += stat.ModTime().String()
 			}
 			for _, file := range files {
-				md5s += file.ModTime().String() + fmt.Sprint("%d", file.Size())
+				md5s += file.ModTime().String() + fmt.Sprintf("%d", file.Size())
 			}
 		}
 	} else {
-		md5s += stat.ModTime().String() + fmt.Sprint("%d", stat.Size())
+		md5s += stat.ModTime().String() + fmt.Sprintf("%d", stat.Size())
 	}
 	h := md5.New()
 	io.Copy(h, bytes.NewBufferString(md5s))

@@ -44,8 +44,8 @@ func (s *Server) sendRecoveryMail(goldHost string, IP string, to []string, link 
 	)
 
 	// Setup headers
-	src := mail.Address{"", smtpCfg.Addr}
-	dst := mail.Address{"", to[0]}
+	src := mail.Address{Name: "", Address: smtpCfg.Addr}
+	dst := mail.Address{Name: "", Address: to[0]}
 	headers := make(map[string]string)
 	headers["From"] = src.String()
 	headers["To"] = dst.String()

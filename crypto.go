@@ -31,6 +31,7 @@ type rsaPrivKey struct {
 	*rsa.PrivateKey
 }
 
+// ParseRSAPublicKeyNE parses a modulus and exponent and returns a new verifier object
 func ParseRSAPublicKeyNE(keyT, keyN, keyE string) (Verifier, error) {
 	if len(keyN) == 0 && len(keyE) == 0 {
 		return nil, errors.New("No modulus and/or exponent provided")
@@ -56,15 +57,17 @@ func ParseRSAPublicKeyNE(keyT, keyN, keyE string) (Verifier, error) {
 	return newVerifierFromKey(rawkey)
 }
 
+// ParseRSAPublicKey parses an RSA public key and returns a new verifier object
 func ParseRSAPublicKey(key *rsa.PublicKey) (Verifier, error) {
 	return newVerifierFromKey(key)
 }
 
+// ParseRSAPrivateKey parses an RSA private key and returns a new signer object
 func ParseRSAPrivateKey(key *rsa.PrivateKey) (Signer, error) {
 	return newSignerFromKey(key)
 }
 
-// ParsePublicKey parses a PEM encoded private key and returns an Verifier.
+// ParseRSAPublicPEMKey parses a PEM encoded private key and returns a new verifier object
 func ParseRSAPublicPEMKey(pemBytes []byte) (Verifier, error) {
 	block, _ := pem.Decode(pemBytes)
 	if block == nil {
@@ -86,7 +89,7 @@ func ParseRSAPublicPEMKey(pemBytes []byte) (Verifier, error) {
 	return newVerifierFromKey(rawkey)
 }
 
-// ParsePublicKey parses a PEM encoded private key and returns a Signer.
+// ParseRSAPrivatePEMKey parses a PEM encoded private key and returns a Signer.
 func ParseRSAPrivatePEMKey(pemBytes []byte) (Signer, error) {
 	block, _ := pem.Decode(pemBytes)
 	if block == nil {
