@@ -124,7 +124,7 @@ func (srv *smtpServer) Listen(network, address string, secure bool) error {
 
 			parsed := bytes.Split(buf, srv.Separator)
 			command := strings.ToLower(string(parsed[0]))
-			payload := bytes.Join(parsed[1:len(parsed)], srv.Separator)
+			payload := bytes.Join(parsed[1:], srv.Separator)
 
 			action, ok := srv.Commands[command]
 			if !ok {
