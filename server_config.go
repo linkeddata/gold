@@ -43,6 +43,12 @@ type ServerConfig struct {
 	// TokenAge contains the validity duration for recovery tokens (in minutes)
 	TokenAge int64
 
+	// METASuffix sets the default suffix for meta files (e.g. ,meta or .meta)
+	MetaSuffix string
+
+	// ACLSuffix sets the default suffix for ACL files (e.g. ,acl or .acl)
+	ACLSuffix string
+
 	// DataSkin sets the default skin for viewing RDF resources
 	DataSkin string
 
@@ -67,6 +73,8 @@ func NewServerConfig() *ServerConfig {
 	return &ServerConfig{
 		CookieAge:  24,
 		TokenAge:   5,
+		MetaSuffix: ",meta",
+		ACLSuffix:  ",acl",
 		DataSkin:   "tabulator",
 		DirIndex:   []string{"index.html", "index.htm"},
 		DirSkin:    "http://linkeddata.github.io/warp/#list/",

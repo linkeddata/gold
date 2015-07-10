@@ -23,10 +23,6 @@ import (
 const (
 	// HCType is the header Content-Type
 	HCType = "Content-Type"
-	// METASuffix is the generic name for metadata corresponding to a given resource
-	METASuffix = ",meta"
-	// ACLSuffix is the generic name for the acl corresponding to a given resource
-	ACLSuffix = ",acl"
 	// SystemPrefix is the generic name for the system-reserved namespace (e.g. APIs)
 	SystemPrefix = ",system"
 	// ProxyPath provides CORS proxy (empty to disable)
@@ -920,7 +916,7 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 			if os.IsNotExist(err) {
 				isNew = true
 			} else if os.IsExist(err) && stat.IsDir() {
-				resource.File = resource.File + "/" + METASuffix
+				resource.File = resource.File + "/" + s.Config.MetaSuffix
 			}
 
 			if dataHasParser {

@@ -18,6 +18,10 @@
 	"CookieAge": 24,
 	
 	"TokenAge":  5,
+
+	"METASuffix": ",meta",
+
+	"ACLSuffix": ",acl",
 	
 	"DataSkin":  "tabulator",
 	

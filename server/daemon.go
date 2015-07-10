@@ -30,6 +30,9 @@ var (
 	tlsKey  = flag.String("tlsKeyFile", "", "TLS certificate eg. key.pem")
 	vhosts  = flag.Bool("vhosts", false, "run in virtual hosts mode?")
 
+	metaSuffix = flag.String("metaSuffix", ",meta", "default suffix for meta files")
+	aclSuffix  = flag.String("aclSuffix", ",acl", "default suffix for ACL files")
+
 	tokenT = flag.Int64("tokenAge", 5, "recovery token lifetime (in minutes)")
 
 	emailName     = flag.String("emailName", "", "remote SMTP server account name")
@@ -102,6 +105,8 @@ func main() {
 		config.Vhosts = *vhosts
 		config.Insecure = *insecure
 		config.NoHTTP = *nohttp
+		config.MetaSuffix = *metaSuffix
+		config.ACLSuffix = *aclSuffix
 		if len(*emailName) > 0 && len(*emailAddr) > 0 && len(*emailUser) > 0 &&
 			len(*emailPass) > 0 && len(*emailServ) > 0 && len(*emailPort) > 0 {
 			ep, _ := strconv.Atoi(*emailPort)

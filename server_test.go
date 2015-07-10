@@ -278,10 +278,10 @@ func TestLDPPUTContainer(t *testing.T) {
 	assert.Equal(t, 201, response.StatusCode)
 
 	metaURI := ParseLinkHeader(response.Header.Get("Link")).MatchRel("meta")
-	assert.Equal(t, testServer.URL+"/_test/dir/"+METASuffix, metaURI)
+	assert.Equal(t, testServer.URL+"/_test/dir/"+config.MetaSuffix, metaURI)
 
 	aclURI := ParseLinkHeader(response.Header.Get("Link")).MatchRel("acl")
-	assert.Equal(t, testServer.URL+"/_test/dir/"+ACLSuffix, aclURI)
+	assert.Equal(t, testServer.URL+"/_test/dir/"+config.ACLSuffix, aclURI)
 
 	request, err = http.NewRequest("DELETE", testServer.URL+"/_test/dir/", nil)
 	assert.NoError(t, err)
@@ -305,7 +305,7 @@ func TestLDPPostLDPC(t *testing.T) {
 	assert.NotEmpty(t, newLDPC)
 
 	metaURI := ParseLinkHeader(response.Header.Get("Link")).MatchRel("meta")
-	assert.Equal(t, newLDPC+METASuffix, metaURI)
+	assert.Equal(t, newLDPC+config.MetaSuffix, metaURI)
 
 	request, err = http.NewRequest("GET", testServer.URL+"/_test/", nil)
 	assert.NoError(t, err)
@@ -789,6 +789,7 @@ func TestIfMatch(t *testing.T) {
 	assert.NoError(t, err)
 
 	ETag := response.Header.Get("ETag")
+	println("ETAG:", ETag)
 	newTag := ETag[:len(ETag)-1] + "1\""
 
 	request, err = http.NewRequest("HEAD", testServer.URL+"/_test/abc", nil)
