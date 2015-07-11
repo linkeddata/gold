@@ -5,6 +5,7 @@ import (
 	"net"
 	"net/url"
 	"os"
+	_path "path"
 	"path/filepath"
 	"strings"
 )
@@ -22,6 +23,7 @@ type pathInfo struct {
 	AclFile   string
 	MetaURI   string
 	MetaFile  string
+	Extension string
 	Exists    bool
 }
 
@@ -57,6 +59,7 @@ func (s *Server) pathInfo(path string) (*pathInfo, error) {
 		res.Base = p.Scheme + "://" + host
 	}
 
+	// p.Path = p.String()[len(p.Scheme+"://"+p.Host):]
 	if strings.HasPrefix(p.Path, "/") && len(p.Path) > 0 {
 		p.Path = strings.TrimLeft(p.Path, "/")
 	}
@@ -91,6 +94,7 @@ func (s *Server) pathInfo(path string) (*pathInfo, error) {
 	} else if len(s.Config.DataRoot) > 0 {
 		res.File = s.Config.DataRoot + p.Path
 	}
+	res.Extension = _path.Ext(res.File)
 
 	if strings.HasSuffix(res.Path, "/") {
 		if filepath.Dir(filepath.Dir(res.Path)) == "." {
@@ -102,21 +106,21 @@ func (s *Server) pathInfo(path string) (*pathInfo, error) {
 		res.ParentURI = res.Base + "/" + filepath.Dir(res.Path) + "/"
 	}
 
-	if strings.HasSuffix(p.Path, ",acl") {
+	if strings.HasSuffix(p.Path, s.Config.ACLSuffix) {
 		res.AclURI = res.URI
 		res.AclFile = res.File
 		res.MetaURI = res.URI
 		res.MetaFile = res.File
-	} else if strings.HasSuffix(p.Path, ",meta") || strings.HasSuffix(p.Path, ",meta/") {
-		res.AclURI = res.URI + ACLSuffix
-		res.AclFile = res.File + ACLSuffix
+	} else if strings.HasSuffix(p.Path, s.Config.MetaSuffix) {
+		res.AclURI = res.URI + s.Config.ACLSuffix
+		res.AclFile = res.File + s.Config.ACLSuffix
 		res.MetaURI = res.URI
 		res.MetaFile = res.File
 	} else {
-		res.AclURI = res.URI + ACLSuffix
-		res.AclFile = res.File + ACLSuffix
-		res.MetaURI = res.URI + METASuffix
-		res.MetaFile = res.File + METASuffix
+		res.AclURI = res.URI + s.Config.ACLSuffix
+		res.AclFile = res.File + s.Config.ACLSuffix
+		res.MetaURI = res.URI + s.Config.MetaSuffix
+		res.MetaFile = res.File + s.Config.MetaSuffix
 	}
 
 	return res, nil
