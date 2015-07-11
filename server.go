@@ -7,6 +7,7 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
+	_mime "mime"
 	"net"
 	"net/http"
 	"net/url"
@@ -603,8 +604,8 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 					io.Copy(w, f)
 				}
 				return
-			} else if !maybeRDF && !strings.Contains(contentType, "text/html") {
-				maybeRDF = true
+				// } else if !maybeRDF && !strings.Contains(contentType, "text/html") {
+				// 	maybeRDF = true
 			}
 		}
 
@@ -612,19 +613,13 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 			return r.respond(status)
 		}
 
-		if extn := strings.LastIndex(resource.File, "."); extn >= 0 {
-			if mime, known := mimeTypes[resource.File[extn:]]; known {
+		if ext := filepath.Ext(resource.File); len(ext) > 0 {
+			if mime := _mime.TypeByExtension(ext); len(mime) > 0 {
 				magicType = mime
 				maybeRDF = false
-			}
-		}
-
-		if maybeRDF {
-			g.ReadFile(resource.File)
-			if g.Len() == 0 {
-				maybeRDF = false
-			} else {
-				w.Header().Set(HCType, contentType)
+				if len(mimeRdfExt[ext]) > 0 {
+					maybeRDF = true
+				}
 			}
 		}
 
@@ -650,6 +645,15 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 				w.WriteHeader(status)
 			}
 			return
+		}
+
+		if maybeRDF {
+			g.ReadFile(resource.File)
+			if g.Len() == 0 {
+				maybeRDF = false
+			} else {
+				w.Header().Set(HCType, contentType)
+			}
 		}
 
 		data := ""

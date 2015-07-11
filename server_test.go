@@ -789,7 +789,6 @@ func TestIfMatch(t *testing.T) {
 	assert.NoError(t, err)
 
 	ETag := response.Header.Get("ETag")
-	println("ETAG:", ETag)
 	newTag := ETag[:len(ETag)-1] + "1\""
 
 	request, err = http.NewRequest("HEAD", testServer.URL+"/_test/abc", nil)
