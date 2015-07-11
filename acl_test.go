@@ -632,6 +632,64 @@ func TestACLRestricted(t *testing.T) {
 	assert.Equal(t, 200, response.StatusCode)
 }
 
+func TestACLPathWithSpaces(t *testing.T) {
+	request, err := http.NewRequest("POST", testServer.URL+aclDir, nil)
+	assert.NoError(t, err)
+	request.Header.Add("Content-Type", "text/turtle")
+	request.Header.Add("Link", "<http://www.w3.org/ns/ldp#BasicContainer>; rel=\"type\"")
+	request.Header.Add("Slug", "one two")
+	response, err := user1h.Do(request)
+	assert.NoError(t, err)
+	response.Body.Close()
+	assert.Equal(t, 201, response.StatusCode)
+
+	acl := ParseLinkHeader(response.Header.Get("Link")).MatchRel("acl")
+	spacesDir := response.Header.Get("Location")
+
+	body := "<#Owner>" +
+		"	<http://www.w3.org/ns/auth/acl#accessTo> <" + spacesDir + ">, <" + acl + ">;" +
+		"	<http://www.w3.org/ns/auth/acl#agent> <" + user1 + ">;" +
+		"	<http://www.w3.org/ns/auth/acl#mode> <http://www.w3.org/ns/auth/acl#Read>, <http://www.w3.org/ns/auth/acl#Write> ."
+	request, err = http.NewRequest("PUT", acl, strings.NewReader(body))
+	assert.NoError(t, err)
+	request.Header.Add("Content-Type", "text/turtle")
+	response, err = user1h.Do(request)
+	assert.NoError(t, err)
+	response.Body.Close()
+	assert.Equal(t, 201, response.StatusCode)
+
+	// user1
+	request, err = http.NewRequest("HEAD", spacesDir, nil)
+	assert.NoError(t, err)
+	response, err = user1h.Do(request)
+	assert.NoError(t, err)
+	response.Body.Close()
+	assert.Equal(t, 200, response.StatusCode)
+
+	// user2
+	request, err = http.NewRequest("HEAD", spacesDir, nil)
+	assert.NoError(t, err)
+	response, err = user2h.Do(request)
+	assert.NoError(t, err)
+	response.Body.Close()
+	assert.Equal(t, 403, response.StatusCode)
+
+	// cleanup
+	request, err = http.NewRequest("DELETE", acl, nil)
+	assert.NoError(t, err)
+	response, err = user1h.Do(request)
+	assert.NoError(t, err)
+	response.Body.Close()
+	assert.Equal(t, 200, response.StatusCode)
+
+	request, err = http.NewRequest("DELETE", spacesDir, nil)
+	assert.NoError(t, err)
+	response, err = user1h.Do(request)
+	assert.NoError(t, err)
+	response.Body.Close()
+	assert.Equal(t, 200, response.StatusCode)
+}
+
 func TestACLGroup(t *testing.T) {
 	request, err := http.NewRequest("HEAD", testServer.URL+aclDir+"abc", nil)
 	assert.NoError(t, err)
