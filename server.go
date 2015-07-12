@@ -75,9 +75,13 @@ func (req httpRequest) BaseURI() string {
 	if req.TLS != nil || req.Header.Get("X-Forwarded-Proto") == "https" {
 		scheme += "s"
 	}
-	host, port, err := net.SplitHostPort(req.Host)
+	reqHost := req.Host
+	if len(req.Header.Get("X-Forward-Host")) > 0 {
+		reqHost = req.Header.Get("X-Forward-Host")
+	}
+	host, port, err := net.SplitHostPort(reqHost)
 	if err != nil {
-		host = req.Host
+		host = reqHost
 	}
 	if len(host) == 0 {
 		host = "localhost"
