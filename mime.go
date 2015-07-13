@@ -122,6 +122,9 @@ func MapPathToExtension(path string, ctype string, data ...[]byte) (string, erro
 	if len(path) == 0 {
 		return "", errors.New("MapPathToExt -- missing path or ctype value")
 	}
+	if path[len(path)-1:] == "/" {
+		return path, nil
+	}
 
 	fileCType, ext, _ := MimeLookup(path)
 	if len(fileCType) > 0 {

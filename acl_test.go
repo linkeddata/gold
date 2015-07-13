@@ -98,7 +98,7 @@ func TestACLInit(t *testing.T) {
 	assert.Equal(t, user2, resp2.Header.Get("User"))
 }
 
-func TestACLEmpty(t *testing.T) {
+func TestNoACLFile(t *testing.T) {
 	request, err := http.NewRequest("MKCOL", testServer.URL+aclDir, nil)
 	assert.NoError(t, err)
 	response, err := user1h.Do(request)

@@ -57,6 +57,20 @@ func TestMapPathToExtension(t *testing.T) {
 	assert.Error(t, err)
 	assert.Empty(t, res)
 
+	// /space/	nil 	/space/
+	path = "/space/"
+	ctype = ""
+	res, err = MapPathToExtension(path, ctype)
+	assert.NoError(t, err)
+	assert.Equal(t, path, res)
+
+	// /space/	text/html 	/space/
+	path = "/space/"
+	ctype = "text/html"
+	res, err = MapPathToExtension(path, ctype)
+	assert.NoError(t, err)
+	assert.Equal(t, path, res)
+
 	// /space/foo	nil 	empty + error msg
 	path = "/space/foo"
 	ctype = ""
