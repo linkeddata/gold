@@ -1156,17 +1156,17 @@ func TestRawContent(t *testing.T) {
 	assert.NoError(t, err)
 	response, err = httpClient.Do(request)
 	assert.NoError(t, err)
-	assert.Equal(t, response.StatusCode, 200)
-	assert.Equal(t, response.Header.Get(HCType), "image/jpeg")
+	assert.Equal(t, 200, response.StatusCode)
+	assert.Equal(t, "image/jpeg", response.Header.Get(HCType))
 	body, err := ioutil.ReadAll(response.Body)
 	response.Body.Close()
-	assert.Equal(t, int64(len(string(body))), stat.Size())
+	assert.Equal(t, stat.Size(), int64(len(string(body))))
 
 	request, err = http.NewRequest("DELETE", testServer.URL+"/test.raw", nil)
 	assert.NoError(t, err)
 	response, err = httpClient.Do(request)
 	assert.NoError(t, err)
-	assert.Equal(t, response.StatusCode, 200)
+	assert.Equal(t, 200, response.StatusCode)
 }
 
 func BenchmarkPUT(b *testing.B) {
