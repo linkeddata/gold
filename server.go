@@ -7,7 +7,7 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
-	_mime "mime"
+	// _mime "mime"
 	"net"
 	"net/http"
 	"net/url"
@@ -587,7 +587,14 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 				maybeRDF = true
 			}
 		default:
-			maybeRDF = magicType == "text/plain"
+			magicType = resource.FileType
+			if len(mimeRdfExt[resource.Extension]) > 0 {
+				maybeRDF = true
+			}
+			if !maybeRDF && magicType == "text/plain" {
+				maybeRDF = true
+			}
+			s.debug.Println("Setting CType to:", magicType)
 			status = 200
 
 			if req.Method == "GET" && strings.Contains(contentType, "text/html") {
@@ -610,23 +617,11 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 					io.Copy(w, f)
 				}
 				return
-				// } else if !maybeRDF && !strings.Contains(contentType, "text/html") {
-				// 	maybeRDF = true
 			}
 		}
 
 		if status != 200 {
 			return r.respond(status)
-		}
-
-		if ext := filepath.Ext(resource.File); len(ext) > 0 {
-			if mime := _mime.TypeByExtension(ext); len(mime) > 0 {
-				magicType = mime
-				maybeRDF = false
-				if len(mimeRdfExt[ext]) > 0 {
-					maybeRDF = true
-				}
-			}
 		}
 
 		if req.Method == "HEAD" {

@@ -24,6 +24,7 @@ type pathInfo struct {
 	MetaURI   string
 	MetaFile  string
 	Extension string
+	MaybeRDF  bool
 	IsDir     bool
 	Exists    bool
 }
@@ -95,13 +96,19 @@ func (s *Server) pathInfo(path string) (*pathInfo, error) {
 				res.URI += "/"
 			}
 		} else {
-			res.FileType, err = magic.TypeByFile(res.File)
-			if err != nil {
-				s.debug.Println(err)
+			res.FileType, res.Extension, res.MaybeRDF = MimeLookup(res.File)
+			if len(res.FileType) == 0 {
+				res.FileType, err = magic.TypeByFile(res.File)
+				if err != nil {
+					s.debug.Println(err)
+				}
 			}
 		}
 	}
-	res.Extension = _path.Ext(res.File)
+
+	if len(res.Extension) == 0 {
+		res.Extension = _path.Ext(res.File)
+	}
 
 	if strings.HasSuffix(res.Path, "/") {
 		if filepath.Dir(filepath.Dir(res.Path)) == "." {

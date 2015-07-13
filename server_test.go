@@ -724,6 +724,23 @@ func TestPUTTurtle(t *testing.T) {
 	assert.Equal(t, "@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n\n<d>\n    <e> <f> ;\n    <h> <i> .\n\n", string(body))
 }
 
+func TestPUTRdf(t *testing.T) {
+	for ext, ctype := range mimeRdfExt {
+		request, err := http.NewRequest("PUT", testServer.URL+"/_test/abc"+ext, nil)
+		assert.NoError(t, err)
+		request.Header.Add("Content-Type", ctype)
+		response, err := httpClient.Do(request)
+		assert.NoError(t, err)
+		assert.Equal(t, 201, response.StatusCode)
+
+		request, err = http.NewRequest("DELETE", testServer.URL+"/_test/abc"+ext, nil)
+		assert.NoError(t, err)
+		response, err = httpClient.Do(request)
+		assert.NoError(t, err)
+		assert.Equal(t, 200, response.StatusCode)
+	}
+}
+
 func TestHEAD(t *testing.T) {
 	request, err := http.NewRequest("HEAD", testServer.URL+"/_test/abc", nil)
 	assert.NoError(t, err)

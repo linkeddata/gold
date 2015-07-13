@@ -1,7 +1,6 @@
 package gold
 
 import (
-	"log"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -112,7 +111,6 @@ func TestPathInfoWithPathAndACLSuffix(t *testing.T) {
 	assert.Equal(t, sroot+"_test/"+config.ACLSuffix, p.MetaFile)
 	assert.Equal(t, config.ACLSuffix, p.Extension)
 	assert.False(t, p.Exists)
-	log.Printf("%+v\n", p)
 }
 
 func TestPathInfoWithPathAndMetaSuffix(t *testing.T) {
