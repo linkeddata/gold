@@ -19,9 +19,9 @@
 	
 	"TokenAge":  5,
 
-	"METASuffix": ",meta",
+	"METASuffix": ".meta",
 
-	"ACLSuffix": ",acl",
+	"ACLSuffix": ".acl",
 	
 	"DataSkin":  "tabulator",
 	
