@@ -1,8 +1,11 @@
 package gold
 
 import (
+	"errors"
 	crdf "github.com/presbrey/goraptor"
 	"mime"
+	"net/http"
+	"path/filepath"
 )
 
 var mimeParser = map[string]string{
@@ -21,6 +24,13 @@ var mimeRdfExt = map[string]string{
 	".n3":     "text/n3",
 	".rdf":    "application/rdf+xml",
 	".jsonld": "application/ld+json",
+}
+
+var rdfExtensions = []string{
+	".ttl",
+	".n3",
+	".rdf",
+	".jsonld",
 }
 
 var (
@@ -61,4 +71,130 @@ func init() {
 		}
 		serializerMimes = append(serializerMimes, mime)
 	}
+}
+
+func ExtLookup(ctype string) string {
+	for k, v := range mimeRdfExt {
+		if v == ctype {
+			return k
+		}
+	}
+	return ""
+}
+
+func AddRDFExtension(ext string) {
+	rdfExtensions = append(rdfExtensions, ext)
+}
+
+func MimeLookup(path string) (string, string, bool) {
+	var mimeType string
+	maybeRDF := false
+	ext := filepath.Ext(path)
+	if len(ext) > 0 {
+		mimeType = mime.TypeByExtension(ext)
+		if len(mimeType) > 0 {
+			if len(mimeRdfExt[ext]) > 0 {
+				maybeRDF = true
+			}
+		}
+	}
+	return mimeType, ext, maybeRDF
+}
+
+// MapPathToExtension returns the path with the proper extension that matches the given content type,
+// even if the resource (path) contains a different extension
+//@@TODO should switch to a more comprehensive list of mime-to-ext (instead of using go's internal list)
+func MapPathToExtension(path string, ctype string, data ...[]byte) (string, error) {
+	if len(path) == 0 {
+		return "", errors.New("MapPathToExt -- missing path or ctype value")
+	}
+
+	fileCType, ext, _ := MimeLookup(path)
+	if len(fileCType) > 0 {
+		fileCType, _, _ = mime.ParseMediaType(fileCType)
+		// filetype, ctype
+		if len(ctype) > 0 {
+			if fileCType != ctype {
+				// append the extension corresponding to Content-Type header
+				newExt, err := mime.ExtensionsByType(ctype)
+				if err != nil {
+					return "", err
+				}
+				if len(newExt) > 0 {
+					ext = newExt[0]
+				}
+				path += "$" + ext
+			}
+		} else {
+			// fileCtype, !ext, !ctype
+			if len(ext) == 0 {
+				newExt, err := mime.ExtensionsByType(fileCType)
+				if err != nil {
+					return "", err
+				}
+				if len(newExt) > 0 {
+					path += newExt[0]
+				}
+			}
+		}
+	} else {
+		// !fileCtype, ext, ctype
+		if len(ext) > 0 {
+			// !fileCtype, ext, ctype
+			if len(ctype) > 0 {
+				newExt, err := mime.ExtensionsByType(ctype)
+				if err != nil {
+					return "", err
+				}
+				if len(newExt) > 0 {
+					match := false
+					for _, e := range newExt {
+						if e == ext {
+							match = true
+							break
+						}
+					}
+					if !match {
+						// could not find matching extension
+						path += "$" + ext
+					}
+				}
+			}
+		} else {
+			// !fileCtype, !ext, ctype
+			if len(ctype) > 0 {
+				// maybe it's an RDF resource
+				if ext = ExtLookup(ctype); len(ext) > 0 {
+					path += ext
+				} else {
+					newExt, err := mime.ExtensionsByType(ctype)
+					if err != nil {
+						return "", err
+					}
+					if len(newExt) > 0 {
+						path += newExt[0]
+					}
+				}
+			} else {
+				// !fileCtype, !ext, !ctype
+				// try to infer from data
+				if len(data) == 0 {
+					return "", errors.New("Cannot infer mime type from from empty file")
+				}
+				// sniff
+				body := data[0]
+				fileCType = http.DetectContentType(body)
+				newExt, err := mime.ExtensionsByType(fileCType)
+				if err != nil {
+					return "", err
+				}
+				if len(newExt) > 0 {
+					ext = newExt[0]
+					path += ext
+				}
+			}
+		}
+	}
+
+	return path, nil
 }

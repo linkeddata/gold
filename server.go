@@ -168,6 +168,8 @@ func NewServer(config *ServerConfig) *Server {
 			LockSystem: webdav.NewMemLS(),
 		},
 	}
+	AddRDFExtension(s.Config.ACLSuffix)
+	AddRDFExtension(s.Config.MetaSuffix)
 	if config.Debug {
 		s.debug = log.New(os.Stderr, debugPrefix, debugFlags)
 	} else {
