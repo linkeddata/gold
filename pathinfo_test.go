@@ -109,6 +109,7 @@ func TestPathInfoWithPathAndACLSuffix(t *testing.T) {
 	assert.Equal(t, sroot+"_test/"+config.ACLSuffix, p.AclFile)
 	assert.Equal(t, path+config.ACLSuffix, p.MetaURI)
 	assert.Equal(t, sroot+"_test/"+config.ACLSuffix, p.MetaFile)
+	assert.Equal(t, config.ACLSuffix, p.Extension)
 	assert.False(t, p.Exists)
 }
 
@@ -126,6 +127,6 @@ func TestPathInfoWithPathAndMetaSuffix(t *testing.T) {
 	assert.Equal(t, sroot+"_test/"+config.MetaSuffix+config.ACLSuffix, p.AclFile)
 	assert.Equal(t, path+config.MetaSuffix, p.MetaURI)
 	assert.Equal(t, sroot+"_test/"+config.MetaSuffix, p.MetaFile)
-	assert.Empty(t, p.Extension)
+	assert.Equal(t, config.MetaSuffix, p.Extension)
 	assert.False(t, p.Exists)
 }

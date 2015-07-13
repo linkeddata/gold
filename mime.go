@@ -86,15 +86,29 @@ func AddRDFExtension(ext string) {
 	rdfExtensions = append(rdfExtensions, ext)
 }
 
+func IsRdfExtension(ext string) bool {
+	for _, v := range rdfExtensions {
+		if v == ext {
+			return true
+		}
+	}
+	return false
+}
+
 func MimeLookup(path string) (string, string, bool) {
 	var mimeType string
 	maybeRDF := false
 	ext := filepath.Ext(path)
 	if len(ext) > 0 {
-		mimeType = mime.TypeByExtension(ext)
-		if len(mimeType) > 0 {
-			if len(mimeRdfExt[ext]) > 0 {
-				maybeRDF = true
+		if IsRdfExtension(ext) {
+			maybeRDF = true
+			mimeType = mimeRdfExt[ext]
+		} else {
+			mimeType = mime.TypeByExtension(ext)
+			if len(mimeType) > 0 {
+				if len(mimeRdfExt[ext]) > 0 {
+					maybeRDF = true
+				}
 			}
 		}
 	}
@@ -109,12 +123,13 @@ func MapPathToExtension(path string, ctype string, data ...[]byte) (string, erro
 		return "", errors.New("MapPathToExt -- missing path or ctype value")
 	}
 
-	fileCType, ext, _ := MimeLookup(path)
+	fileCType, ext, maybeRDF := MimeLookup(path)
 	if len(fileCType) > 0 {
 		fileCType, _, _ = mime.ParseMediaType(fileCType)
 		// filetype, ctype
 		if len(ctype) > 0 {
 			if fileCType != ctype {
+				println(path, fileCType, ext, ctype, maybeRDF)
 				// append the extension corresponding to Content-Type header
 				newExt, err := mime.ExtensionsByType(ctype)
 				if err != nil {
@@ -128,6 +143,7 @@ func MapPathToExtension(path string, ctype string, data ...[]byte) (string, erro
 		} else {
 			// fileCtype, !ext, !ctype
 			if len(ext) == 0 {
+				println(path, fileCType, ext, ctype, maybeRDF)
 				newExt, err := mime.ExtensionsByType(fileCType)
 				if err != nil {
 					return "", err
@@ -138,10 +154,11 @@ func MapPathToExtension(path string, ctype string, data ...[]byte) (string, erro
 			}
 		}
 	} else {
-		// !fileCtype, ext, ctype
+		// !fileCtype, ext
 		if len(ext) > 0 {
 			// !fileCtype, ext, ctype
 			if len(ctype) > 0 {
+				println(path, fileCType, ext, ctype, maybeRDF)
 				newExt, err := mime.ExtensionsByType(ctype)
 				if err != nil {
 					return "", err
@@ -156,13 +173,17 @@ func MapPathToExtension(path string, ctype string, data ...[]byte) (string, erro
 					}
 					if !match {
 						// could not find matching extension
-						path += "$" + ext
+						if !IsRdfExtension(newExt[0]) {
+							path += "$" + newExt[0]
+						}
 					}
 				}
 			}
 		} else {
 			// !fileCtype, !ext, ctype
 			if len(ctype) > 0 {
+				println(path, fileCType, ext, ctype, maybeRDF)
+
 				// maybe it's an RDF resource
 				if ext = ExtLookup(ctype); len(ext) > 0 {
 					path += ext
@@ -176,6 +197,8 @@ func MapPathToExtension(path string, ctype string, data ...[]byte) (string, erro
 					}
 				}
 			} else {
+				println(path, fileCType, ext, ctype, maybeRDF)
+
 				// !fileCtype, !ext, !ctype
 				// try to infer from data
 				if len(data) == 0 {
@@ -189,8 +212,7 @@ func MapPathToExtension(path string, ctype string, data ...[]byte) (string, erro
 					return "", err
 				}
 				if len(newExt) > 0 {
-					ext = newExt[0]
-					path += ext
+					path += newExt[0]
 				}
 			}
 		}

@@ -193,8 +193,8 @@ func TestHTMLIndex(t *testing.T) {
 	response, err = httpClient.Do(request)
 	assert.NoError(t, err)
 	assert.Equal(t, 200, response.StatusCode)
-	assert.Equal(t, request.URL.String()+"index.html,meta", ParseLinkHeader(response.Header.Get("Link")).MatchRel("meta"))
-	assert.Equal(t, request.URL.String()+"index.html,acl", ParseLinkHeader(response.Header.Get("Link")).MatchRel("acl"))
+	assert.Equal(t, request.URL.String()+"index.html"+config.MetaSuffix, ParseLinkHeader(response.Header.Get("Link")).MatchRel("meta"))
+	assert.Equal(t, request.URL.String()+"index.html"+config.ACLSuffix, ParseLinkHeader(response.Header.Get("Link")).MatchRel("acl"))
 
 	request, err = http.NewRequest("DELETE", testServer.URL+"/_test/index.html", nil)
 	assert.NoError(t, err)
