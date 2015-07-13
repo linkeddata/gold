@@ -100,6 +100,7 @@ func TestPathInfoWithPathAndACLSuffix(t *testing.T) {
 	sroot := serverDefaultRoot()
 
 	p, err := handler.pathInfo(path + config.ACLSuffix)
+	p, err = handler.pathInfo(path + config.ACLSuffix)
 	assert.Nil(t, err)
 	assert.Equal(t, path+config.ACLSuffix, p.URI)
 	assert.Equal(t, testServer.URL, p.Base)
@@ -118,6 +119,7 @@ func TestPathInfoWithPathAndMetaSuffix(t *testing.T) {
 	sroot := serverDefaultRoot()
 
 	p, err := handler.pathInfo(path + config.MetaSuffix)
+	p, err = handler.pathInfo(path + config.MetaSuffix)
 	assert.Nil(t, err)
 	assert.Equal(t, path+config.MetaSuffix, p.URI)
 	assert.Equal(t, testServer.URL, p.Base)

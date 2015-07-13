@@ -4,7 +4,7 @@
 
 Linked Data server for Go
 
-[![Build Status](https://travis-ci.org/linkeddata/gold.png)](https://travis-ci.org/linkeddata/gold)
+[![Build Status](https://travis-ci.org/linkeddata/gold.svg?branch=master)](https://travis-ci.org/linkeddata/gold)
 
 ## Install
 
