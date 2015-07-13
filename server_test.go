@@ -193,8 +193,8 @@ func TestHTMLIndex(t *testing.T) {
 	response, err = httpClient.Do(request)
 	assert.NoError(t, err)
 	assert.Equal(t, 200, response.StatusCode)
-	assert.Equal(t, request.URL.String()+"index.html,meta", ParseLinkHeader(response.Header.Get("Link")).MatchRel("meta"))
-	assert.Equal(t, request.URL.String()+"index.html,acl", ParseLinkHeader(response.Header.Get("Link")).MatchRel("acl"))
+	assert.Equal(t, request.URL.String()+"index.html"+config.MetaSuffix, ParseLinkHeader(response.Header.Get("Link")).MatchRel("meta"))
+	assert.Equal(t, request.URL.String()+"index.html"+config.ACLSuffix, ParseLinkHeader(response.Header.Get("Link")).MatchRel("acl"))
 
 	request, err = http.NewRequest("DELETE", testServer.URL+"/_test/index.html", nil)
 	assert.NoError(t, err)
@@ -724,6 +724,23 @@ func TestPUTTurtle(t *testing.T) {
 	assert.Equal(t, "@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n\n<d>\n    <e> <f> ;\n    <h> <i> .\n\n", string(body))
 }
 
+func TestPUTRdf(t *testing.T) {
+	for ext, ctype := range mimeRdfExt {
+		request, err := http.NewRequest("PUT", testServer.URL+"/_test/abc"+ext, nil)
+		assert.NoError(t, err)
+		request.Header.Add("Content-Type", ctype)
+		response, err := httpClient.Do(request)
+		assert.NoError(t, err)
+		assert.Equal(t, 201, response.StatusCode)
+
+		request, err = http.NewRequest("DELETE", testServer.URL+"/_test/abc"+ext, nil)
+		assert.NoError(t, err)
+		response, err = httpClient.Do(request)
+		assert.NoError(t, err)
+		assert.Equal(t, 200, response.StatusCode)
+	}
+}
+
 func TestHEAD(t *testing.T) {
 	request, err := http.NewRequest("HEAD", testServer.URL+"/_test/abc", nil)
 	assert.NoError(t, err)
@@ -789,7 +806,6 @@ func TestIfMatch(t *testing.T) {
 	assert.NoError(t, err)
 
 	ETag := response.Header.Get("ETag")
-	println("ETAG:", ETag)
 	newTag := ETag[:len(ETag)-1] + "1\""
 
 	request, err = http.NewRequest("HEAD", testServer.URL+"/_test/abc", nil)
@@ -1157,17 +1173,17 @@ func TestRawContent(t *testing.T) {
 	assert.NoError(t, err)
 	response, err = httpClient.Do(request)
 	assert.NoError(t, err)
-	assert.Equal(t, response.StatusCode, 200)
-	assert.Equal(t, response.Header.Get(HCType), "image/jpeg")
+	assert.Equal(t, 200, response.StatusCode)
+	assert.Equal(t, "image/jpeg", response.Header.Get(HCType))
 	body, err := ioutil.ReadAll(response.Body)
 	response.Body.Close()
-	assert.Equal(t, int64(len(string(body))), stat.Size())
+	assert.Equal(t, stat.Size(), int64(len(string(body))))
 
 	request, err = http.NewRequest("DELETE", testServer.URL+"/test.raw", nil)
 	assert.NoError(t, err)
 	response, err = httpClient.Do(request)
 	assert.NoError(t, err)
-	assert.Equal(t, response.StatusCode, 200)
+	assert.Equal(t, 200, response.StatusCode)
 }
 
 func BenchmarkPUT(b *testing.B) {

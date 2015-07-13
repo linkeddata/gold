@@ -5,6 +5,7 @@ import (
 	"net"
 	"net/url"
 	"os"
+	_path "path"
 	"path/filepath"
 	"strings"
 )
@@ -22,6 +23,9 @@ type pathInfo struct {
 	AclFile   string
 	MetaURI   string
 	MetaFile  string
+	Extension string
+	MaybeRDF  bool
+	IsDir     bool
 	Exists    bool
 }
 
@@ -57,24 +61,9 @@ func (s *Server) pathInfo(path string) (*pathInfo, error) {
 		res.Base = p.Scheme + "://" + host
 	}
 
+	// p.Path = p.String()[len(p.Scheme+"://"+p.Host):]
 	if strings.HasPrefix(p.Path, "/") && len(p.Path) > 0 {
 		p.Path = strings.TrimLeft(p.Path, "/")
-	}
-
-	res.Exists = true
-	// check if file exits first
-	if stat, err := os.Stat(res.Root + p.Path); os.IsNotExist(err) {
-		res.Exists = false
-	} else {
-		// Add missing trailing slashes for dirs
-		if stat.IsDir() && !strings.HasSuffix(p.Path, "/") && len(p.Path) > 1 {
-			p.Path += "/"
-		}
-		// get filetype
-		res.FileType, err = magic.TypeByFile(res.Root + p.Path)
-		if err != nil {
-			s.debug.Println(err)
-		}
 	}
 
 	if len(p.Path) == 0 {
@@ -92,6 +81,35 @@ func (s *Server) pathInfo(path string) (*pathInfo, error) {
 		res.File = s.Config.DataRoot + p.Path
 	}
 
+	res.Exists = true
+	res.IsDir = false
+	// check if file exits first
+	if stat, err := os.Stat(res.File); os.IsNotExist(err) {
+		res.Exists = false
+	} else {
+		// Add missing trailing slashes for dirs
+		if stat.IsDir() {
+			if !strings.HasSuffix(res.Path, "/") && len(res.Path) > 1 {
+				res.IsDir = true
+				res.Path += "/"
+				res.File += "/"
+				res.URI += "/"
+			}
+		} else {
+			res.FileType, res.Extension, res.MaybeRDF = MimeLookup(res.File)
+			if len(res.FileType) == 0 {
+				res.FileType, err = magic.TypeByFile(res.File)
+				if err != nil {
+					s.debug.Println(err)
+				}
+			}
+		}
+	}
+
+	if len(res.Extension) == 0 {
+		res.Extension = _path.Ext(res.File)
+	}
+
 	if strings.HasSuffix(res.Path, "/") {
 		if filepath.Dir(filepath.Dir(res.Path)) == "." {
 			res.ParentURI = res.Base + "/"
@@ -102,12 +120,12 @@ func (s *Server) pathInfo(path string) (*pathInfo, error) {
 		res.ParentURI = res.Base + "/" + filepath.Dir(res.Path) + "/"
 	}
 
-	if strings.HasSuffix(p.Path, s.Config.ACLSuffix) {
+	if strings.HasSuffix(res.Path, s.Config.ACLSuffix) {
 		res.AclURI = res.URI
 		res.AclFile = res.File
 		res.MetaURI = res.URI
 		res.MetaFile = res.File
-	} else if strings.HasSuffix(p.Path, s.Config.MetaSuffix) {
+	} else if strings.HasSuffix(res.Path, s.Config.MetaSuffix) {
 		res.AclURI = res.URI + s.Config.ACLSuffix
 		res.AclFile = res.File + s.Config.ACLSuffix
 		res.MetaURI = res.URI

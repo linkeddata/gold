@@ -73,8 +73,8 @@ func NewServerConfig() *ServerConfig {
 	return &ServerConfig{
 		CookieAge:  24,
 		TokenAge:   5,
-		MetaSuffix: ",meta",
-		ACLSuffix:  ",acl",
+		MetaSuffix: ".meta",
+		ACLSuffix:  ".acl",
 		DataSkin:   "tabulator",
 		DirIndex:   []string{"index.html", "index.htm"},
 		DirSkin:    "http://linkeddata.github.io/warp/#list/",

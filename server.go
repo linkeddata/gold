@@ -7,6 +7,7 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
+	// _mime "mime"
 	"net"
 	"net/http"
 	"net/url"
@@ -74,9 +75,13 @@ func (req httpRequest) BaseURI() string {
 	if req.TLS != nil || req.Header.Get("X-Forwarded-Proto") == "https" {
 		scheme += "s"
 	}
-	host, port, err := net.SplitHostPort(req.Host)
+	reqHost := req.Host
+	if len(req.Header.Get("X-Forward-Host")) > 0 {
+		reqHost = req.Header.Get("X-Forward-Host")
+	}
+	host, port, err := net.SplitHostPort(reqHost)
 	if err != nil {
-		host = req.Host
+		host = reqHost
 	}
 	if len(host) == 0 {
 		host = "localhost"
@@ -163,6 +168,8 @@ func NewServer(config *ServerConfig) *Server {
 			LockSystem: webdav.NewMemLS(),
 		},
 	}
+	AddRDFExtension(s.Config.ACLSuffix)
+	AddRDFExtension(s.Config.MetaSuffix)
 	if config.Debug {
 		s.debug = log.New(os.Stderr, debugPrefix, debugFlags)
 	} else {
@@ -580,7 +587,14 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 				maybeRDF = true
 			}
 		default:
-			maybeRDF = magicType == "text/plain"
+			magicType = resource.FileType
+			if len(mimeRdfExt[resource.Extension]) > 0 {
+				maybeRDF = true
+			}
+			if !maybeRDF && magicType == "text/plain" {
+				maybeRDF = true
+			}
+			s.debug.Println("Setting CType to:", magicType)
 			status = 200
 
 			if req.Method == "GET" && strings.Contains(contentType, "text/html") {
@@ -603,29 +617,11 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 					io.Copy(w, f)
 				}
 				return
-			} else if !maybeRDF && !strings.Contains(contentType, "text/html") {
-				maybeRDF = true
 			}
 		}
 
 		if status != 200 {
 			return r.respond(status)
-		}
-
-		if extn := strings.LastIndex(resource.File, "."); extn >= 0 {
-			if mime, known := mimeTypes[resource.File[extn:]]; known {
-				magicType = mime
-				maybeRDF = false
-			}
-		}
-
-		if maybeRDF {
-			g.ReadFile(resource.File)
-			if g.Len() == 0 {
-				maybeRDF = false
-			} else {
-				w.Header().Set(HCType, contentType)
-			}
 		}
 
 		if req.Method == "HEAD" {
@@ -650,6 +646,15 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 				w.WriteHeader(status)
 			}
 			return
+		}
+
+		if maybeRDF {
+			g.ReadFile(resource.File)
+			if g.Len() == 0 {
+				maybeRDF = false
+			} else {
+				w.Header().Set(HCType, contentType)
+			}
 		}
 
 		data := ""
