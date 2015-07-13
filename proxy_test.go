@@ -9,7 +9,7 @@ import (
 )
 
 func TestProxy(t *testing.T) {
-	request, err := http.NewRequest("GET", testServer.URL+"/"+ProxyPath+"?uri="+testServer.URL, nil)
+	request, err := http.NewRequest("GET", testServer.URL+"/"+ProxyPath+"?uri="+testServer.URL+"/_test/", nil)
 	assert.NoError(t, err)
 	request.Header.Add("Origin", "https://example.org/")
 	response, err := httpClient.Do(request)
