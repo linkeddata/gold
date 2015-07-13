@@ -102,21 +102,21 @@ func (s *Server) pathInfo(path string) (*pathInfo, error) {
 		res.ParentURI = res.Base + "/" + filepath.Dir(res.Path) + "/"
 	}
 
-	if strings.HasSuffix(p.Path, ",acl") {
+	if strings.HasSuffix(p.Path, s.Config.ACLSuffix) {
 		res.AclURI = res.URI
 		res.AclFile = res.File
 		res.MetaURI = res.URI
 		res.MetaFile = res.File
-	} else if strings.HasSuffix(p.Path, ",meta") || strings.HasSuffix(p.Path, ",meta/") {
-		res.AclURI = res.URI + ACLSuffix
-		res.AclFile = res.File + ACLSuffix
+	} else if strings.HasSuffix(p.Path, s.Config.MetaSuffix) {
+		res.AclURI = res.URI + s.Config.ACLSuffix
+		res.AclFile = res.File + s.Config.ACLSuffix
 		res.MetaURI = res.URI
 		res.MetaFile = res.File
 	} else {
-		res.AclURI = res.URI + ACLSuffix
-		res.AclFile = res.File + ACLSuffix
-		res.MetaURI = res.URI + METASuffix
-		res.MetaFile = res.File + METASuffix
+		res.AclURI = res.URI + s.Config.ACLSuffix
+		res.AclFile = res.File + s.Config.ACLSuffix
+		res.MetaURI = res.URI + s.Config.MetaSuffix
+		res.MetaFile = res.File + s.Config.MetaSuffix
 	}
 
 	return res, nil
