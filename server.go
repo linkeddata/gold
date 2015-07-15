@@ -507,6 +507,10 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 						var _s Term
 						for _, info := range infos {
 							if info != nil {
+								// do not list ACLs and Meta files
+								if strings.HasSuffix(info.Name(), s.Config.ACLSuffix) || strings.HasSuffix(info.Name(), s.Config.MetaSuffix) {
+									continue
+								}
 								res := resource.URI + info.Name()
 								if info.IsDir() {
 									res += "/"

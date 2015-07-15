@@ -424,10 +424,17 @@ func TestLDPPostLDPRNoSlug(t *testing.T) {
 }
 
 func TestLDPGetLDPC(t *testing.T) {
-	request, err := http.NewRequest("GET", testServer.URL+"/_test/", nil)
+	request, err := http.NewRequest("PUT", testServer.URL+"/_test/"+config.MetaSuffix, strings.NewReader("@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n\n<> a <http://example.org/two>."))
+	request.Header.Add("Content-Type", "text/turtle")
+	response, err := httpClient.Do(request)
+	response.Body.Close()
+	assert.NoError(t, err)
+	assert.Equal(t, 201, response.StatusCode)
+
+	request, err = http.NewRequest("GET", testServer.URL+"/_test/", nil)
 	assert.NoError(t, err)
 	request.Header.Add("Accept", "text/turtle")
-	response, err := httpClient.Do(request)
+	response, err = httpClient.Do(request)
 	assert.NoError(t, err)
 	assert.Equal(t, 200, response.StatusCode)
 
@@ -436,7 +443,14 @@ func TestLDPGetLDPC(t *testing.T) {
 
 	g := NewGraph(testServer.URL + "/_test/")
 	g.Parse(strings.NewReader(string(body)), "text/turtle")
+	assert.Nil(t, g.One(NewResource(testServer.URL+"/_test/"+config.MetaSuffix), nil, nil))
 	assert.NotNil(t, g.One(NewResource(testServer.URL+"/_test/"), NewResource("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), NewResource("http://www.w3.org/ns/ldp#BasicContainer")))
+
+	request, err = http.NewRequest("DELETE", testServer.URL+"/_test/"+config.MetaSuffix, nil)
+	response, err = httpClient.Do(request)
+	response.Body.Close()
+	assert.NoError(t, err)
+	assert.Equal(t, 200, response.StatusCode)
 }
 
 func TestLDPPreferContainmentHeader(t *testing.T) {
