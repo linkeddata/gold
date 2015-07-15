@@ -929,13 +929,6 @@ func TestACLCleanUp(t *testing.T) {
 	response.Body.Close()
 	assert.Equal(t, 200, response.StatusCode)
 
-	request, err = http.NewRequest("DELETE", testServer.URL+aclDir+config.ACLSuffix, nil)
-	assert.NoError(t, err)
-	response, err = user1h.Do(request)
-	assert.NoError(t, err)
-	response.Body.Close()
-	assert.Equal(t, 200, response.StatusCode)
-
 	request, err = http.NewRequest("DELETE", testServer.URL+aclDir, nil)
 	assert.NoError(t, err)
 	response, err = user1h.Do(request)

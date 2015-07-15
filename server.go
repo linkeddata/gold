@@ -1073,7 +1073,14 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 		}
 
 		if len(resource.Path) == 0 {
-			return r.respond(500, "500 - Cannot DELETE /")
+			return r.respond(500, "500 - Cannot DELETE root (/)")
+		}
+		// remove ACL and meta files first
+		if resource.File != resource.AclFile {
+			_ = os.Remove(resource.AclFile)
+		}
+		if resource.File != resource.MetaFile {
+			_ = os.Remove(resource.MetaFile)
 		}
 		err = os.Remove(resource.File)
 		if err != nil {
