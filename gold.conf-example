@@ -1,6 +1,6 @@
 {
 	"ListenHTTP": ":8000",
-	
+
 	"ListenHTTPS": ":4443",
 
 	"TLSCert": "/Users/user/certs/cert.pem",
@@ -8,30 +8,36 @@
 	"TLSKey": "/Users/user/keys/key.pem",
 
 	"DataRoot": "/Users/user/gold-data/",
-	
+
 	"Vhosts": true,
-	
+
 	"Insecure": false,
-	
-	"Debug": false,	
-	
+
+	"Debug": false,
+
 	"CookieAge": 24,
-	
+
 	"TokenAge":  5,
 
 	"METASuffix": ".meta",
 
 	"ACLSuffix": ".acl",
-	
+
 	"DataSkin":  "tabulator",
-	
+
 	"DirSkin":   "http://linkeddata.github.io/warp/#list/",
-	
+
 	"SignUpSkin": "http://linkeddata.github.io/signup/?tab=signup&endpointUrl=",
 
-	"DirIndex":  ["index.html", "index.htm"],	
-	
+	"DirIndex":  ["index.html", "index.htm"],
+
 	"DiskLimit": 100000000,
+
+	"AgentWebid": "",
+
+	"AgentCert": "",
+
+	"AgentKey": "",
 
 	"SMTPConfig": {
 		"Name": "Administrator",

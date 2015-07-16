@@ -28,6 +28,8 @@ const (
 	SystemPrefix = ",system"
 	// ProxyPath provides CORS proxy (empty to disable)
 	ProxyPath = ",proxy"
+	// AuthProxyPath provides WebID delegation proxy (empty to disable)
+	AuthProxyPath = ",authproxy"
 	// RDFExtension is the default extension for RDF documents (i.e. turtle for now)
 	RDFExtension = ".ttl"
 )
@@ -205,7 +207,21 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		req.RequestURI = uri.RequestURI()
 		proxy.ServeHTTP(w, req)
 		return
+	} else if AuthProxyPath != "" && strings.HasPrefix(req.URL.Path, "/"+AuthProxyPath) {
+		uri, err := url.Parse(req.FormValue("uri"))
+		if err != nil {
+			s.debug.Println(req.RequestURI, err.Error())
+		}
+		if uri.Scheme == "https" {
+			req.URL = uri
+			req.Host = uri.Host
+			req.RequestURI = uri.RequestURI()
+			HijackProxy(w, req, s)
+
+			return
+		}
 	}
+
 	if websocketUpgrade(req) {
 		websocketServe(w, req)
 		return

@@ -972,6 +972,7 @@ func TestGetJsonLd(t *testing.T) {
 	request.Header.Add("Accept", "application/ld+json")
 	response, err = httpClient.Do(request)
 	assert.NoError(t, err)
+	assert.Equal(t, "application/ld+json", response.Header.Get("Content-Type"))
 	assert.Equal(t, 200, response.StatusCode)
 }
 

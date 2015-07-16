@@ -152,8 +152,8 @@ func NewSPKACx509(uri string, name string, spkacBase64 string) ([]byte, error) {
 	return certDerBytes, nil
 }
 
-// NewRSAcert creates a new RSA x509 self-signed certificate
-func NewRSAcert(uri string, name string, priv *rsa.PrivateKey) (*tls.Certificate, error) {
+// NewRSADerCert returns a new raw RSA x509 self-signed certificate
+func NewRSADerCert(uri string, name string, priv *rsa.PrivateKey) ([]byte, error) {
 	uri = "URI: " + uri
 	template := x509.Certificate{
 		SerialNumber: new(big.Int).SetInt64(42),
@@ -178,18 +178,28 @@ func NewRSAcert(uri string, name string, priv *rsa.PrivateKey) (*tls.Certificate
 	}
 	template.ExtraExtensions = []pkix.Extension{{Id: subjectAltName, Value: values}}
 
-	keyPEM := bytes.NewBuffer(nil)
-	err = pem.Encode(keyPEM, &pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(priv)})
-	if err != nil {
-		return nil, err
-	}
-
 	derBytes, err := x509.CreateCertificate(rand.Reader, &template, &template, &priv.PublicKey, priv)
 	if err != nil {
 		return nil, err
 	}
+	return derBytes, nil
+}
+
+// NewRSAcert creates a new RSA x509 self-signed certificate
+func NewRSAcert(uri string, name string, priv *rsa.PrivateKey) (*tls.Certificate, error) {
+	certDER, err := NewRSADerCert(uri, name, priv)
+	if err != nil {
+		return nil, err
+	}
+
 	certPEM := bytes.NewBuffer(nil)
-	err = pem.Encode(certPEM, &pem.Block{Type: "CERTIFICATE", Bytes: derBytes})
+	err = pem.Encode(certPEM, &pem.Block{Type: "CERTIFICATE", Bytes: certDER})
+	if err != nil {
+		return nil, err
+	}
+
+	keyPEM := bytes.NewBuffer(nil)
+	err = pem.Encode(keyPEM, &pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(priv)})
 	if err != nil {
 		return nil, err
 	}
