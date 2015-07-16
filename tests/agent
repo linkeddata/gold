@@ -1,0 +1,16 @@
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+
+<>
+    a <http://xmlns.com/foaf/0.1/PersonalProfileDocument> ;
+    <http://xmlns.com/foaf/0.1/maker> <#id> ;
+    <http://xmlns.com/foaf/0.1/primaryTopic> <#id> .
+
+<#id>
+    a <http://xmlns.com/foaf/0.1/Person> ;
+    <http://www.w3.org/ns/auth/cert#key> <#key> .
+
+<#key>
+    a <http://www.w3.org/ns/auth/cert#RSAPublicKey> ;
+    <http://www.w3.org/ns/auth/cert#exponent> "65537"^^<http://www.w3.org/2001/XMLSchema#int> ;
+    <http://www.w3.org/ns/auth/cert#modulus> "c6572e07b1098a247c2bd9defbf5add9a44723002a1304ea8cee1faa760c68f32801ceb319db522ee13dfaf7eb18de9d476743efa3aa05b5676bc40f7c2c9c8b0631a1e0fe4d6d54e6d53dc75ad2582f20c03550f9c69de19dc42ee0ef317d162a66b767fda1f82fae0eae9a96dfd3d31c7e45b8e7a8c7561d4d55d72028c7aff68499073663ebd9ff3ffb37caa71916a6855a5d39e18e7316765b53cba37e3a0d95d9f9a053a4111ea9d80582cbe9fd99539fb165d5b17463beb8b08c02306f31e07fabb259eb9c83a56a9e9d82f3a4dae8a6d05962ad7ba32d3d0d24f5c0840497eb989c7c3e38439034f251429de3fed2056a7ece90e24b9b2d9d489be1c9"^^<http://www.w3.org/2001/XMLSchema#hexBinary> .
+
