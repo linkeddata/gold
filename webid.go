@@ -164,13 +164,13 @@ func WebIDTLSAuth(tls *tls.ConnectionState) (uri string, err error) {
 		_, err = asn1.Unmarshal(x.Value, &v)
 		if err == nil {
 			san := string(v.Bytes)
-			for _, sanURI := range strings.Split(san, ",") {
+			for _, sanURI := range strings.Split(san[2:], ",") {
 				sanURI = strings.TrimSpace(sanURI)
-				if strings.Contains(san, "URI:") {
-					claim = san[7:]
+				if strings.HasPrefix(sanURI, "URI:") {
+					claim = sanURI[5:]
 					break
 				} else {
-					claim = san[2:]
+					claim = ""
 				}
 			}
 		}
