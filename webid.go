@@ -50,6 +50,12 @@ func pkeyTypeNE(pkey interface{}) (t, n, e string) {
 	return
 }
 
+func genCacheName(webid string) string {
+	src := []byte(webid)
+	// @@TODO add date/timestamp
+	return base64.StdEncoding.EncodeToString(src)
+}
+
 // WebIDDigestAuth performs a digest authentication using WebID-RSA
 func WebIDDigestAuth(req *httpRequest) (string, error) {
 	if len(req.Header.Get("Authorization")) == 0 {
