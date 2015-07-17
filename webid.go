@@ -170,7 +170,7 @@ func WebIDTLSAuth(tls *tls.ConnectionState) (uri string, err error) {
 					claim = sanURI[5:]
 					break
 				} else {
-					claim = ""
+					claim = sanURI
 				}
 			}
 		}
