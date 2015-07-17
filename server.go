@@ -252,6 +252,26 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 
 	s.debug.Println("\n------ New " + req.Method + " request from " + req.RemoteAddr + " ------")
 
+	// Authentication
+	user := req.authn(w)
+	w.Header().Set("User", user)
+	acl := NewWAC(req, s, w, user)
+
+	// intercept requests for the delegationproxy
+	if DelegationProxy != "" && strings.HasPrefix(req.URL.Path, "/"+DelegationProxy) {
+		uri, err := url.Parse(req.FormValue("uri"))
+		if err != nil {
+			s.debug.Println(req.RequestURI, err.Error())
+		}
+		if uri.Scheme == "https" {
+			req.URL = uri
+			req.Host = uri.Host
+			req.RequestURI = uri.RequestURI()
+			DelegateProxy(w, req, s, user)
+			return
+		}
+	}
+
 	// CORS
 	w.Header().Set("Access-Control-Allow-Credentials", "true")
 	w.Header().Set("Access-Control-Expose-Headers", "User, Location, Link, Vary, Last-Modified, Content-Length")
@@ -271,11 +291,6 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 	}
 
-	// Authentication
-	user := req.authn(w)
-	w.Header().Set("User", user)
-	acl := NewWAC(req, s, w, user)
-
 	// Intercept API requests
 	if strings.HasPrefix(req.Request.URL.Path, "/"+SystemPrefix) && req.Method != "OPTIONS" {
 		resp := HandleSystem(w, req, s)
@@ -285,21 +300,6 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 			return
 		}
 		return r.respond(resp.Status, resp.Body)
-	}
-
-	// intercept requests for the delegationproxy
-	if DelegationProxy != "" && strings.HasPrefix(req.URL.Path, "/"+DelegationProxy) {
-		uri, err := url.Parse(req.FormValue("uri"))
-		if err != nil {
-			s.debug.Println(req.RequestURI, err.Error())
-		}
-		if uri.Scheme == "https" {
-			req.URL = uri
-			req.Host = uri.Host
-			req.RequestURI = uri.RequestURI()
-			DelegateProxy(w, req, s, user)
-			return
-		}
 	}
 
 	// Intercept requests for the Agent's profile
