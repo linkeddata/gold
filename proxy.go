@@ -107,13 +107,16 @@ func DelegateProxy(w http.ResponseWriter, req *httpRequest, s *Server, user stri
 		defer func() {
 			response.Body.Close()
 		}()
-		// do not forward User heder
-		response.Header.Del("User")
 		// write headers
 		for h := range response.Header {
 			// s.debug.Println(response.Header.Get(h))
 			w.Header().Add(h, response.Header.Get(h))
 		}
+		// set the right User heder
+		w.Header().Set("User", user)
+		// set the right origin header
+		w.Header().Set("Origin", req.Header.Get("Origin"))
+
 		// w.Header().Add("Content-Type", response.Header.Get("Content-Type"))
 		// w.Header().Add("User", response.Header.Get("User"))
 		w.WriteHeader(response.StatusCode)
