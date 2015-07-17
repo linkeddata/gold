@@ -35,8 +35,7 @@ var (
 
 	tokenT = flag.Int64("tokenAge", 5, "recovery token lifetime (in minutes)")
 
-	agentCert = flag.String("agentCert", "", "agent's TLS certificate eg. cert.pem")
-	agentKey  = flag.String("agentKey", "", "agent's TLS certificate eg. key.pem")
+	agentWebID = flag.String("agentWebid", "", "agent's WebID eg. https://example.org/agent#id")
 
 	emailName     = flag.String("emailName", "", "remote SMTP server account name")
 	emailAddr     = flag.String("emailAddr", "", "remote SMTP server email address")
@@ -110,8 +109,7 @@ func main() {
 		config.NoHTTP = *nohttp
 		config.MetaSuffix = *metaSuffix
 		config.ACLSuffix = *aclSuffix
-		config.AgentCert = *agentCert
-		config.AgentKey = *agentKey
+		config.AgentWebID = *agentWebID
 		if len(*emailName) > 0 && len(*emailAddr) > 0 && len(*emailUser) > 0 &&
 			len(*emailPass) > 0 && len(*emailServ) > 0 && len(*emailPort) > 0 {
 			ep, _ := strconv.Atoi(*emailPort)

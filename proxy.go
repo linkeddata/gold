@@ -3,6 +3,11 @@ package gold
 import (
 	"crypto/rand"
 	"crypto/tls"
+	"crypto/x509"
+	"encoding/pem"
+	"net/url"
+
+	"fmt"
 	"io"
 	"net/http"
 
@@ -23,12 +28,51 @@ func init() {
 	})
 }
 
-func HijackProxy(w http.ResponseWriter, req *http.Request, s *Server) {
-	if len(s.Config.AgentCert) > 0 && len(s.Config.AgentKey) > 0 && (req.Method == "GET" || req.Method == "HEAD") {
-		s.debug.Println("Hijacking proxy")
+func (r *httpRequest) IsAgentRequest(s *Server) bool {
+	if len(s.Config.AgentWebID) > 0 {
+		if p, err := url.Parse(s.Config.AgentWebID); err == nil {
+			if r.RequestURI == p.Path {
+				return true
+			}
+		}
+	}
+	return false
+}
 
-		s.debug.Println("Loading keypair from:", s.Config.AgentCert, s.Config.AgentKey)
-		cert, err := tls.LoadX509KeyPair(s.Config.AgentCert, s.Config.AgentKey)
+// NewAgentIdentity generates the agent's WebID and cert
+func NewAgentIdentity(s *Server) error {
+	agentGraph, agentPrv, _, err := NewWebIDProfileWithKeys(s.Config.AgentWebID)
+	// create cert
+	agentCert, err := NewRSADerCert(s.Config.AgentWebID, "Minion", agentPrv)
+	if err != nil {
+		return err
+	}
+	// serialize
+	AgentProfile, err = agentGraph.Serialize("text/turtle")
+	if err != nil {
+		return err
+	}
+	AgentKey = pem.EncodeToMemory(&pem.Block{
+		Type:  "RSA PRIVATE KEY",
+		Bytes: x509.MarshalPKCS1PrivateKey(agentPrv),
+	})
+	AgentCert = pem.EncodeToMemory(&pem.Block{
+		Type:  "CERTIFICATE",
+		Bytes: agentCert,
+	})
+	return nil
+}
+
+func DelegationProxy(w http.ResponseWriter, req *http.Request, s *Server) {
+	s.debug.Println("Method requested:", req.Method)
+	if req.Method != "GET" && req.Method != "HEAD" {
+		w.WriteHeader(405)
+		fmt.Fprint(w, "405 - Method Not Allowed:"+req.Method)
+		return
+	}
+	if len(AgentCert) > 0 {
+		s.debug.Println("Hijacking proxy")
+		cert, err := tls.X509KeyPair(AgentCert, AgentKey)
 		if err != nil {
 			w.WriteHeader(500)
 			return
@@ -58,9 +102,13 @@ func HijackProxy(w http.ResponseWriter, req *http.Request, s *Server) {
 			w.WriteHeader(500)
 			return
 		}
-		defer response.Body.Close()
-		// write headers
+		// defer request.Body.Close()
+		defer func() {
+			response.Body.Close()
+		}()
+		// do not forward User heder
 		response.Header.Del("User")
+		// write headers
 		for h := range response.Header {
 			// s.debug.Println(response.Header.Get(h))
 			w.Header().Add(h, response.Header.Get(h))
@@ -71,5 +119,6 @@ func HijackProxy(w http.ResponseWriter, req *http.Request, s *Server) {
 
 		// write contents
 		io.Copy(w, response.Body)
+		return
 	}
 }

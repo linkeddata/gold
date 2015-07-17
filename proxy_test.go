@@ -10,12 +10,10 @@ import (
 	// "io"
 	// "os"
 	// "strings"
-	// "testing"
 	// -----
 	// "crypto/tls"
 	// "net/http/httptest"
 	// "strings"
-	// "testing"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -36,6 +34,12 @@ func TestProxy(t *testing.T) {
 }
 
 func TestAuthProxy(t *testing.T) {
+	request, err := http.NewRequest("POST", testServer.URL+"/"+AuthProxyPath+"?uri="+testServer.URL, nil)
+	assert.NoError(t, err)
+	response, err := httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.Equal(t, 405, response.StatusCode)
+
 	// generate agent profile + keys
 	// agent, _ := handler.pathInfo("https://localhost:4443/tests/agent#id")
 	// agentg, agentk, _, err := NewWebIDProfileWithKeys(agent.URI)
@@ -73,21 +77,19 @@ func TestAuthProxy(t *testing.T) {
 
 	// -------------------
 	// agent, _ := handler.pathInfo(testServer.URL + "/tests/agent")
-	// // println(agent.URI, agent.File)
-
 	// configAgent := NewServerConfig()
 	// configAgent.Debug = true
 	// configAgent.AgentKey = agent.File + ".key"
 	// configAgent.AgentCert = agent.File + ".crt"
 	// handlerAgent := NewServer(configAgent)
-	// testServerAngent := httptest.NewUnstartedServer(handlerAgent)
-	// testServerAngent.TLS = new(tls.Config)
-	// testServerAngent.TLS.ClientAuth = tls.RequestClientCert
-	// testServerAngent.TLS.NextProtos = []string{"http/1.1"}
-	// testServerAngent.StartTLS()
-	// testServerAngent.URL = strings.Replace(testServerAngent.URL, "127.0.0.1", "localhost", 1)
+	// testServerAgent := httptest.NewUnstartedServer(handlerAgent)
+	// testServerAgent.TLS = new(tls.Config)
+	// testServerAgent.TLS.ClientAuth = tls.RequestClientCert
+	// testServerAgent.TLS.NextProtos = []string{"http/1.1"}
+	// testServerAgent.StartTLS()
+	// testServerAgent.URL = strings.Replace(testServerAgent.URL, "127.0.0.1", "localhost", 1)
 
-	// request, err := http.NewRequest("GET", testServerAngent.URL+"/"+AuthProxyPath+"?uri="+testServerAngent.URL+"/_test/", nil)
+	// request, err := http.NewRequest("GET", testServerAgent.URL+"/"+AuthProxyPath+"?uri="+testServerAgent.URL+"/_test/", nil)
 	// assert.NoError(t, err)
 	// request.Header.Add("Origin", "https://example.org/")
 	// response, err := httpClient.Do(request)

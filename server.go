@@ -41,6 +41,13 @@ var (
 	debugFlags  = log.Flags() | log.Lshortfile
 	debugPrefix = "[debug] "
 
+	// AgentProfile is the WebID profile used by the agent (robot)
+	AgentProfile string
+	// The delegation agent's certificate used for WebID delegation
+	AgentCert []byte
+	// The delegation agent's private key belonging to the certificate used for WebID delegation
+	AgentKey []byte
+
 	magic *magicmime.Magic
 
 	methodsAll = []string{
@@ -72,6 +79,18 @@ type httpRequest struct {
 	*Server
 }
 
+// Server object contains http handler, root where the data is found and whether it uses vhosts or not
+type Server struct {
+	http.Handler
+
+	Config     *ServerConfig
+	cookie     *securecookie.SecureCookie
+	cookieSalt []byte
+	debug      *log.Logger
+	webdav     *webdav.Handler
+}
+
+// BaseURI Iset the right base URI for a request
 func (req httpRequest) BaseURI() string {
 	scheme := "http"
 	if req.TLS != nil || req.Header.Get("X-Forwarded-Proto") == "https" {
@@ -141,22 +160,13 @@ func handleStatusText(status int, err error) string {
 		return "HTTP 403 - Forbidden\n\n" + err.Error()
 	case 404:
 		return "HTTP 404 - Not found\n\n" + err.Error()
+	case 405:
+		return "HTTP 405 - Method Not Allowed\n\n" + err.Error()
 	case 500:
 		return "HTTP 500 - Internal Server Error\n\n" + err.Error()
 	default: // 501
 		return "HTTP 501 - Not implemented\n\n" + err.Error()
 	}
-}
-
-// Server object contains http handler, root where the data is found and whether it uses vhosts or not
-type Server struct {
-	http.Handler
-
-	Config     *ServerConfig
-	cookie     *securecookie.SecureCookie
-	cookieSalt []byte
-	debug      *log.Logger
-	webdav     *webdav.Handler
 }
 
 // NewServer is used to create a new Server instance
@@ -176,6 +186,13 @@ func NewServer(config *ServerConfig) *Server {
 		s.debug = log.New(os.Stderr, debugPrefix, debugFlags)
 	} else {
 		s.debug = log.New(ioutil.Discard, "", 0)
+	}
+	// generate new Agent?
+	if len(s.Config.AgentWebID) > 0 {
+		err := NewAgentIdentity(s)
+		if err != nil {
+			s.debug.Println("Error creating agent identity:", err.Error())
+		}
 	}
 	s.debug.Println("---- starting server ----")
 	s.debug.Printf("config: %#v\n", s.Config)
@@ -216,8 +233,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 			req.URL = uri
 			req.Host = uri.Host
 			req.RequestURI = uri.RequestURI()
-			HijackProxy(w, req, s)
-
+			DelegationProxy(w, req, s)
 			return
 		}
 	}
@@ -279,6 +295,14 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 			return
 		}
 		return r.respond(resp.Status, resp.Body)
+	}
+
+	// Intercept requests for the Agent's profile
+	if req.IsAgentRequest(s) && req.Method == "GET" {
+		if len(AgentProfile) > 0 {
+			return r.respond(200, AgentProfile)
+		}
+		return r.respond(404)
 	}
 
 	resource, _ := s.pathInfo(req.BaseURI())

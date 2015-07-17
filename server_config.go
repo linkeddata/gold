@@ -64,11 +64,8 @@ type ServerConfig struct {
 	// DiskLimit is the maximum total disk (in bytes) to be allocated to a given user
 	DiskLimit int
 
-	// The delegation agent's certificate used for WebID delegation
-	AgentCert string
-
-	// The delegation agent's private key belonging to the certificate used for WebID delegation
-	AgentKey string
+	// AgentWebID is the WebID used by the agent (robot)
+	AgentWebID string
 
 	// SMTPConfig holds the settings for the remote SMTP user/server
 	SMTPConfig EmailConfig
