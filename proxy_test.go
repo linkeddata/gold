@@ -34,7 +34,7 @@ func TestProxy(t *testing.T) {
 }
 
 func TestAuthProxy(t *testing.T) {
-	request, err := http.NewRequest("POST", testServer.URL+"/"+AuthProxyPath+"?uri="+testServer.URL, nil)
+	request, err := http.NewRequest("POST", testServer.URL+"/"+DelegationProxy+"?uri="+testServer.URL, nil)
 	assert.NoError(t, err)
 	response, err := httpClient.Do(request)
 	assert.NoError(t, err)
@@ -89,7 +89,7 @@ func TestAuthProxy(t *testing.T) {
 	// testServerAgent.StartTLS()
 	// testServerAgent.URL = strings.Replace(testServerAgent.URL, "127.0.0.1", "localhost", 1)
 
-	// request, err := http.NewRequest("GET", testServerAgent.URL+"/"+AuthProxyPath+"?uri="+testServerAgent.URL+"/_test/", nil)
+	// request, err := http.NewRequest("GET", testServerAgent.URL+"/"+DelegationProxy+"?uri="+testServerAgent.URL+"/_test/", nil)
 	// assert.NoError(t, err)
 	// request.Header.Add("Origin", "https://example.org/")
 	// response, err := httpClient.Do(request)

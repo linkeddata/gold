@@ -29,7 +29,7 @@ const (
 	// ProxyPath provides CORS proxy (empty to disable)
 	ProxyPath = ",proxy"
 	// AuthProxyPath provides WebID delegation proxy (empty to disable)
-	AuthProxyPath = ",authproxy"
+	DelegationProxy = ",delegate"
 	// RDFExtension is the default extension for RDF documents (i.e. turtle for now)
 	RDFExtension = ".ttl"
 )
@@ -224,18 +224,6 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		req.RequestURI = uri.RequestURI()
 		proxy.ServeHTTP(w, req)
 		return
-	} else if AuthProxyPath != "" && strings.HasPrefix(req.URL.Path, "/"+AuthProxyPath) {
-		uri, err := url.Parse(req.FormValue("uri"))
-		if err != nil {
-			s.debug.Println(req.RequestURI, err.Error())
-		}
-		if uri.Scheme == "https" {
-			req.URL = uri
-			req.Host = uri.Host
-			req.RequestURI = uri.RequestURI()
-			DelegationProxy(w, req, s)
-			return
-		}
 	}
 
 	if websocketUpgrade(req) {
@@ -279,6 +267,8 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 	if len(origins) > 0 {
 		origin = origins[0]
 		w.Header().Set("Access-Control-Allow-Origin", origin)
+	} else {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
 	}
 
 	// Authentication
@@ -295,6 +285,21 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 			return
 		}
 		return r.respond(resp.Status, resp.Body)
+	}
+
+	// intercept requests for the delegationproxy
+	if DelegationProxy != "" && strings.HasPrefix(req.URL.Path, "/"+DelegationProxy) {
+		uri, err := url.Parse(req.FormValue("uri"))
+		if err != nil {
+			s.debug.Println(req.RequestURI, err.Error())
+		}
+		if uri.Scheme == "https" {
+			req.URL = uri
+			req.Host = uri.Host
+			req.RequestURI = uri.RequestURI()
+			DelegateProxy(w, req, s, user)
+			return
+		}
 	}
 
 	// Intercept requests for the Agent's profile
@@ -351,9 +356,6 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 			w.Header().Set("Access-Control-Allow-Methods", strings.Join(corsReqM, ", "))
 		} else {
 			w.Header().Set("Access-Control-Allow-Methods", strings.Join(methodsAll, ", "))
-		}
-		if len(origin) < 1 {
-			w.Header().Set("Access-Control-Allow-Origin", "*")
 		}
 
 		// set LDP Link headers

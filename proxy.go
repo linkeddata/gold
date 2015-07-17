@@ -63,7 +63,7 @@ func NewAgentIdentity(s *Server) error {
 	return nil
 }
 
-func DelegationProxy(w http.ResponseWriter, req *http.Request, s *Server) {
+func DelegateProxy(w http.ResponseWriter, req *httpRequest, s *Server, user string) {
 	s.debug.Println("Method requested:", req.Method)
 	if req.Method != "GET" && req.Method != "HEAD" {
 		w.WriteHeader(405)
@@ -95,6 +95,7 @@ func DelegationProxy(w http.ResponseWriter, req *http.Request, s *Server) {
 			w.WriteHeader(500)
 			return
 		}
+		request.Header.Add("On-Behalf-Of", user)
 		request.Header = req.Header
 		response, err := agenth.Do(request)
 		if err != nil {
