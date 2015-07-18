@@ -178,7 +178,10 @@ func WebIDTLSAuth(tls *tls.ConnectionState) (uri string, err error) {
 					continue
 				}
 				if strings.HasPrefix(sanURI, "URI:") {
-					claim = sanURI[5:]
+					claim = strings.TrimSpace(sanURI[4:])
+					break
+				} else if strings.HasPrefix(sanURI, "http") {
+					claim = sanURI
 					break
 				}
 			}
