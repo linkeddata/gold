@@ -13,6 +13,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unicode"
 )
 
 const (
@@ -169,14 +170,25 @@ func WebIDTLSAuth(tls *tls.ConnectionState) (uri string, err error) {
 		v := asn1.RawValue{}
 		_, err = asn1.Unmarshal(x.Value, &v)
 		if err == nil {
-			san := string(v.Bytes)
-			for _, sanURI := range strings.Split(san[2:], ",") {
+			san := ""
+			for _, r := range string(v.Bytes[2:]) {
+				if rune(r) == 65533 {
+					san += ","
+				} else if unicode.IsGraphic(rune(r)) {
+					san += string(r)
+				}
+			}
+			for _, sanURI := range strings.Split(san, ",") {
 				sanURI = strings.TrimSpace(sanURI)
+				if len(sanURI) == 0 {
+					continue
+				}
 				if strings.HasPrefix(sanURI, "URI:") {
-					claim = sanURI[5:]
+					claim = strings.TrimSpace(sanURI[4:])
 					break
-				} else {
+				} else if strings.HasPrefix(sanURI, "http") {
 					claim = sanURI
+					break
 				}
 			}
 		}
