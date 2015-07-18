@@ -4,7 +4,6 @@ import (
 	"errors"
 	"log"
 	"net/http"
-	"path/filepath"
 	"strings"
 	"time"
 )
@@ -37,9 +36,9 @@ func (acl *WAC) allow(mode string, path string) (int, error) {
 	if err != nil {
 		return 500, err
 	}
-	depth := strings.Split("/"+p.Path, "/")
+	depth := strings.Split(p.Path, "/")
 
-	for i := 0; i < len(depth); i++ {
+	for d := len(depth) - 1; d >= 0; d-- {
 		p, err := acl.srv.pathInfo(path)
 		if err != nil {
 			return 500, err
@@ -151,28 +150,20 @@ func (acl *WAC) allow(mode string, path string) (int, error) {
 
 		accessType = "defaultForNew"
 
-		if i == 0 {
-			if filepath.Dir(filepath.Dir(p.Path)) == "." {
-				path = p.Base
-			} else if strings.HasSuffix(p.Path, "/") {
-				path = p.Base + "/" + filepath.Dir(filepath.Dir(p.Path))
-			} else {
-				path = p.Base + "/" + filepath.Dir(p.Path)
-			}
-		} else {
-			if len(p.Path) == 0 {
-				break
-			} else if filepath.Dir(filepath.Dir(p.Path)) == "." {
-				path = p.Base
-			} else {
-				path = p.Base + "/" + filepath.Dir(filepath.Dir(p.Path))
-			}
-		}
-
-		path += "/"
+		// cd one level: walkPath("/foo/bar/baz") => /foo/bar/
+		path = walkPath(p.Base, depth, d)
 	}
 	acl.srv.debug.Println("No ACL policies present - access allowed")
 	return 200, nil
+}
+
+func walkPath(base string, depth []string, d int) string {
+	depth = depth[:d]
+	path := base + "/" + strings.Join(depth, "/")
+	if d > 0 {
+		path += "/"
+	}
+	return path
 }
 
 // AllowRead checks if Read access is allowed

@@ -936,3 +936,21 @@ func TestACLCleanUp(t *testing.T) {
 	response.Body.Close()
 	assert.Equal(t, 200, response.StatusCode)
 }
+
+func TestACLwalkPath(t *testing.T) {
+	config.Debug = false
+	s := NewServer(config)
+	path := "http://example.org/foo/bar/baz"
+	p, _ := s.pathInfo(path)
+
+	depth := strings.Split(p.Path, "/")
+	var results []string
+
+	for i := len(depth) - 1; i >= 0; i-- {
+		path = walkPath(p.Base, depth, i)
+		results = append(results, path)
+	}
+	assert.Equal(t, "http://example.org/foo/bar/", results[0])
+	assert.Equal(t, "http://example.org/foo/", results[1])
+	assert.Equal(t, "http://example.org/", results[2])
+}
