@@ -2,8 +2,10 @@ package gold
 
 import (
 	"bytes"
+	"crypto/sha1"
 	"crypto/tls"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -11,6 +13,8 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"strings"
+	"time"
 
 	jsonld "github.com/linkeddata/gojsonld"
 	crdf "github.com/presbrey/goraptor"
@@ -45,8 +49,9 @@ var (
 type Graph struct {
 	triples map[*Triple]bool
 
-	uri  string
-	term Term
+	uri      string
+	term     Term
+	cacheDir string
 }
 
 // NewGraph creates a Graph object
@@ -312,8 +317,101 @@ func (g *Graph) AppendFile(filename string, baseURI string) {
 	g.ParseBase(f, "text/turtle", baseURI)
 }
 
+func (g *Graph) SetCacheDir(path string) error {
+	if len(path) > 0 {
+		if !strings.HasSuffix(path, "/") {
+			path += "/"
+		}
+		path += CacheDir
+
+		_, err := os.Stat(path)
+		if os.IsNotExist(err) {
+			err := os.MkdirAll(path, 0755)
+			if err != nil {
+				return err
+			}
+		}
+
+		g.cacheDir = path
+		return nil
+	}
+	return errors.New("You must provide a path for the cache dir")
+}
+
+func (g *Graph) DelCacheDir() error {
+	if len(g.cacheDir) > 0 {
+		err := os.RemoveAll(g.cacheDir)
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+	return errors.New("You must provide a path for the cache dir")
+}
+
+func (g *Graph) WriteCache(uri string) error {
+	if len(uri) > 0 && g.Len() > 0 && len(g.cacheDir) > 0 {
+		file := ""
+		sumURI := fmt.Sprintf("%x", sha1.Sum([]byte(uri)))
+		file = g.cacheDir + sumURI + RDFExtension
+		unlock := lock(file)
+		defer unlock()
+
+		fd, err := os.OpenFile(file, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
+		if err != nil {
+			return err
+		}
+		defer fd.Close()
+		err = g.WriteFile(fd, "text/turtle")
+		if err != nil {
+			return err
+		}
+
+		return nil
+	}
+
+	return errors.New("You must provide a URI")
+}
+
+func (g *Graph) DelCacheFile(file string) error {
+	if len(file) > 0 {
+		err := os.Remove(file)
+		if err != nil && !os.IsNotExist(err) {
+			return err
+		}
+	}
+	return nil
+}
+
+func (g *Graph) GetCacheFile(uri string) string {
+	file := ""
+	if len(uri) > 0 && len(g.cacheDir) > 0 {
+		sumURI := fmt.Sprintf("%x", sha1.Sum([]byte(uri)))
+		file = g.cacheDir + sumURI + RDFExtension
+
+		stat, err := os.Stat(file)
+		if !os.IsNotExist(err) {
+			now := time.Now().Unix()
+			exp := stat.ModTime().Unix() + CacheValidity*60
+			if exp < now {
+				// cache expired, removing stale data
+				g.DelCacheFile(file)
+				return ""
+			}
+		}
+	}
+	return file
+}
+
 // LoadURI is used to load RDF data from a specific URI
-func (g *Graph) LoadURI(uri string) (err error) {
+// Use local cache first
+func (g *Graph) LoadURI(uri string, webid ...string) (err error) {
+	// load from cache
+	if filename := g.GetCacheFile(uri); len(filename) > 0 {
+		g.ReadFile(filename)
+		return nil
+	}
+
 	doc := defrag(uri)
 	q, err := http.NewRequest("GET", doc, nil)
 	if err != nil {
@@ -328,6 +426,10 @@ func (g *Graph) LoadURI(uri string) (err error) {
 		defer r.Body.Close()
 		if r.StatusCode == 200 {
 			g.ParseBase(r.Body, r.Header.Get("Content-Type"), doc)
+			if len(g.cacheDir) > 0 {
+				// store cache
+				err = g.WriteCache(uri)
+			}
 		} else {
 			err = fmt.Errorf("Could not fetch graph from %s - HTTP %d", uri, r.StatusCode)
 		}

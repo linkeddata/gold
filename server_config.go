@@ -25,6 +25,9 @@ type ServerConfig struct {
 	// Root points to the folder that will be used as root for data
 	DataRoot string
 
+	// CacheRoot points to the folder that will be used as root for cached data
+	CacheRoot string
+
 	// Vhosts enables the use of virtual hosts (i.e. user.example.org)
 	Vhosts bool
 

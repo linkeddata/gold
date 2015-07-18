@@ -32,6 +32,10 @@ const (
 	DelegationProxy = ",delegate"
 	// RDFExtension is the default extension for RDF documents (i.e. turtle for now)
 	RDFExtension = ".ttl"
+	// CacheDir is where gold stores its cache files
+	CacheDir = "gold-data/"
+	// CacheValidity is the duration in minutes of a cached resource
+	CacheValidity = 5
 )
 
 var (

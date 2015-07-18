@@ -24,6 +24,7 @@ var (
 
 	cookieT = flag.Int64("cookieAge", 24, "lifetime for cookies (in hours)")
 	debug   = flag.Bool("debug", false, "output extra logging?")
+	cache   = flag.String("cache", "/tmp/", "path to file cache storage")
 	root    = flag.String("root", ".", "path to file storage root")
 	skin    = flag.String("skin", "tabulator", "default view for HTML clients")
 	tlsCert = flag.String("tlsCertFile", "", "TLS certificate eg. cert.pem")
@@ -110,6 +111,9 @@ func main() {
 		config.MetaSuffix = *metaSuffix
 		config.ACLSuffix = *aclSuffix
 		config.AgentWebID = *agentWebID
+		if len(*cache) > 0 {
+			config.CacheRoot = *cache
+		}
 		if len(*emailName) > 0 && len(*emailAddr) > 0 && len(*emailUser) > 0 &&
 			len(*emailPass) > 0 && len(*emailServ) > 0 && len(*emailPort) > 0 {
 			ep, _ := strconv.Atoi(*emailPort)

@@ -9,6 +9,8 @@
 
 	"DataRoot": "/Users/user/gold-data/",
 
+	"CacheRoot": "/tmp/"
+
 	"Vhosts": true,
 
 	"Insecure": false,

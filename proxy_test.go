@@ -29,7 +29,6 @@ func TestProxy(t *testing.T) {
 	body, err := ioutil.ReadAll(response.Body)
 	assert.NoError(t, err)
 	response.Body.Close()
-	println("User:", response.Header.Get("User"))
 	assert.Contains(t, string(body), "<http://www.w3.org/ns/ldp#BasicContainer>")
 }
 

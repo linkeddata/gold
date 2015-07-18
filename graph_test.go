@@ -1,8 +1,10 @@
 package gold
 
 import (
+	"os"
 	"strings"
 	"testing"
+	"time"
 
 	jsonld "github.com/linkeddata/gojsonld"
 	"github.com/stretchr/testify/assert"
@@ -91,4 +93,53 @@ func TestGraphAll(t *testing.T) {
 	assert.Equal(t, len(g.All(nil, NewResource("b"), nil)), 2)
 	assert.Equal(t, len(g.All(nil, nil, NewResource("d"))), 1)
 	assert.Equal(t, len(g.All(nil, nil, NewResource("c"))), 2)
+}
+
+func TestGraphSetCacheDir(t *testing.T) {
+	g := NewGraph(testServer.URL)
+	g.SetCacheDir("/tmp/")
+
+	_, err := os.Stat("/tmp/" + CacheDir)
+	assert.False(t, os.IsNotExist(err))
+}
+
+func TestGraphWriteCache(t *testing.T) {
+	g := NewGraph(testServer.URL)
+	g.SetCacheDir("/tmp/")
+	g.AddTriple(NewResource("a"), NewResource("b"), NewResource("c"))
+	err := g.WriteCache(testServer.URL)
+	assert.NoError(t, err)
+	file := g.GetCacheFile(testServer.URL)
+	assert.NotEmpty(t, file)
+
+	_, err = os.Stat(file)
+	assert.False(t, os.IsNotExist(err))
+}
+
+func TestGraphGetCacheFile(t *testing.T) {
+	g := NewGraph(testServer.URL)
+	g.SetCacheDir("/tmp/")
+	err := g.LoadURI(testServer.URL)
+	assert.NoError(t, err)
+	file := g.GetCacheFile(testServer.URL)
+	assert.NotEmpty(t, file)
+	assert.Equal(t, 1, g.Len())
+}
+
+func TestGraphGetCacheFileExpired(t *testing.T) {
+	g := NewGraph(testServer.URL)
+	g.SetCacheDir("/tmp/")
+	file := g.GetCacheFile(testServer.URL)
+	assert.NotEmpty(t, file)
+
+	future := time.Now().Add(time.Duration(-10) * time.Minute)
+	os.Chtimes(file, future, future)
+	err := g.LoadURI(testServer.URL)
+	assert.NoError(t, err)
+}
+
+func TestGraphDelCacheDir(t *testing.T) {
+	g := NewGraph(testServer.URL)
+	g.SetCacheDir("/tmp/")
+	assert.Nil(t, g.DelCacheDir())
 }
