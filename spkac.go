@@ -169,6 +169,7 @@ func NewRSADerCert(uri string, name string, priv *rsa.PrivateKey) ([]byte, error
 		KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
 		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
 	}
+	// https://tools.ietf.org/html/rfc5280#section-4.2.1.6
 	rawValues := []asn1.RawValue{
 		{Class: 2, Tag: 6, Bytes: []byte(uri)},
 	}
