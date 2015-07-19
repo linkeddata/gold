@@ -280,12 +280,6 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 	w.Header().Set("Access-Control-Allow-Credentials", "true")
 	w.Header().Set("Access-Control-Expose-Headers", "User, Location, Link, Vary, Last-Modified, Content-Length")
 	w.Header().Set("Access-Control-Max-Age", "1728000")
-
-	// RWW
-	w.Header().Set("MS-Author-Via", "DAV, SPARQL")
-	w.Header().Set("Updates-Via", "wss://"+req.Host+"/")
-
-	// TODO: WAC
 	origin := ""
 	origins := req.Header["Origin"] // all CORS requests
 	if len(origins) > 0 {
@@ -294,6 +288,10 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 	} else {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 	}
+
+	// RWW
+	w.Header().Set("MS-Author-Via", "DAV, SPARQL")
+	w.Header().Set("Updates-Via", "wss://"+req.Host+"/")
 
 	// Intercept API requests
 	if strings.HasPrefix(req.Request.URL.Path, "/"+SystemPrefix) && req.Method != "OPTIONS" {
@@ -340,8 +338,8 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 		}
 	}
 
-	// set ACL Link header
-	w.Header().Set("Link", brack(resource.AclURI)+"; rel=\"acl\", "+brack(resource.MetaURI)+"; rel=\"meta\"")
+	// add ACL and meta Link headers
+	w.Header().Add("Link", brack(resource.AclURI)+"; rel=\"acl\", "+brack(resource.MetaURI)+"; rel=\"meta\"")
 
 	// generic headers
 	w.Header().Set("Accept-Patch", "application/json, application/sparql-update")

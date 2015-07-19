@@ -71,24 +71,10 @@ func DelegateProxy(w http.ResponseWriter, req *httpRequest, s *Server, user stri
 		return
 	}
 	if len(AgentCert) > 0 {
-		s.debug.Println("Hijacking proxy")
-		cert, err := tls.X509KeyPair(AgentCert, AgentKey)
-		if err != nil {
-			w.WriteHeader(500)
-			return
-		}
-		conf := &tls.Config{
-			Certificates:       []tls.Certificate{cert},
-			InsecureSkipVerify: true,
-			Rand:               rand.Reader,
-		}
+		s.debug.Println("Delegating proxy request to", s.Config.AgentWebID)
 
-		agenth := &http.Client{
-			Transport: &http.Transport{
-				TLSClientConfig: conf,
-			},
-		}
-		s.debug.Println("Auth proxy for:", req.URL.String())
+		// prepare the request
+		s.debug.Println("Proxy request for:", req.URL.String())
 		request, err := http.NewRequest(req.Method, req.URL.String(), nil)
 		if err != nil {
 			s.debug.Println("Error in request", err.Error())
@@ -97,12 +83,40 @@ func DelegateProxy(w http.ResponseWriter, req *httpRequest, s *Server, user stri
 		}
 		request.Header.Add("On-Behalf-Of", user)
 		request.Header = req.Header
-		response, err := agenth.Do(request)
+
+		// try unauthenticated
+		response, err := httpClient.Do(request)
 		if err != nil {
-			s.debug.Println("Error in response", err.Error())
+			s.debug.Println("Error in proxy response", err.Error())
 			w.WriteHeader(500)
 			return
 		}
+		// retry with credentials
+		if response.StatusCode == 401 {
+			cert, err := tls.X509KeyPair(AgentCert, AgentKey)
+			if err != nil {
+				w.WriteHeader(500)
+				return
+			}
+			conf := &tls.Config{
+				Certificates:       []tls.Certificate{cert},
+				InsecureSkipVerify: true,
+				Rand:               rand.Reader,
+			}
+
+			agenth := &http.Client{
+				Transport: &http.Transport{
+					TLSClientConfig: conf,
+				},
+			}
+			response, err = agenth.Do(request)
+			if err != nil {
+				s.debug.Println("Error in proxy response", err.Error())
+				w.WriteHeader(500)
+				return
+			}
+		}
+
 		// defer request.Body.Close()
 		defer func() {
 			response.Body.Close()
@@ -112,6 +126,7 @@ func DelegateProxy(w http.ResponseWriter, req *httpRequest, s *Server, user stri
 			// s.debug.Println(response.Header.Get(h))
 			w.Header().Add(h, response.Header.Get(h))
 		}
+
 		// set the right User heder
 		w.Header().Set("User", user)
 		// set the right origin header
@@ -123,6 +138,7 @@ func DelegateProxy(w http.ResponseWriter, req *httpRequest, s *Server, user stri
 
 		// write contents
 		io.Copy(w, response.Body)
+		s.debug.Print("Responding to ", req.RemoteAddr)
 		return
 	}
 }
