@@ -2,7 +2,6 @@ package gold
 
 import (
 	"errors"
-	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -20,7 +19,7 @@ type WAC struct {
 func NewWAC(req *httpRequest, srv *Server, w http.ResponseWriter, user string) *WAC {
 	if len(req.Header.Get("On-Behalf-Of")) > 0 {
 		delegator := debrack(req.Header.Get("On-Behalf-Of"))
-		if verifyDelegator(delegator, user) {
+		if verifyDelegator(delegator, user, srv) {
 			srv.debug.Println("Request User ID (delegation):", user)
 			user = delegator
 		}
@@ -186,11 +185,11 @@ func (acl *WAC) AllowControl(path string) (int, error) {
 	return acl.allow("Control", path)
 }
 
-func verifyDelegator(delegator string, delegatee string) bool {
-	g := NewGraph(delegator)
+func verifyDelegator(delegator string, delegatee string, srv *Server) bool {
+	g := NewGraph(delegator, srv.Config.CacheRoot)
 	err := g.LoadURI(delegator)
 	if err != nil {
-		log.Println("Error loading graph for " + delegator)
+		srv.debug.Println("Error loading graph for " + delegator)
 	}
 
 	for _, val := range g.All(NewResource(delegator), NewResource("http://www.w3.org/ns/auth/acl#delegates"), nil) {
