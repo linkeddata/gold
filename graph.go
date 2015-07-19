@@ -55,16 +55,20 @@ type Graph struct {
 }
 
 // NewGraph creates a Graph object
-func NewGraph(uri string) *Graph {
+func NewGraph(uri string, cacheDir ...string) *Graph {
 	if uri[:5] != "http:" && uri[:6] != "https:" {
 		panic(uri)
 	}
-	return &Graph{
+	g := &Graph{
 		triples: make(map[*Triple]bool),
 
 		uri:  uri,
 		term: NewResource(uri),
 	}
+	if len(cacheDir) > 0 {
+		g.SetCacheDir(cacheDir[0])
+	}
+	return g
 }
 
 // Len returns the length of the graph as number of triples in the graph
