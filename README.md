@@ -35,17 +35,17 @@ Setup Go + dependencies:
     brew install go raptor libmagic
 
     # on Ubuntu eg.
-    sudo apt-get install golang-go libraptor2-dev libmagic-dev 
+    sudo apt-get install golang-go libraptor2-dev libmagic-dev
 
     mkdir ~/go; export GOPATH=~/go
     go version
 
-`IMPORTANT`: Please check that you have at least Go version 1.4 installed. If you don't, please consider [installing](http://golang.org/doc/install) a more recent version. 
+`IMPORTANT`: Please check that you have at least Go version 1.4 installed. If you don't, please consider [installing](http://golang.org/doc/install) a more recent version.
 
 Use the `go get` command to install the server and all the dependencies:
 
     go get github.com/linkeddata/gold/server
-    
+
 Optionally, you can install some extra dependencies used by the tests:
 
     go get github.com/stretchr/testify/assert
@@ -56,8 +56,8 @@ Run the server:
     ~/go/bin/server -https=":8443" -root=/home/user/data/ -debug
 
 Alternatively, you can compile and run it from the source dir in one command:
-    
-    go run ~/go/src/github.com/linkeddata/gold/server/*.go -https=":8443" -root=/home/user/data/ -debug
+
+    go run ~/go/src/github.com/linkeddata/gold/server/*.go -http=":8080" -https=":8443" -root=/home/user/data/ -debug
 
 You can also use the provided `gold.conf-example` file to create your own configuration file:
 
