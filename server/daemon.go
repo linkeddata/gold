@@ -79,8 +79,8 @@ func main() {
 		os.Exit(1)
 	}
 
-	if *version && len(GoldVersion) > 0 {
-		println("Go Linked Data -- version", GoldVersion)
+	if *version && len(VERSION) > 0 {
+		println("Gold (Go Linked Data) -- version", VERSION)
 		os.Exit(0)
 	}
 
