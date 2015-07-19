@@ -14,8 +14,14 @@ import (
 	"github.com/linkeddata/gold"
 )
 
+const (
+	//GoldVersion is the version number for the server
+	VERSION = "0.5.1"
+)
+
 var (
-	conf = flag.String("conf", "", "use this configuration file")
+	conf    = flag.String("conf", "", "use this configuration file")
+	version = flag.Bool("version", false, "outputs the current version")
 
 	httpA    = flag.String("http", ":80", "HTTP listener address (redirects to HTTPS)")
 	httpsA   = flag.String("https", ":443", "HTTPS listener address")
@@ -71,6 +77,11 @@ func main() {
 	if err != nil {
 		println("[Server] Error starting server:", err)
 		os.Exit(1)
+	}
+
+	if *version && len(GoldVersion) > 0 {
+		println("Go Linked Data -- version", GoldVersion)
+		os.Exit(0)
 	}
 
 	if *root == "." {

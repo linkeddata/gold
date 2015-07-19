@@ -64,10 +64,9 @@ func NewAgentIdentity(s *Server) error {
 }
 
 func DelegateProxy(w http.ResponseWriter, req *httpRequest, s *Server, user string) {
-	s.debug.Println("Method requested:", req.Method)
 	if req.Method != "GET" && req.Method != "HEAD" {
 		w.WriteHeader(405)
-		fmt.Fprint(w, "405 - Method Not Allowed:"+req.Method)
+		fmt.Fprint(w, "405 - Method not allowed with proxy:"+req.Method)
 		return
 	}
 	if len(AgentCert) > 0 {
@@ -92,6 +91,7 @@ func DelegateProxy(w http.ResponseWriter, req *httpRequest, s *Server, user stri
 			return
 		}
 		// retry with credentials
+		s.debug.Println("Proxy: server responded with HTTP", response.StatusCode)
 		if response.StatusCode == 401 {
 			cert, err := tls.X509KeyPair(AgentCert, AgentKey)
 			if err != nil {
@@ -115,6 +115,7 @@ func DelegateProxy(w http.ResponseWriter, req *httpRequest, s *Server, user stri
 				w.WriteHeader(500)
 				return
 			}
+			s.debug.Println("Auth proxy: server responded with HTTP", response.StatusCode)
 		}
 
 		// defer request.Body.Close()

@@ -22,6 +22,8 @@ import (
 )
 
 const (
+	//GoldVersion is the version number for the server
+	GoldVersion = "0.5.1"
 	// HCType is the header Content-Type
 	HCType = "Content-Type"
 	// SystemPrefix is the generic name for the system-reserved namespace (e.g. APIs)
