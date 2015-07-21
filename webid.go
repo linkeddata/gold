@@ -196,8 +196,6 @@ func WebIDTLSAuth(tls *tls.ConnectionState) (uri string, err error) {
 			continue
 		}
 
-		fmt.Println("Certificate contains claim:", claim)
-
 		pkey := tls.PeerCertificates[0].PublicKey
 		t, n, e := pkeyTypeNE(pkey)
 		if len(t) == 0 {
