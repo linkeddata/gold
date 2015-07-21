@@ -36,7 +36,7 @@ func (acl *WAC) allow(mode string, path string) (int, error) {
 	if err != nil {
 		return 500, err
 	}
-	depth := strings.Split(p.Path, "/")
+	depth := strings.Split("/"+p.Path, "/")
 
 	for d := len(depth) - 1; d >= 0; d-- {
 		p, err := acl.srv.pathInfo(path)

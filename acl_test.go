@@ -28,7 +28,6 @@ var (
 )
 
 func init() {
-	handler.Config.Debug = true
 	testServer = httptest.NewUnstartedServer(handler)
 	testServer.TLS = new(tls.Config)
 	testServer.TLS.ClientAuth = tls.RequestClientCert
@@ -805,6 +804,7 @@ func TestACLGroup(t *testing.T) {
 }
 
 func TestACLDefaultForNew(t *testing.T) {
+	config.Debug = true
 	request, err := http.NewRequest("HEAD", testServer.URL+aclDir, nil)
 	assert.NoError(t, err)
 	response, err := user1h.Do(request)
@@ -893,6 +893,8 @@ func TestACLDefaultForNew(t *testing.T) {
 	assert.NoError(t, err)
 	response.Body.Close()
 	assert.Equal(t, 401, response.StatusCode)
+
+	config.Debug = false
 }
 
 func TestACLWebIDDelegation(t *testing.T) {
