@@ -36,9 +36,9 @@ func (acl *WAC) allow(mode string, path string) (int, error) {
 	if err != nil {
 		return 500, err
 	}
-	depth := strings.Split("/"+p.Path, "/")
+	depth := strings.Split(p.Path, "/")
 
-	for d := len(depth) - 1; d >= 0; d-- {
+	for d := len(depth); d >= 0; d-- {
 		p, err := acl.srv.pathInfo(path)
 		if err != nil {
 			return 500, err
@@ -151,17 +151,22 @@ func (acl *WAC) allow(mode string, path string) (int, error) {
 		accessType = "defaultForNew"
 
 		// cd one level: walkPath("/foo/bar/baz") => /foo/bar/
-		path = walkPath(p.Base, depth, d)
+		// decrement depth
+		if len(depth) > 0 {
+			depth = depth[:len(depth)-1]
+		} else {
+			depth = depth[:1]
+		}
+		path = walkPath(p.Base, depth)
 	}
 	acl.srv.debug.Println("No ACL policies present - access allowed")
 	return 200, nil
 }
 
-func walkPath(base string, depth []string, d int) string {
-	depth = depth[:d]
-	path := base + "/" + strings.Join(depth, "/")
-	if d > 0 {
-		path += "/"
+func walkPath(base string, depth []string) string {
+	path := base + "/"
+	if len(depth) > 0 {
+		path += strings.Join(depth, "/") + "/"
 	}
 	return path
 }

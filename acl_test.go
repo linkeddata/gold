@@ -948,8 +948,9 @@ func TestACLwalkPath(t *testing.T) {
 	depth := strings.Split(p.Path, "/")
 	var results []string
 
-	for i := len(depth) - 1; i >= 0; i-- {
-		path = walkPath(p.Base, depth, i)
+	for i := len(depth); i > 0; i-- {
+		depth = depth[:len(depth)-1]
+		path = walkPath(p.Base, depth)
 		results = append(results, path)
 	}
 	assert.Equal(t, "http://example.org/foo/bar/", results[0])
