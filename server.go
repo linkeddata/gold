@@ -790,7 +790,7 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 			link := ParseLinkHeader(req.Header.Get("Link")).MatchRel("type")
 			slug := req.Header.Get("Slug")
 
-			uuid, err := newUUID()
+			uuid := NewUUID()
 			if err != nil {
 				s.debug.Println("POST LDP UUID err: " + err.Error())
 				return r.respond(500, err)

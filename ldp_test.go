@@ -1,7 +1,6 @@
 package gold
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -48,20 +47,6 @@ func TestPreferHeaderParser(t *testing.T) {
 }
 
 func TestNewUUID(t *testing.T) {
-	uuid, err := newUUID()
-	assert.Nil(t, err)
+	uuid := NewUUID()
 	assert.Equal(t, 32, len(uuid))
-}
-
-func BenchmarkNewUUID(b *testing.B) {
-	e := 0
-	for i := 0; i < b.N; i++ {
-		if _, err := newUUID(); err != nil {
-			e++
-		}
-	}
-	if e > 0 {
-		b.Log(fmt.Sprintf("%d/%d failed", e, b.N))
-		b.Fail()
-	}
 }
