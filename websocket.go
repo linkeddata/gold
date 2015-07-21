@@ -10,8 +10,13 @@ import (
 	"golang.org/x/net/websocket"
 )
 
+// type wsConn struct {
+// 	subbed bool
+// 	uuid   string
+// }
+
 var (
-	websocketSubs  = map[string]map[*websocket.Conn]bool{}
+	websocketSubs  = map[string]map[*websocket.Conn]string{}
 	websocketSubsL = new(sync.RWMutex)
 )
 
@@ -55,10 +60,11 @@ func websocketHandler(ws *websocket.Conn) {
 			uris[uri] = true
 			websocketSubsL.Lock()
 			if _, ex := websocketSubs[uri]; !ex {
-				websocketSubs[uri] = map[*websocket.Conn]bool{}
+				websocketSubs[uri] = map[*websocket.Conn]string{}
 			}
-			websocketSubs[uri][ws] = true
+			websocketSubs[uri][ws] = NewUUID()
 			websocketSubsL.Unlock()
+			websocket.Message.Send(ws, "ack "+websocketSubs[uri][ws])
 
 		default:
 			log.Println("invalid message:", message)
@@ -74,15 +80,22 @@ func websocketHandler(ws *websocket.Conn) {
 	// log.Println("closed via:", ws.RemoteAddr())
 }
 
-func websocketPublish(uri string) {
+func websocketPublish(uri string, uuid ...string) {
 	websocketSubsL.RLock()
 	subs := websocketSubs[uri]
 	websocketSubsL.RUnlock()
 
 	for k := range subs {
-		err := websocket.Message.Send(k, "pub "+uri)
-		if err != nil {
-			log.Println(err)
+		uuidMatch := true
+		// log.Println(uuid)
+		if len(uuid) > 0 && subs[k] != uuid[0] {
+			uuidMatch = false
+		}
+		if uuidMatch {
+			err := websocket.Message.Send(k, "pub "+uri)
+			if err != nil {
+				log.Println(err)
+			}
 		}
 	}
 }

@@ -77,8 +77,21 @@ func TestWebSocketSubPub(t *testing.T) {
 	_, err = ws.Write([]byte("sub " + testServerWs.URL + "/"))
 	assert.NoError(t, err)
 
+	msg := make([]byte, 512)
+	var n int
+	n, err = ws.Read(msg)
+	assert.NoError(t, err)
+	assert.Equal(t, "ack", string(msg[:3]))
+	assert.NotEmpty(t, string(msg[5:n]))
+
 	_, err = ws.Write([]byte("sub " + resURL))
 	assert.NoError(t, err)
+
+	msg = make([]byte, 512)
+	n, err = ws.Read(msg)
+	assert.NoError(t, err)
+	assert.Equal(t, "ack", string(msg[:3]))
+	assert.NotEmpty(t, string(msg[5:n]))
 
 	request, err := http.NewRequest("PUT", resURL, strings.NewReader("<a> <b> <c>."))
 	assert.NoError(t, err)
@@ -87,8 +100,7 @@ func TestWebSocketSubPub(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, 201, response.StatusCode)
 
-	msg := make([]byte, 512)
-	var n int
+	msg = make([]byte, 512)
 	n, err = ws.Read(msg)
 	assert.NoError(t, err)
 	assert.Equal(t, "pub "+resURL, string(msg[:n]))
@@ -129,7 +141,6 @@ func TestWebSocketSubPub(t *testing.T) {
 	response, err = httpClient.Do(request)
 	assert.NoError(t, err)
 	assert.Equal(t, 201, response.StatusCode)
-	assert.True(t, strings.HasSuffix(response.Header.Get("Location"), "res"))
 
 	msg = make([]byte, 512)
 	n, err = ws.Read(msg)
