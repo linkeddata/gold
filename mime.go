@@ -73,7 +73,7 @@ func init() {
 	}
 }
 
-func ExtLookup(ctype string) string {
+func LookupExt(ctype string) string {
 	for k, v := range mimeRdfExt {
 		if v == ctype {
 			return k
@@ -102,11 +102,11 @@ func MimeLookup(path string) (string, string, bool) {
 	if len(ext) > 0 {
 		if IsRdfExtension(ext) {
 			maybeRDF = true
-			mimeType = mimeRdfExt[ext]
+			mimeType = LookupExt(ext)
 		} else {
 			mimeType = mime.TypeByExtension(ext)
 			if len(mimeType) > 0 {
-				if len(mimeRdfExt[ext]) > 0 {
+				if len(LookupExt(ext)) > 0 {
 					maybeRDF = true
 				}
 			}
@@ -170,7 +170,7 @@ func MimeLookup(path string) (string, string, bool) {
 // 			// !fileCtype, !ext, ctype
 // 			if len(ctype) > 0 {
 // 				// maybe it's an RDF resource
-// 				if ext = ExtLookup(ctype); len(ext) > 0 {
+// 				if ext = LookupExt(ctype); len(ext) > 0 {
 // 					path += ext
 // 				} else {
 // 					newExt, err := mime.ExtensionsByType(ctype)
