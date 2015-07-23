@@ -3,10 +3,8 @@ package gold
 
 import (
 	"crypto/rand"
-	"crypto/rsa"
 	"crypto/tls"
 	"net/http"
-	"net/http/httptest"
 	"strings"
 	"testing"
 
@@ -16,25 +14,6 @@ import (
 const (
 	aclDir = "/_test/acldir/"
 )
-
-var (
-	user1, user2         string
-	user1g, user2g       *Graph
-	user1k, user2k       *rsa.PrivateKey
-	user1p, user2p       *rsa.PublicKey
-	user1h, user2h       *http.Client
-	user1cert, user2cert *tls.Certificate
-	testServer           *httptest.Server
-)
-
-func init() {
-	testServer = httptest.NewUnstartedServer(handler)
-	testServer.TLS = new(tls.Config)
-	testServer.TLS.ClientAuth = tls.RequestClientCert
-	testServer.TLS.NextProtos = []string{"http/1.1"}
-	testServer.StartTLS()
-	testServer.URL = strings.Replace(testServer.URL, "127.0.0.1", "localhost", 1)
-}
 
 func TestACLInit(t *testing.T) {
 	var err error

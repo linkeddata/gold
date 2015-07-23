@@ -1,6 +1,7 @@
 package gold
 
 import (
+	"crypto/rsa"
 	"crypto/tls"
 	"fmt"
 	"io"
@@ -17,9 +18,28 @@ import (
 )
 
 var (
-	config  = NewServerConfig()
-	handler = NewServer(config)
+	user1, user2         string
+	user1g, user2g       *Graph
+	user1k, user2k       *rsa.PrivateKey
+	user1p, user2p       *rsa.PublicKey
+	user1h, user2h       *http.Client
+	user1cert, user2cert *tls.Certificate
+	testServer           *httptest.Server
+	config               *ServerConfig
+	handler              *Server
 )
+
+func init() {
+	config = NewServerConfig()
+	handler = NewServer(config)
+
+	testServer = httptest.NewUnstartedServer(handler)
+	testServer.TLS = new(tls.Config)
+	testServer.TLS.ClientAuth = tls.RequestClientCert
+	testServer.TLS.NextProtos = []string{"http/1.1"}
+	testServer.StartTLS()
+	testServer.URL = strings.Replace(testServer.URL, "127.0.0.1", "localhost", 1)
+}
 
 func TestMKCOL(t *testing.T) {
 	request, err := http.NewRequest("MKCOL", testServer.URL+"/_test", nil)
