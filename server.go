@@ -776,6 +776,7 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 				return r.respond(aclWrite, handleStatusText(aclWrite, err))
 			}
 		}
+		err = nil
 
 		etag, _ := NewETag(resource.File)
 		if !req.ifMatch("\"" + etag + "\"") {
@@ -787,15 +788,11 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 
 		// LDP
 		isNew := false
-		if err == nil && resource.IsDir && dataMime != "multipart/form-data" {
+		if resource.IsDir && dataMime != "multipart/form-data" {
 			link := ParseLinkHeader(req.Header.Get("Link")).MatchRel("type")
 			slug := req.Header.Get("Slug")
 
 			uuid := NewUUID()
-			if err != nil {
-				s.debug.Println("POST LDP UUID err: " + err.Error())
-				return r.respond(500, err)
-			}
 			uuid = uuid[:6]
 
 			if !strings.HasSuffix(resource.Path, "/") {
