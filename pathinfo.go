@@ -8,6 +8,7 @@ import (
 	_path "path"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 type pathInfo struct {
@@ -27,6 +28,8 @@ type pathInfo struct {
 	MaybeRDF  bool
 	IsDir     bool
 	Exists    bool
+	ModTime   time.Time
+	Size      int64
 }
 
 func (s *Server) pathInfo(path string) (*pathInfo, error) {
@@ -87,6 +90,8 @@ func (s *Server) pathInfo(path string) (*pathInfo, error) {
 	if stat, err := os.Stat(res.File); os.IsNotExist(err) {
 		res.Exists = false
 	} else {
+		res.ModTime = stat.ModTime()
+		res.Size = stat.Size()
 		// Add missing trailing slashes for dirs
 		if stat.IsDir() {
 			if !strings.HasSuffix(res.Path, "/") && len(res.Path) > 1 {
