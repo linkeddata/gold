@@ -317,8 +317,7 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 		}
 
 		// set LDP Link headers
-		stat, err := os.Stat(resource.File)
-		if err == nil && stat.IsDir() {
+		if resource.IsDir {
 			w.Header().Add("Link", brack("http://www.w3.org/ns/ldp#BasicContainer")+"; rel=\"type\"")
 		}
 		w.Header().Add("Link", brack("http://www.w3.org/ns/ldp#Resource")+"; rel=\"type\"")
@@ -361,26 +360,23 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 		// overwrite ACL Link header
 		w.Header().Set("Link", brack(resource.AclURI)+"; rel=\"acl\", "+brack(resource.MetaURI)+"; rel=\"meta\"")
 
-		// check if resource exists and set LDP Link headers
-		stat, err := os.Stat(resource.File)
-		if err != nil {
-			// redirect to skin
-			if s.Config.Vhosts && resource.Base == strings.TrimRight(req.BaseURI(), "/") && contentType == "text/html" && req.Method != "HEAD" {
-				w.Header().Set(HCType, contentType)
-				urlStr := s.Config.SignUpSkin + url.QueryEscape(resource.Obj.Scheme+"://"+resource.Obj.Host+"/"+SystemPrefix+"/accountStatus")
-				http.Redirect(w, req.Request, urlStr, 303)
-				return
-			}
-			s.debug.Println("Got a stat error: " + err.Error())
+		// redirect to skin
+		if s.Config.Vhosts && resource.Base == strings.TrimRight(req.BaseURI(), "/") && contentType == "text/html" && req.Method != "HEAD" {
+			w.Header().Set(HCType, contentType)
+			urlStr := s.Config.SignUpSkin + url.QueryEscape(resource.Obj.Scheme+"://"+resource.Obj.Host+"/"+SystemPrefix+"/accountStatus")
+			http.Redirect(w, req.Request, urlStr, 303)
+			return
+		}
 
+		if !resource.Exists {
 			return r.respond(404, Skins["404"])
 		}
 
-		if stat.IsDir() {
+		if resource.IsDir {
 			w.Header().Add("Link", brack("http://www.w3.org/ns/ldp#BasicContainer")+"; rel=\"type\"")
 		}
-		if req.Method == "HEAD" && stat != nil {
-			w.Header().Set("Content-Length", fmt.Sprintf("%d", stat.Size()))
+		if req.Method == "HEAD" {
+			w.Header().Set("Content-Length", fmt.Sprintf("%d", resource.Size))
 		}
 		w.Header().Add("Link", brack("http://www.w3.org/ns/ldp#Resource")+"; rel=\"type\"")
 
@@ -409,8 +405,7 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 
 		g := NewGraph(resource.URI)
 
-		switch {
-		case stat.IsDir():
+		if resource.IsDir {
 			if len(s.Config.DirIndex) > 0 && contentType == "text/html" {
 				magicType = "text/html"
 				maybeRDF = false
@@ -440,8 +435,8 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 				g.AddTriple(root, NewResource("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), NewResource("http://www.w3.org/ns/ldp#Container"))
 				g.AddTriple(root, NewResource("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), NewResource("http://www.w3.org/ns/ldp#BasicContainer"))
 
-				g.AddTriple(root, NewResource("http://www.w3.org/ns/posix/stat#mtime"), NewLiteral(fmt.Sprintf("%d", stat.ModTime().Unix())))
-				g.AddTriple(root, NewResource("http://www.w3.org/ns/posix/stat#size"), NewLiteral(fmt.Sprintf("%d", stat.Size())))
+				g.AddTriple(root, NewResource("http://www.w3.org/ns/posix/stat#mtime"), NewLiteral(fmt.Sprintf("%d", resource.ModTime.Unix())))
+				g.AddTriple(root, NewResource("http://www.w3.org/ns/posix/stat#size"), NewLiteral(fmt.Sprintf("%d", resource.Size)))
 
 				kb := NewGraph(resource.MetaURI)
 				kb.ReadFile(resource.MetaFile)
@@ -461,20 +456,27 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 					matches, err := filepath.Glob(globPath)
 					if err == nil {
 						for _, file := range matches {
-							stat, serr := os.Stat(file)
-							if !stat.IsDir() && serr == nil {
-								// TODO: check acls
-								guessType, _ := magic.TypeByFile(file)
-								if guessType == "text/plain" {
-									res, err := s.pathInfo(resource.Base + "/" + filepath.Dir(resource.Path) + "/" + filepath.Base(file))
-									if err != nil {
-										return r.respond(500, err)
-									}
-									aclStatus, err = acl.AllowRead(res.URI)
-									if aclStatus == 200 && err == nil {
-										g.AppendFile(res.File, res.URI)
-										g.AddTriple(root, NewResource("http://www.w3.org/ns/ldp#contains"), NewResource(res.URI))
-									}
+							// if !stat.IsDir() && serr == nil {
+							// 	// TODO: check acls
+							// 	guessType, _ := magic.TypeByFile(file)
+							// 	if guessType == "text/plain" {
+							// 		res, err := s.pathInfo(resource.Base + "/" + filepath.Dir(resource.Path) + "/" + filepath.Base(file))
+							// 		if err != nil {
+							// 			return r.respond(500, err)
+							// 		}
+							// 		aclStatus, err = acl.AllowRead(res.URI)
+							// 		if aclStatus == 200 && err == nil {
+							// 			g.AppendFile(res.File, res.URI)
+							// 			g.AddTriple(root, NewResource("http://www.w3.org/ns/ldp#contains"), NewResource(res.URI))
+							// 		}
+							// 	}
+							// }
+							res, err := s.pathInfo(resource.Base + "/" + filepath.Dir(resource.Path) + "/" + filepath.Base(file))
+							if !res.IsDir && res.Exists && err == nil {
+								aclStatus, err = acl.AllowRead(res.URI)
+								if aclStatus == 200 && err == nil {
+									g.AppendFile(res.File, res.URI)
+									g.AddTriple(root, NewResource("http://www.w3.org/ns/ldp#contains"), NewResource(res.URI))
 								}
 							}
 						}
@@ -590,7 +592,7 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 				status = 200
 				maybeRDF = true
 			}
-		default:
+		} else {
 			magicType = resource.FileType
 			if len(mimeRdfExt[resource.Extension]) > 0 {
 				maybeRDF = true
@@ -785,8 +787,7 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 
 		// LDP
 		isNew := false
-		stat, err := os.Stat(resource.File)
-		if err == nil && stat.IsDir() && dataMime != "multipart/form-data" {
+		if err == nil && resource.IsDir && dataMime != "multipart/form-data" {
 			link := ParseLinkHeader(req.Header.Get("Link")).MatchRel("type")
 			slug := req.Header.Get("Slug")
 
@@ -874,7 +875,7 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 			isNew = true
 		}
 
-		if stat == nil {
+		if !resource.Exists {
 			err = os.MkdirAll(_path.Dir(resource.File), 0755)
 			if err != nil {
 				s.debug.Println("POST MkdirAll err: " + err.Error())
@@ -922,10 +923,10 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 				return r.respond(201)
 			}
 		} else {
-			stat, err = os.Stat(resource.File)
-			if os.IsNotExist(err) {
+			if !resource.Exists {
 				isNew = true
-			} else if os.IsExist(err) && stat.IsDir() {
+			}
+			if resource.IsDir {
 				resource.File = resource.File + "/" + s.Config.MetaSuffix
 			}
 
@@ -1004,6 +1005,11 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 			return r.respond(412, "412 - Precondition Failed")
 		}
 
+		isNew := true
+		if resource.Exists {
+			isNew = false
+		}
+
 		// LDP PUT should be merged with LDP POST into a common LDP "method" switch
 		link := ParseLinkHeader(req.Header.Get("Link")).MatchRel("type")
 		if len(link) > 0 && link == "http://www.w3.org/ns/ldp#BasicContainer" {
@@ -1028,16 +1034,10 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 			return r.respond(500, err)
 		}
 
-		isNew := true
-		stat, err := os.Stat(resource.File)
-		if os.IsExist(err) {
-			isNew = false
-		}
-
 		f, err := os.OpenFile(resource.File, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
 		if err != nil {
 			s.debug.Println("PUT os.OpenFile err: " + err.Error())
-			if stat.IsDir() {
+			if resource.IsDir {
 				w.Header().Add("Link", brack(resource.URI)+"; rel=\"describedby\"")
 				return r.respond(406, "406 - Cannot use PUT on a directory.")
 			}

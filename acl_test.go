@@ -150,7 +150,7 @@ func TestACLOrigin(t *testing.T) {
 	response, err = user1h.Do(request)
 	assert.NoError(t, err)
 	response.Body.Close()
-	assert.Equal(t, 201, response.StatusCode)
+	assert.Equal(t, 200, response.StatusCode)
 
 	// user1
 	request, err = http.NewRequest("HEAD", testServer.URL+aclDir, nil)
@@ -228,7 +228,7 @@ func TestACLOwnerOnly(t *testing.T) {
 	response, err = user1h.Do(request)
 	assert.NoError(t, err)
 	response.Body.Close()
-	assert.Equal(t, 201, response.StatusCode)
+	assert.Equal(t, 200, response.StatusCode)
 
 	// user1
 	request, err = http.NewRequest("HEAD", acl, nil)
@@ -258,7 +258,7 @@ func TestACLOwnerOnly(t *testing.T) {
 	response, err = user1h.Do(request)
 	assert.NoError(t, err)
 	response.Body.Close()
-	assert.Equal(t, 201, response.StatusCode)
+	assert.Equal(t, 200, response.StatusCode)
 
 	// user2
 	request, err = http.NewRequest("HEAD", testServer.URL+aclDir, nil)
@@ -319,7 +319,7 @@ func TestACLReadOnly(t *testing.T) {
 	response, err = user1h.Do(request)
 	assert.NoError(t, err)
 	response.Body.Close()
-	assert.Equal(t, 201, response.StatusCode)
+	assert.Equal(t, 200, response.StatusCode)
 
 	// user1
 	request, err = http.NewRequest("HEAD", acl, nil)
@@ -342,7 +342,7 @@ func TestACLReadOnly(t *testing.T) {
 	response, err = user1h.Do(request)
 	assert.NoError(t, err)
 	response.Body.Close()
-	assert.Equal(t, 201, response.StatusCode)
+	assert.Equal(t, 200, response.StatusCode)
 
 	// user2
 	request, err = http.NewRequest("HEAD", testServer.URL+aclDir, nil)
@@ -442,7 +442,7 @@ func TestACLAppendOnly(t *testing.T) {
 	response, err = user1h.Do(request)
 	assert.NoError(t, err)
 	response.Body.Close()
-	assert.Equal(t, 201, response.StatusCode)
+	assert.Equal(t, 200, response.StatusCode)
 
 	// user1
 	request, err = http.NewRequest("HEAD", acl, nil)
@@ -561,7 +561,7 @@ func TestACLRestricted(t *testing.T) {
 	response, err = user1h.Do(request)
 	assert.NoError(t, err)
 	response.Body.Close()
-	assert.Equal(t, 201, response.StatusCode)
+	assert.Equal(t, 200, response.StatusCode)
 
 	// user2
 	request, err = http.NewRequest("HEAD", testServer.URL+aclDir+"abc", nil)
@@ -721,7 +721,7 @@ func TestACLGroup(t *testing.T) {
 	response, err = user1h.Do(request)
 	assert.NoError(t, err)
 	response.Body.Close()
-	assert.Equal(t, 201, response.StatusCode)
+	assert.Equal(t, 200, response.StatusCode)
 
 	request, err = http.NewRequest("HEAD", testServer.URL+aclDir+"abc", nil)
 	assert.NoError(t, err)

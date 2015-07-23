@@ -94,8 +94,8 @@ func (s *Server) pathInfo(path string) (*pathInfo, error) {
 		res.Size = stat.Size()
 		// Add missing trailing slashes for dirs
 		if stat.IsDir() {
+			res.IsDir = true
 			if !strings.HasSuffix(res.Path, "/") && len(res.Path) > 1 {
-				res.IsDir = true
 				res.Path += "/"
 				res.File += "/"
 				res.URI += "/"

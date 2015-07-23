@@ -631,7 +631,7 @@ func TestStreaming(t *testing.T) {
 	request.Header.Add("Content-Type", "text/turtle")
 	response, err := httpClient.Do(request)
 	assert.NoError(t, err)
-	assert.Equal(t, 201, response.StatusCode)
+	assert.Equal(t, 200, response.StatusCode)
 
 	request, err = http.NewRequest("GET", testServer.URL+"/_test/abc", nil)
 	assert.NoError(t, err)
@@ -647,7 +647,7 @@ func TestStreaming(t *testing.T) {
 	assert.NoError(t, err)
 	response, err = httpClient.Do(request)
 	assert.NoError(t, err)
-	assert.Equal(t, 201, response.StatusCode)
+	assert.Equal(t, 200, response.StatusCode)
 }
 
 func TestPOSTSPARQL(t *testing.T) {
@@ -746,10 +746,16 @@ func TestPATCHFailParse(t *testing.T) {
 }
 
 func TestPUTTurtle(t *testing.T) {
-	request, err := http.NewRequest("PUT", testServer.URL+"/_test/abc", strings.NewReader("<d> <e> <f> ; <h> <i> ."))
+	request, err := http.NewRequest("DELETE", testServer.URL+"/_test/abc", nil)
+	assert.NoError(t, err)
+	response, err := httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, response.StatusCode)
+
+	request, err = http.NewRequest("PUT", testServer.URL+"/_test/abc", strings.NewReader("<d> <e> <f> ; <h> <i> ."))
 	assert.NoError(t, err)
 	request.Header.Add("Content-Type", "text/turtle")
-	response, err := httpClient.Do(request)
+	response, err = httpClient.Do(request)
 	assert.NoError(t, err)
 	assert.Equal(t, 201, response.StatusCode)
 	body, err := ioutil.ReadAll(response.Body)
@@ -889,7 +895,7 @@ func TestIfMatch(t *testing.T) {
 	body, err := ioutil.ReadAll(response.Body)
 	response.Body.Close()
 	assert.Empty(t, string(body))
-	assert.Equal(t, 201, response.StatusCode)
+	assert.Equal(t, 200, response.StatusCode)
 }
 
 func TestIfNoneMatch(t *testing.T) {
@@ -969,7 +975,7 @@ func TestIfNoneMatch(t *testing.T) {
 	request.Header.Add("If-None-Match", newTag)
 	response, err = httpClient.Do(request)
 	assert.NoError(t, err)
-	assert.Equal(t, 201, response.StatusCode)
+	assert.Equal(t, 200, response.StatusCode)
 }
 
 func TestGetJsonLd(t *testing.T) {
