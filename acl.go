@@ -55,12 +55,10 @@ func (acl *WAC) allow(mode string, path string) (int, error) {
 			// TODO make it more elegant instead of duplicating code
 			for _, i := range aclGraph.All(nil, ns.acl.Get("mode"), ns.acl.Get("Control")) {
 				for range aclGraph.All(i.Subject, ns.acl.Get(accessType), NewResource(p.URI)) {
-					if len(acl.key) > 0 {
-						//@@TODO add resourceKey to ACL vocab
-						for range aclGraph.All(i.Subject, ns.acl.Get("resourceKey"), NewLiteral(acl.key)) {
-							acl.srv.debug.Println(mode + " access allowed (as owner) for: " + acl.user)
-							return 200, nil
-						}
+					//@@TODO add resourceKey to ACL vocab
+					for range aclGraph.All(i.Subject, ns.acl.Get("resourceKey"), NewLiteral(acl.key)) {
+						acl.srv.debug.Println(mode + " access allowed based on matching resource key")
+						return 200, nil
 					}
 					for range aclGraph.All(i.Subject, ns.acl.Get("owner"), NewResource(acl.user)) {
 						acl.srv.debug.Println(mode + " access allowed (as owner) for: " + acl.user)
@@ -108,12 +106,9 @@ func (acl *WAC) allow(mode string, path string) (int, error) {
 						acl.srv.debug.Println("No origin found, moving on")
 					}
 				allowOrigin:
-					acl.srv.debug.Println("In allowOrigin")
-					if len(acl.key) > 0 {
-						for range aclGraph.All(i.Subject, ns.acl.Get("resourceKey"), NewLiteral(acl.key)) {
-							acl.srv.debug.Println(mode + " access allowed (as owner) for: " + acl.user)
-							return 200, nil
-						}
+					for range aclGraph.All(i.Subject, ns.acl.Get("resourceKey"), NewLiteral(acl.key)) {
+						acl.srv.debug.Println(mode + " access allowed based on matching resource key")
+						return 200, nil
 					}
 					for range aclGraph.All(i.Subject, ns.acl.Get("owner"), NewResource(acl.user)) {
 						acl.srv.debug.Println(mode + " access allowed (as owner) for: " + acl.user)
