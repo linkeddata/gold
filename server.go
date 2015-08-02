@@ -161,8 +161,8 @@ type Server struct {
 func NewServer(config *ServerConfig) *Server {
 	s := &Server{
 		Config:     config,
-		cookie:     securecookie.New(securecookie.GenerateRandomKey(64), securecookie.GenerateRandomKey(32)),
-		cookieSalt: securecookie.GenerateRandomKey(32),
+		cookie:     securecookie.New(securecookie.GenerateRandomKey(32), securecookie.GenerateRandomKey(32)),
+		cookieSalt: securecookie.GenerateRandomKey(8),
 		webdav: &webdav.Handler{
 			FileSystem: webdav.Dir(config.DataRoot),
 			LockSystem: webdav.NewMemLS(),

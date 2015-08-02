@@ -7,9 +7,20 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
+
+func TestNewSecureToken(t *testing.T) {
+	tokenValues := map[string]string{
+		"secret": string(handler.cookieSalt),
+	}
+	validity := 1 * time.Minute
+	token, err := NewSecureToken("WWW-Authenticate", tokenValues, validity, handler)
+	assert.NoError(t, err)
+	assert.Equal(t, 184, len(token))
+}
 
 func TestParseDigestAuthorizationHeader(t *testing.T) {
 	h := `WebID-RSA source="http://server.org/", username="http://example.org/", nonce="string1", sig="string2"`
