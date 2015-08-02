@@ -3,6 +3,7 @@ package gold
 import (
 	"crypto/rand"
 	"crypto/rsa"
+	"crypto/sha1"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/asn1"
@@ -68,7 +69,7 @@ func WebIDDigestAuth(req *httpRequest) (string, error) {
 	}
 
 	webid := authH.Username
-	claim := source + authH.Username + authH.Nonce
+	claim := sha1.Sum([]byte(source + authH.Username + authH.Nonce))
 	signature, err := base64.StdEncoding.DecodeString(authH.Signature)
 	if err != nil {
 		return "", err
@@ -111,7 +112,7 @@ func WebIDDigestAuth(req *httpRequest) (string, error) {
 				// loop through all the PEM keys
 				parser, err := ParseRSAPublicPEMKey([]byte(keyP))
 				if err == nil {
-					err = parser.Verify([]byte(claim), signature)
+					err = parser.Verify(claim[:], signature)
 					if err == nil {
 						return webid, nil
 					}
@@ -125,7 +126,7 @@ func WebIDDigestAuth(req *httpRequest) (string, error) {
 					// println(keyN, keyE)
 					parser, err := ParseRSAPublicKeyNE("RSAPublicKey", keyN, keyE)
 					if err == nil {
-						err = parser.Verify([]byte(claim), signature)
+						err = parser.Verify(claim[:], signature)
 						if err != nil {
 							return "", err
 						}

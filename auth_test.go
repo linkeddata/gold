@@ -1,6 +1,7 @@
 package gold
 
 import (
+	"crypto/sha1"
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/pem"
@@ -135,9 +136,9 @@ func TestWebIDRSAAuth(t *testing.T) {
 	signer, err := ParseRSAPrivatePEMKey(keyBytes)
 	assert.NoError(t, err)
 
-	claim := p.Source + user1 + p.Nonce
+	claim := sha1.Sum([]byte(p.Source + user1 + p.Nonce))
 
-	signed, err := signer.Sign([]byte(claim))
+	signed, err := signer.Sign(claim[:])
 	assert.NoError(t, err)
 
 	b64Sig := base64.StdEncoding.EncodeToString(signed)
@@ -152,9 +153,9 @@ func TestWebIDRSAAuth(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, 200, response.StatusCode)
 
-	claim = "http://baddude.org/" + user1 + p.Nonce
+	claim = sha1.Sum([]byte("http://baddude.org/" + user1 + p.Nonce))
 
-	signed, err = signer.Sign([]byte(claim))
+	signed, err = signer.Sign(claim[:])
 	assert.NoError(t, err)
 
 	b64Sig = base64.StdEncoding.EncodeToString(signed)
