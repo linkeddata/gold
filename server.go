@@ -425,7 +425,8 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 					} else if req.Method != "HEAD" {
 						//TODO load file manager skin from local preference file
 						w.Header().Set(HCType, contentType)
-						urlStr := s.Config.DirSkin + resource.Obj.Scheme + "/" + resource.Obj.Host + "/" + resource.Obj.Path
+						urlStr := s.Config.DirSkin + resource.Obj.Scheme + "/" + resource.Obj.Host + "/" + resource.Obj.Path + "?" + req.Request.URL.RawQuery
+						s.debug.Println("Redirecting to", urlStr)
 						http.Redirect(w, req.Request, urlStr, 303)
 						return
 					}
