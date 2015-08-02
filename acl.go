@@ -145,7 +145,7 @@ func (acl *WAC) allow(mode string, path string) (int, error) {
 					}
 				}
 			}
-			if len(acl.user) == 0 {
+			if len(acl.user) == 0 && len(acl.key) == 0 {
 				acl.srv.debug.Println("Authentication required")
 				tokenValues := map[string]string{
 					"secret": string(acl.srv.cookieSalt),
