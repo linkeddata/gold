@@ -14,10 +14,11 @@ type WAC struct {
 	srv  *Server
 	w    http.ResponseWriter
 	user string
+	key  string
 }
 
 // NewWAC creates a new WAC object
-func NewWAC(req *httpRequest, srv *Server, w http.ResponseWriter, user string) *WAC {
+func NewWAC(req *httpRequest, srv *Server, w http.ResponseWriter, user string, key string) *WAC {
 	if len(req.Header.Get("On-Behalf-Of")) > 0 {
 		delegator := debrack(req.Header.Get("On-Behalf-Of"))
 		if verifyDelegator(delegator, user) {
@@ -25,7 +26,7 @@ func NewWAC(req *httpRequest, srv *Server, w http.ResponseWriter, user string) *
 			user = delegator
 		}
 	}
-	return &WAC{req: req, srv: srv, w: w, user: user}
+	return &WAC{req: req, srv: srv, w: w, user: user, key: key}
 }
 
 // Return an HTTP code and error (200 if authd, 401 if auth required, 403 if not authorized, 500 if error)
@@ -54,6 +55,13 @@ func (acl *WAC) allow(mode string, path string) (int, error) {
 			// TODO make it more elegant instead of duplicating code
 			for _, i := range aclGraph.All(nil, ns.acl.Get("mode"), ns.acl.Get("Control")) {
 				for range aclGraph.All(i.Subject, ns.acl.Get(accessType), NewResource(p.URI)) {
+					if len(acl.key) > 0 {
+						//@@TODO add resourceKey to ACL vocab
+						for range aclGraph.All(i.Subject, ns.acl.Get("resourceKey"), NewLiteral(acl.key)) {
+							acl.srv.debug.Println(mode + " access allowed (as owner) for: " + acl.user)
+							return 200, nil
+						}
+					}
 					for range aclGraph.All(i.Subject, ns.acl.Get("owner"), NewResource(acl.user)) {
 						acl.srv.debug.Println(mode + " access allowed (as owner) for: " + acl.user)
 						return 200, nil
@@ -101,6 +109,12 @@ func (acl *WAC) allow(mode string, path string) (int, error) {
 					}
 				allowOrigin:
 					acl.srv.debug.Println("In allowOrigin")
+					if len(acl.key) > 0 {
+						for range aclGraph.All(i.Subject, ns.acl.Get("resourceKey"), NewLiteral(acl.key)) {
+							acl.srv.debug.Println(mode + " access allowed (as owner) for: " + acl.user)
+							return 200, nil
+						}
+					}
 					for range aclGraph.All(i.Subject, ns.acl.Get("owner"), NewResource(acl.user)) {
 						acl.srv.debug.Println(mode + " access allowed (as owner) for: " + acl.user)
 						return 200, nil

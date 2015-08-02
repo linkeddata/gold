@@ -249,10 +249,13 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 		w.Header().Set("Access-Control-Allow-Origin", origin)
 	}
 
+	// Get request key
+	rKey := req.Request.FormValue("key")
+
 	// Authentication
 	user := req.authn(w)
 	w.Header().Set("User", user)
-	acl := NewWAC(req, s, w, user)
+	acl := NewWAC(req, s, w, user, rKey)
 
 	// Intercept API requests
 	if strings.HasPrefix(req.Request.URL.Path, "/"+SystemPrefix) && req.Method != "OPTIONS" {

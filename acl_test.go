@@ -122,6 +122,68 @@ func TestNoACLFile(t *testing.T) {
 	assert.Equal(t, 200, response.StatusCode)
 }
 
+func TestResourceKey(t *testing.T) {
+	key := "aaabbbccc"
+
+	request, err := http.NewRequest("HEAD", testServer.URL+aclDir, nil)
+	assert.NoError(t, err)
+	response, err := user1h.Do(request)
+	assert.NoError(t, err)
+	response.Body.Close()
+	assert.Equal(t, 200, response.StatusCode)
+
+	acl := ParseLinkHeader(response.Header.Get("Link")).MatchRel("acl")
+
+	body := "<#Owner>" +
+		"	a <http://www.w3.org/ns/auth/acl#Authorization> ;" +
+		"	<http://www.w3.org/ns/auth/acl#accessTo> <" + testServer.URL + aclDir + ">, <" + acl + ">;" +
+		"	<http://www.w3.org/ns/auth/acl#agent> <" + user1 + ">;" +
+		"	<http://www.w3.org/ns/auth/acl#mode> <http://www.w3.org/ns/auth/acl#Read>, <http://www.w3.org/ns/auth/acl#Write> ." +
+		"<#PublicWithKey>" +
+		"	a <http://www.w3.org/ns/auth/acl#Authorization> ;" +
+		"	<http://www.w3.org/ns/auth/acl#accessTo> <" + testServer.URL + aclDir + ">;" +
+		"	<http://www.w3.org/ns/auth/acl#resourceKey> \"" + key + "\";" +
+		"	<http://www.w3.org/ns/auth/acl#mode> <http://www.w3.org/ns/auth/acl#Read> ."
+	request, err = http.NewRequest("PUT", acl, strings.NewReader(body))
+	assert.NoError(t, err)
+	request.Header.Add("Content-Type", "text/turtle")
+	response, err = user1h.Do(request)
+	assert.NoError(t, err)
+	response.Body.Close()
+	assert.Equal(t, 200, response.StatusCode)
+
+	// user1
+	request, err = http.NewRequest("HEAD", acl, nil)
+	assert.NoError(t, err)
+	response, err = user1h.Do(request)
+	assert.NoError(t, err)
+	response.Body.Close()
+	assert.Equal(t, 200, response.StatusCode)
+
+	request, err = http.NewRequest("HEAD", testServer.URL+aclDir, nil)
+	assert.NoError(t, err)
+	response, err = user1h.Do(request)
+	assert.NoError(t, err)
+	response.Body.Close()
+	assert.Equal(t, 200, response.StatusCode)
+
+	// user2
+	request, err = http.NewRequest("HEAD", testServer.URL+aclDir+"?key="+key, nil)
+	assert.NoError(t, err)
+	response, err = user2h.Do(request)
+	assert.NoError(t, err)
+	response.Body.Close()
+	assert.Equal(t, 200, response.StatusCode)
+
+	// agent
+	request, err = http.NewRequest("HEAD", testServer.URL+aclDir+"?key="+key, nil)
+	assert.NoError(t, err)
+	response, err = httpClient.Do(request)
+	assert.NoError(t, err)
+	response.Body.Close()
+	assert.Equal(t, 200, response.StatusCode)
+}
+
 func TestACLOrigin(t *testing.T) {
 	origin1 := "http://example.org/"
 	origin2 := "http://example.com/"
@@ -783,7 +845,6 @@ func TestACLGroup(t *testing.T) {
 }
 
 func TestACLDefaultForNew(t *testing.T) {
-	config.Debug = true
 	request, err := http.NewRequest("HEAD", testServer.URL+aclDir, nil)
 	assert.NoError(t, err)
 	response, err := user1h.Do(request)
@@ -872,8 +933,6 @@ func TestACLDefaultForNew(t *testing.T) {
 	assert.NoError(t, err)
 	response.Body.Close()
 	assert.Equal(t, 401, response.StatusCode)
-
-	config.Debug = false
 }
 
 func TestACLWebIDDelegation(t *testing.T) {
