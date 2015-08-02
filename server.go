@@ -364,7 +364,7 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 		w.Header().Set("Link", brack(resource.AclURI)+"; rel=\"acl\", "+brack(resource.MetaURI)+"; rel=\"meta\"")
 
 		// redirect to skin
-		if s.Config.Vhosts && resource.Base == strings.TrimRight(req.BaseURI(), "/") && contentType == "text/html" && req.Method != "HEAD" {
+		if s.Config.Vhosts && !resource.Exists && resource.Base == strings.TrimRight(req.BaseURI(), "/") && contentType == "text/html" && req.Method != "HEAD" {
 			w.Header().Set(HCType, contentType)
 			urlStr := s.Config.SignUpSkin + url.QueryEscape(resource.Obj.Scheme+"://"+resource.Obj.Host+"/"+SystemPrefix+"/accountStatus")
 			http.Redirect(w, req.Request, urlStr, 303)

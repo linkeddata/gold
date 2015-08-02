@@ -56,17 +56,21 @@ func (acl *WAC) allow(mode string, path string) (int, error) {
 			for _, i := range aclGraph.All(nil, ns.acl.Get("mode"), ns.acl.Get("Control")) {
 				for range aclGraph.All(i.Subject, ns.acl.Get(accessType), NewResource(p.URI)) {
 					//@@TODO add resourceKey to ACL vocab
-					for range aclGraph.All(i.Subject, ns.acl.Get("resourceKey"), NewLiteral(acl.key)) {
-						acl.srv.debug.Println(mode + " access allowed based on matching resource key")
-						return 200, nil
+					if len(acl.key) > 0 {
+						for range aclGraph.All(i.Subject, ns.acl.Get("resourceKey"), NewLiteral(acl.key)) {
+							acl.srv.debug.Println(mode + " access allowed based on matching resource key")
+							return 200, nil
+						}
 					}
-					for range aclGraph.All(i.Subject, ns.acl.Get("owner"), NewResource(acl.user)) {
-						acl.srv.debug.Println(mode + " access allowed (as owner) for: " + acl.user)
-						return 200, nil
-					}
-					for range aclGraph.All(i.Subject, ns.acl.Get("agent"), NewResource(acl.user)) {
-						acl.srv.debug.Println(mode + " access allowed (as agent) for: " + acl.user)
-						return 200, nil
+					if len(acl.user) > 0 {
+						for range aclGraph.All(i.Subject, ns.acl.Get("owner"), NewResource(acl.user)) {
+							acl.srv.debug.Println(mode + " access allowed (as owner) for: " + acl.user)
+							return 200, nil
+						}
+						for range aclGraph.All(i.Subject, ns.acl.Get("agent"), NewResource(acl.user)) {
+							acl.srv.debug.Println(mode + " access allowed (as agent) for: " + acl.user)
+							return 200, nil
+						}
 					}
 					for _, t := range aclGraph.All(i.Subject, ns.acl.Get("agentClass"), nil) {
 						// check for foaf groups
@@ -106,17 +110,21 @@ func (acl *WAC) allow(mode string, path string) (int, error) {
 						acl.srv.debug.Println("No origin found, moving on")
 					}
 				allowOrigin:
-					for range aclGraph.All(i.Subject, ns.acl.Get("resourceKey"), NewLiteral(acl.key)) {
-						acl.srv.debug.Println(mode + " access allowed based on matching resource key")
-						return 200, nil
+					if len(acl.key) > 0 {
+						for range aclGraph.All(i.Subject, ns.acl.Get("resourceKey"), NewLiteral(acl.key)) {
+							acl.srv.debug.Println(mode + " access allowed based on matching resource key")
+							return 200, nil
+						}
 					}
-					for range aclGraph.All(i.Subject, ns.acl.Get("owner"), NewResource(acl.user)) {
-						acl.srv.debug.Println(mode + " access allowed (as owner) for: " + acl.user)
-						return 200, nil
-					}
-					for range aclGraph.All(i.Subject, ns.acl.Get("agent"), NewResource(acl.user)) {
-						acl.srv.debug.Println(mode + " access allowed (as agent) for: " + acl.user)
-						return 200, nil
+					if len(acl.user) > 0 {
+						for range aclGraph.All(i.Subject, ns.acl.Get("owner"), NewResource(acl.user)) {
+							acl.srv.debug.Println(mode + " access allowed (as owner) for: " + acl.user)
+							return 200, nil
+						}
+						for range aclGraph.All(i.Subject, ns.acl.Get("agent"), NewResource(acl.user)) {
+							acl.srv.debug.Println(mode + " access allowed (as agent) for: " + acl.user)
+							return 200, nil
+						}
 					}
 					for _, t := range aclGraph.All(i.Subject, ns.acl.Get("agentClass"), nil) {
 						// check for foaf groups
