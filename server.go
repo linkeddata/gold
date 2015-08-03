@@ -234,7 +234,7 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 
 	// CORS
 	w.Header().Set("Access-Control-Allow-Credentials", "true")
-	w.Header().Set("Access-Control-Expose-Headers", "User, Location, Link, Vary, Last-Modified, Content-Length")
+	w.Header().Set("Access-Control-Expose-Headers", "User, Location, Link, Vary, Last-Modified, WWW-Authenticate, Content-Length")
 	w.Header().Set("Access-Control-Max-Age", "1728000")
 
 	// RWW
