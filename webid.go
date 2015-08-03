@@ -78,6 +78,11 @@ func WebIDDigestAuth(req *httpRequest) (string, error) {
 		return "", errors.New("No WebID and/or claim found in the Authorization header")
 	}
 
+	// fetch WebID to get pubKey
+	if !strings.HasPrefix(authH.Username, "http") {
+		return "", errors.New("Username is not a valid HTTP URI: " + authH.Username)
+	}
+
 	// Decrypt and validate nonce from secure token
 	tValues, err := ValidateSecureToken("WWW-Authenticate", authH.Nonce, req.Server)
 	if err != nil {
@@ -97,7 +102,6 @@ func WebIDDigestAuth(req *httpRequest) (string, error) {
 		return "", errors.New("Wrong secret value in client token!")
 	}
 
-	// fetch WebID to get pubKey
 	g := NewGraph(authH.Username)
 	err = g.LoadURI(authH.Username)
 	if err != nil {
