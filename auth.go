@@ -24,17 +24,17 @@ func (req *httpRequest) authn(w http.ResponseWriter) string {
 		req.Server.debug.Println("userCookie error:", err)
 	}
 	if len(user) > 0 {
-		req.Server.debug.Println("Cookie authentication successful for User: " + user)
+		req.Server.debug.Println("Cookie auth OK for User: " + user)
 		return user
 	}
 
 	if len(req.Header.Get("Authorization")) > 0 {
 		user, err = WebIDDigestAuth(req)
 		if err != nil {
-			req.Server.debug.Println("WebID Digest authentication error:", err)
+			req.Server.debug.Println("WebID-RSA auth error:", err)
 		}
 		if len(user) > 0 {
-			req.Server.debug.Println("WebID Digest authentication successful for User: " + user)
+			req.Server.debug.Println("WebID-RSA auth OK for User: " + user)
 			return user
 		}
 	}
@@ -44,7 +44,7 @@ func (req *httpRequest) authn(w http.ResponseWriter) string {
 		req.Server.debug.Println("WebID-TLS error:", err)
 	}
 	if len(user) > 0 {
-		req.Server.debug.Println("WebID-TLS authentication successful for User: " + user)
+		req.Server.debug.Println("WebID-TLS auth OK for User: " + user)
 		req.Server.userCookieSet(w, user)
 		return user
 	}
@@ -109,7 +109,7 @@ func ParseDigestAuthenticateHeader(header string) (*DigestAuthentication, error)
 	for _, part := range parts {
 		vals := strings.SplitN(strings.TrimSpace(part), "=", 2)
 		key := vals[0]
-		val := strings.Trim(vals[1], "\",")
+		val := strings.Replace(vals[1], "\"", "", -1)
 		opts[key] = val
 	}
 
@@ -141,12 +141,12 @@ func ParseDigestAuthorizationHeader(header string) (*DigestAuthorization, error)
 	opts := make(map[string]string)
 	parts := strings.SplitN(header, " ", 2)
 	opts["type"] = parts[0]
-	parts = strings.Split(parts[1], ", ")
+	parts = strings.Split(parts[1], ",")
 
 	for _, part := range parts {
-		vals := strings.SplitN(part, "=", 2)
+		vals := strings.SplitN(strings.TrimSpace(part), "=", 2)
 		key := vals[0]
-		val := strings.Trim(vals[1], "\",")
+		val := strings.Replace(vals[1], "\"", "", -1)
 		opts[key] = val
 	}
 

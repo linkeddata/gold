@@ -63,19 +63,18 @@ func WebIDDigestAuth(req *httpRequest) (string, error) {
 		return "", err
 	}
 
-	source := authH.Source
-	if len(source) == 0 || source != req.BaseURI() {
-		return "", errors.New("Bad source of auth token, possible MITM attack!")
+	if len(authH.Source) == 0 || authH.Source != req.BaseURI() {
+		return "", errors.New("Bad source URI for auth token: " + authH.Source + " -- possible MITM attack!")
 	}
 
-	webid := authH.Username
-	claim := sha1.Sum([]byte(source + authH.Username + authH.Nonce))
+	claim := sha1.Sum([]byte(authH.Source + authH.Username + authH.Nonce))
 	signature, err := base64.StdEncoding.DecodeString(authH.Signature)
+
 	if err != nil {
-		return "", err
+		return "", errors.New(err.Error() + " in " + authH.Signature)
 	}
 
-	if len(webid) == 0 || len(claim) == 0 || len(signature) == 0 {
+	if len(authH.Username) == 0 || len(claim) == 0 || len(signature) == 0 {
 		return "", errors.New("No WebID and/or claim found in the Authorization header")
 	}
 
@@ -89,7 +88,7 @@ func WebIDDigestAuth(req *httpRequest) (string, error) {
 		return "", err
 	}
 	if time.Now().Local().Unix() > v {
-		return "", errors.New("Token expired for " + webid)
+		return "", errors.New("Token expired for " + authH.Username)
 	}
 	if len(tValues["secret"]) == 0 {
 		return "", errors.New("Missing secret from token (tempered with?)")
@@ -99,13 +98,13 @@ func WebIDDigestAuth(req *httpRequest) (string, error) {
 	}
 
 	// fetch WebID to get pubKey
-	g := NewGraph(webid)
-	err = g.LoadURI(webid)
+	g := NewGraph(authH.Username)
+	err = g.LoadURI(authH.Username)
 	if err != nil {
 		return "", err
 	}
 
-	for _, keyT := range g.All(NewResource(webid), ns.cert.Get("key"), nil) {
+	for _, keyT := range g.All(NewResource(authH.Username), ns.cert.Get("key"), nil) {
 		for range g.All(keyT.Object, ns.rdf.Get("type"), ns.cert.Get("RSAPublicKey")) {
 			for _, pubP := range g.All(keyT.Object, ns.cert.Get("pem"), nil) {
 				keyP := term2C(pubP.Object).String()
@@ -114,7 +113,7 @@ func WebIDDigestAuth(req *httpRequest) (string, error) {
 				if err == nil {
 					err = parser.Verify(claim[:], signature)
 					if err == nil {
-						return webid, nil
+						return authH.Username, nil
 					}
 				}
 			}
@@ -130,7 +129,7 @@ func WebIDDigestAuth(req *httpRequest) (string, error) {
 						if err != nil {
 							return "", err
 						}
-						return webid, nil
+						return authH.Username, nil
 					}
 				}
 			}

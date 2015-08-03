@@ -24,8 +24,17 @@ func TestNewSecureToken(t *testing.T) {
 }
 
 func TestParseDigestAuthorizationHeader(t *testing.T) {
-	h := `WebID-RSA source="http://server.org/", username="http://example.org/", nonce="string1", sig="string2"`
+	h := "WebID-RSA source=\"http://server.org/\", username=\"http://example.org/\", nonce=\"string1\", sig=\"string2\""
 	p, err := ParseDigestAuthorizationHeader(h)
+	assert.NoError(t, err)
+	assert.Equal(t, "WebID-RSA", p.Type)
+	assert.Equal(t, "http://server.org/", p.Source)
+	assert.Equal(t, "http://example.org/", p.Username)
+	assert.Equal(t, "string1", p.Nonce)
+	assert.Equal(t, "string2", p.Signature)
+
+	h = "WebID-RSA source=\"http://server.org/\", \nusername=\"http://example.org/\", \nnonce=\"string1\",\n sig=\"string2\""
+	p, err = ParseDigestAuthorizationHeader(h)
 	assert.NoError(t, err)
 	assert.Equal(t, "WebID-RSA", p.Type)
 	assert.Equal(t, "http://server.org/", p.Source)
@@ -137,10 +146,8 @@ func TestWebIDRSAAuth(t *testing.T) {
 	assert.NoError(t, err)
 
 	claim := sha1.Sum([]byte(p.Source + user1 + p.Nonce))
-
 	signed, err := signer.Sign(claim[:])
 	assert.NoError(t, err)
-
 	b64Sig := base64.StdEncoding.EncodeToString(signed)
 	assert.NotEmpty(t, b64Sig)
 
@@ -152,16 +159,36 @@ func TestWebIDRSAAuth(t *testing.T) {
 	response, err = httpClient.Do(request)
 	assert.NoError(t, err)
 	assert.Equal(t, 200, response.StatusCode)
+}
 
-	claim = sha1.Sum([]byte("http://baddude.org/" + user1 + p.Nonce))
+func TestWebIDRSAAuthBadSource(t *testing.T) {
+	request, err := http.NewRequest("GET", testServer.URL+aclDir+"abc", nil)
+	assert.NoError(t, err)
+	response, err := httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.Equal(t, 401, response.StatusCode)
+	wwwAuth := response.Header.Get("WWW-Authenticate")
+	assert.NotEmpty(t, wwwAuth)
 
-	signed, err = signer.Sign(claim[:])
+	p, _ := ParseDigestAuthenticateHeader(wwwAuth)
+
+	// Load private key
+	pKey := x509.MarshalPKCS1PrivateKey(user1k)
+	keyBytes := pem.EncodeToMemory(&pem.Block{
+		Type:  "RSA PRIVATE KEY",
+		Bytes: pKey,
+	})
+	signer, err := ParseRSAPrivatePEMKey(keyBytes)
 	assert.NoError(t, err)
 
-	b64Sig = base64.StdEncoding.EncodeToString(signed)
+	// Bad source
+	claim := sha1.Sum([]byte("http://baddude.org/" + user1 + p.Nonce))
+	signed, err := signer.Sign(claim[:])
+	assert.NoError(t, err)
+	b64Sig := base64.StdEncoding.EncodeToString(signed)
 	assert.NotEmpty(t, b64Sig)
 
-	authHeader = `WebID-RSA source="http://baddude.org/", username="` + user1 + `", nonce="` + p.Nonce + `", sig="` + b64Sig + `"`
+	authHeader := `WebID-RSA source="http://baddude.org/", username="` + user1 + `", nonce="` + p.Nonce + `", sig="` + b64Sig + `"`
 
 	request, err = http.NewRequest("GET", testServer.URL+aclDir+"abc", nil)
 	request.Header.Add("Authorization", authHeader)
