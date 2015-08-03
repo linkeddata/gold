@@ -104,10 +104,10 @@ func ParseDigestAuthenticateHeader(header string) (*DigestAuthentication, error)
 	opts := make(map[string]string)
 	parts := strings.SplitN(header, " ", 2)
 	opts["type"] = parts[0]
-	parts = strings.Split(parts[1], ", ")
+	parts = strings.Split(parts[1], ",")
 
 	for _, part := range parts {
-		vals := strings.SplitN(part, "=", 2)
+		vals := strings.SplitN(strings.TrimSpace(part), "=", 2)
 		key := vals[0]
 		val := strings.Trim(vals[1], "\",")
 		opts[key] = val
