@@ -2,7 +2,7 @@
 
 [![Join the chat at https://gitter.im/linkeddata/gold](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/linkeddata/gold?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
-Linked Data server for Go, based on [https://bitbucket.org/ww/gold](initial work done by William Waites).
+Linked Data server for Go, based on [initial work done by William Waites](https://bitbucket.org/ww/gold).
 
 [![Build Status](https://travis-ci.org/linkeddata/gold.svg?branch=master)](https://travis-ci.org/linkeddata/gold)
 
