@@ -4,7 +4,6 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/sha1"
-	"crypto/tls"
 	"crypto/x509"
 	"encoding/asn1"
 	"encoding/base64"
@@ -69,7 +68,6 @@ func WebIDDigestAuth(req *httpRequest) (string, error) {
 
 	claim := sha1.Sum([]byte(authH.Source + authH.Username + authH.Nonce))
 	signature, err := base64.StdEncoding.DecodeString(authH.Signature)
-
 	if err != nil {
 		return "", errors.New(err.Error() + " in " + authH.Signature)
 	}
@@ -108,11 +106,13 @@ func WebIDDigestAuth(req *httpRequest) (string, error) {
 		return "", err
 	}
 
+	req.debug.Println("Checking for public keys for user", authH.Username)
 	for _, keyT := range g.All(NewResource(authH.Username), ns.cert.Get("key"), nil) {
 		for range g.All(keyT.Object, ns.rdf.Get("type"), ns.cert.Get("RSAPublicKey")) {
+			req.debug.Println("Found RSA key in user's profile", keyT.Object.String())
 			for _, pubP := range g.All(keyT.Object, ns.cert.Get("pem"), nil) {
 				keyP := term2C(pubP.Object).String()
-				// loop through all the PEM keys
+				req.debug.Println("Found matching public key in user's profile", keyP[:10], "...", keyP[len(keyP)-10:len(keyP)])
 				parser, err := ParseRSAPublicPEMKey([]byte(keyP))
 				if err == nil {
 					err = parser.Verify(claim[:], signature)
@@ -120,21 +120,22 @@ func WebIDDigestAuth(req *httpRequest) (string, error) {
 						return authH.Username, nil
 					}
 				}
+				req.debug.Println("Unable to verify signature with key", keyP[:10], "...", keyP[len(keyP)-10:len(keyP)], "-- reason:", err)
 			}
 			// also loop through modulus/exp
 			for _, pubN := range g.All(keyT.Object, ns.cert.Get("modulus"), nil) {
 				keyN := term2C(pubN.Object).String()
 				for _, pubE := range g.All(keyT.Object, ns.cert.Get("exponent"), nil) {
 					keyE := term2C(pubE.Object).String()
-					// println(keyN, keyE)
+					req.debug.Println("Found matching modulus and exponent in user's profile", keyN[:10], "...", keyN[len(keyN)-10:len(keyN)])
 					parser, err := ParseRSAPublicKeyNE("RSAPublicKey", keyN, keyE)
 					if err == nil {
 						err = parser.Verify(claim[:], signature)
-						if err != nil {
-							return "", err
+						if err == nil {
+							return authH.Username, nil
 						}
-						return authH.Username, nil
 					}
+					req.debug.Println("Unable to verify signature with key", keyN[:10], "...", keyN[len(keyN)-10:len(keyN)], "-- reason:", err)
 				}
 			}
 		}
@@ -144,7 +145,8 @@ func WebIDDigestAuth(req *httpRequest) (string, error) {
 }
 
 // WebIDTLSAuth - performs WebID-TLS authentication
-func WebIDTLSAuth(tls *tls.ConnectionState) (uri string, err error) {
+func WebIDTLSAuth(req *httpRequest) (uri string, err error) {
+	tls := req.TLS
 	claim := ""
 	uri = ""
 	err = nil
@@ -235,6 +237,7 @@ func WebIDTLSAuth(tls *tls.ConnectionState) (uri string, err error) {
 				}
 			matchExponent:
 				// found a matching exponent in the profile
+				req.debug.Println("Found matching public modulus and exponent in user's profile")
 				uri = claim
 				webidL.Lock()
 				pkeyURI[pkeyk] = uri

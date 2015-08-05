@@ -39,7 +39,7 @@ func (req *httpRequest) authn(w http.ResponseWriter) string {
 		}
 	}
 
-	user, err = WebIDTLSAuth(req.TLS)
+	user, err = WebIDTLSAuth(req)
 	if err != nil {
 		req.Server.debug.Println("WebID-TLS error:", err)
 	}

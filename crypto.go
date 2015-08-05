@@ -4,7 +4,6 @@ import (
 	"crypto"
 	"crypto/rand"
 	"crypto/rsa"
-	"crypto/sha256"
 	"crypto/x509"
 	"encoding/pem"
 	"errors"
@@ -93,7 +92,7 @@ func ParseRSAPublicPEMKey(pemBytes []byte) (Verifier, error) {
 func ParseRSAPrivatePEMKey(pemBytes []byte) (Signer, error) {
 	block, _ := pem.Decode(pemBytes)
 	if block == nil {
-		return nil, errors.New("No key found")
+		return nil, errors.New("No key found or could not decode PEM key")
 	}
 
 	var rawkey interface{}
@@ -134,16 +133,10 @@ func newVerifierFromKey(k interface{}) (Verifier, error) {
 
 // Sign signs data with rsa-sha256
 func (r *rsaPrivKey) Sign(data []byte) ([]byte, error) {
-	h := sha256.New()
-	h.Write(data)
-	d := h.Sum(nil)
-	return rsa.SignPKCS1v15(rand.Reader, r.PrivateKey, crypto.SHA256, d)
+	return rsa.SignPKCS1v15(rand.Reader, r.PrivateKey, crypto.SHA1, data)
 }
 
 // Verify verifies the message using a rsa-sha256 signature
 func (r *rsaPubKey) Verify(message []byte, sig []byte) error {
-	h := sha256.New()
-	h.Write(message)
-	d := h.Sum(nil)
-	return rsa.VerifyPKCS1v15(r.PublicKey, crypto.SHA256, d, sig)
+	return rsa.VerifyPKCS1v15(r.PublicKey, crypto.SHA1, message, sig)
 }
