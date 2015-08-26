@@ -7,15 +7,11 @@ var (
 <html id="docHTML">
 <head>
     <link type="text/css" rel="stylesheet" href="https://w3.scripts.mit.edu/tabulator/tabbedtab.css" />
-    <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
     <script type="text/javascript" src="https://w3.scripts.mit.edu/tabulator/js/mashup/mashlib.js"></script>
 <script>
-jQuery.ajaxPrefilter(function(options) {
-    if (options.crossDomain) {
-        options.url = "https://data.fm/proxy?uri=" + encodeURIComponent(options.url);
-    }
-});
-jQuery(document).ready(function() {
+
+document.addEventListener('DOMContentLoaded', function() {
+    $rdf.Fetcher.crossSiteProxyTemplate = document.origin + '/` + ProxyPath + `?uri={uri}';
     var uri = window.location.href;
     window.document.title = uri;
     var kb = tabulator.kb;
