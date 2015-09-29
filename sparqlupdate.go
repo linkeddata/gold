@@ -83,7 +83,7 @@ func (sparql *SPARQLUpdate) Parse(src io.Reader) error {
 
 // SPARQLUpdate is used to update a graph from a SPARQL query
 // Ugly, needs to be improved
-func (g *Graph) SPARQLUpdate(sparql *SPARQLUpdate) error {
+func (g *Graph) SPARQLUpdate(sparql *SPARQLUpdate) (int, error) {
 	for _, query := range sparql.queries {
 		if query.verb == "DELETE" || query.verb == "DELETE DATA" {
 			for pattern := range query.graph.IterTriples() {
@@ -91,7 +91,7 @@ func (g *Graph) SPARQLUpdate(sparql *SPARQLUpdate) error {
 				for _, triple := range g.All(pattern.Subject, pattern.Predicate, nil) {
 					switch triple.Object.(type) {
 					case *BlankNode:
-						return errors.New("bnodes are not supported!")
+						return 500, errors.New("bnodes are not supported!")
 					default:
 						if pattern.Object.Equal(triple.Object) {
 							g.Remove(triple)
@@ -100,7 +100,7 @@ func (g *Graph) SPARQLUpdate(sparql *SPARQLUpdate) error {
 					}
 				}
 				if !found {
-					return errors.New("no matching triple found in graph!")
+					return 409, errors.New("no matching triple found in graph!")
 				}
 			}
 		}
@@ -112,5 +112,5 @@ func (g *Graph) SPARQLUpdate(sparql *SPARQLUpdate) error {
 			}
 		}
 	}
-	return nil
+	return 200, nil
 }

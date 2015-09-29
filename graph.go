@@ -24,7 +24,7 @@ type AnyGraph interface {
 	Serialize(string) (string, error)
 
 	JSONPatch(io.Reader) error
-	SPARQLUpdate(*SPARQLUpdate) error
+	SPARQLUpdate(*SPARQLUpdate) (int, error)
 	IterTriples() chan *Triple
 
 	ReadFile(string)
