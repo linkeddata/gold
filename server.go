@@ -737,7 +737,11 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 			case "application/sparql-update":
 				sparql := NewSPARQLUpdate(g.URI())
 				sparql.Parse(req.Body)
-				g.SPARQLUpdate(sparql)
+				err = g.SPARQLUpdate(sparql)
+				if err != nil {
+					println(err.Error())
+					return r.respond(500, "Error processing SPARQL Update "+err.Error())
+				}
 			default:
 				if dataHasParser {
 					g.Parse(req.Body, dataMime)
@@ -941,7 +945,11 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 				case "application/sparql-update":
 					sparql := NewSPARQLUpdate(g.URI())
 					sparql.Parse(req.Body)
-					g.SPARQLUpdate(sparql)
+					err = g.SPARQLUpdate(sparql)
+					if err != nil {
+						println(err.Error())
+						return r.respond(500, "Error processing SPARQL Update "+err.Error())
+					}
 				default:
 					g.Parse(req.Body, dataMime)
 				}

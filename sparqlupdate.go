@@ -2,6 +2,7 @@ package gold
 
 import (
 	"bytes"
+	"errors"
 	"io"
 	"io/ioutil"
 	"strings"
@@ -81,21 +82,35 @@ func (sparql *SPARQLUpdate) Parse(src io.Reader) error {
 }
 
 // SPARQLUpdate is used to update a graph from a SPARQL query
-func (g *Graph) SPARQLUpdate(sparql *SPARQLUpdate) {
+// Ugly, needs to be improved
+func (g *Graph) SPARQLUpdate(sparql *SPARQLUpdate) error {
 	for _, query := range sparql.queries {
-		switch query.verb {
-		case "INSERT", "INSERT DATA":
-			for triple := range query.graph.IterTriples() {
-				g.Add(triple)
-			}
-		case "DELETE", "DELETE DATA":
+		if query.verb == "DELETE" || query.verb == "DELETE DATA" {
 			for pattern := range query.graph.IterTriples() {
+				found := false
 				for _, triple := range g.All(pattern.Subject, pattern.Predicate, nil) {
-					if pattern.Object.Equal(triple.Object) {
-						g.Remove(triple)
+					switch triple.Object.(type) {
+					case *BlankNode:
+						return errors.New("bnodes are not supported!")
+					default:
+						if pattern.Object.Equal(triple.Object) {
+							g.Remove(triple)
+							found = true
+						}
 					}
+				}
+				if !found {
+					return errors.New("no matching triple found in graph!")
 				}
 			}
 		}
 	}
+	for _, query := range sparql.queries {
+		if query.verb == "INSERT" || query.verb == "INSERT DATA" {
+			for triple := range query.graph.IterTriples() {
+				g.Add(triple)
+			}
+		}
+	}
+	return nil
 }

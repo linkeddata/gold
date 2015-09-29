@@ -658,9 +658,6 @@ func TestPOSTSPARQL(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, 200, response.StatusCode)
 
-	// body, err := ioutil.ReadAll(response.Body)
-	// response.Body.Close()
-
 	request, err = http.NewRequest("POST", testServer.URL+"/_test/abc", strings.NewReader("DELETE DATA { <a> <b> <c> . }"))
 	assert.NoError(t, err)
 	request.Header.Add("Content-Type", "application/sparql-update")
@@ -715,14 +712,24 @@ func TestPATCHJson(t *testing.T) {
 }
 
 func TestPATCHSPARQL(t *testing.T) {
-	sparqlData := `INSERT DATA { <a> <b> <c> . } ; INSERT DATA { <a> <d> "123"^^<http://www.w3.org/2001/XMLSchema#int> . } ;
-					DELETE DATA { <a> <b> <c> . }; DELETE DATA { <a> <d> "123"^^<http://www.w3.org/2001/XMLSchema#int> . }`
+	sparqlData := `INSERT DATA { <a> <b> <c> . } ; INSERT DATA { <a> <d> "123"^^<http://www.w3.org/2001/XMLSchema#int> . }`
 	request, err := http.NewRequest("PATCH", testServer.URL+"/_test/abc", strings.NewReader(sparqlData))
 	assert.NoError(t, err)
 	request.Header.Add("Content-Type", "application/sparql-update")
 	response, err := httpClient.Do(request)
 	assert.NoError(t, err)
 	body, err := ioutil.ReadAll(response.Body)
+	response.Body.Close()
+	assert.Empty(t, string(body))
+	assert.Equal(t, 200, response.StatusCode)
+
+	sparqlData = `DELETE DATA { <a> <b> <c> . }; DELETE DATA { <a> <d> "123"^^<http://www.w3.org/2001/XMLSchema#int> . }`
+	request, err = http.NewRequest("PATCH", testServer.URL+"/_test/abc", strings.NewReader(sparqlData))
+	assert.NoError(t, err)
+	request.Header.Add("Content-Type", "application/sparql-update")
+	response, err = httpClient.Do(request)
+	assert.NoError(t, err)
+	body, err = ioutil.ReadAll(response.Body)
 	response.Body.Close()
 	assert.Empty(t, string(body))
 	assert.Equal(t, 200, response.StatusCode)
