@@ -82,7 +82,7 @@ func TestWebSocketSubPub(t *testing.T) {
 	n, err = ws.Read(msg)
 	assert.NoError(t, err)
 	assert.Equal(t, "ack", string(msg[:3]))
-	assert.NotEmpty(t, string(msg[5:n]))
+	assert.Equal(t, testServerWs.URL+"/", string(msg[4:n]))
 
 	_, err = ws.Write([]byte("sub " + resURL))
 	assert.NoError(t, err)
@@ -91,7 +91,7 @@ func TestWebSocketSubPub(t *testing.T) {
 	n, err = ws.Read(msg)
 	assert.NoError(t, err)
 	assert.Equal(t, "ack", string(msg[:3]))
-	assert.NotEmpty(t, string(msg[5:n]))
+	assert.Equal(t, resURL, string(msg[4:n]))
 
 	request, err := http.NewRequest("PUT", resURL, strings.NewReader("<a> <b> <c>."))
 	assert.NoError(t, err)

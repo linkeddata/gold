@@ -64,7 +64,7 @@ func websocketHandler(ws *websocket.Conn) {
 			}
 			websocketSubs[uri][ws] = NewUUID()
 			websocketSubsL.Unlock()
-			websocket.Message.Send(ws, "ack "+websocketSubs[uri][ws])
+			websocket.Message.Send(ws, "ack "+uri)
 
 		default:
 			log.Println("invalid message:", message)
