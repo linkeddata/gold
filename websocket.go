@@ -66,6 +66,15 @@ func websocketHandler(ws *websocket.Conn) {
 			websocketSubsL.Unlock()
 			websocket.Message.Send(ws, "ack "+uri)
 
+		case "unsub":
+			websocketSubsL.Lock()
+			uris[uri] = false
+			if len(websocketSubs[uri][ws]) > 0 {
+				delete(websocketSubs[uri], ws)
+			}
+			websocketSubsL.Unlock()
+			websocket.Message.Send(ws, "removed "+uri)
+
 		default:
 			log.Println("invalid message:", message)
 		}

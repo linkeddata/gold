@@ -147,6 +147,14 @@ func TestWebSocketSubPub(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, "pub "+testServerWs.URL+"/", string(msg[:n]))
 
+	_, err = ws.Write([]byte("unsub " + resURL))
+	assert.NoError(t, err)
+
+	msg = make([]byte, 512)
+	n, err = ws.Read(msg)
+	assert.NoError(t, err)
+	assert.Equal(t, "removed "+resURL, string(msg[:n]))
+
 	err = os.RemoveAll("_test/")
 	assert.NoError(t, err)
 }
