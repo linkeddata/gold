@@ -528,7 +528,6 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 								if info.IsDir() {
 									_s = NewResource(f.URI)
 									if !showEmpty {
-										g.AddTriple(_s, NewResource("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), NewResource("http://www.w3.org/ns/posix/stat#Directory"))
 										g.AddTriple(_s, NewResource("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), NewResource("http://www.w3.org/ns/ldp#BasicContainer"))
 										g.AddTriple(_s, NewResource("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), NewResource("http://www.w3.org/ns/ldp#Container"))
 									}
@@ -544,8 +543,7 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 								} else {
 									_s = NewResource(f.URI)
 									if !showEmpty {
-										g.AddTriple(_s, NewResource("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), NewResource("http://www.w3.org/ns/posix/stat#File"))
-										g.AddTriple(_s, NewResource("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), NewResource("http://www.w3.org/2000/01/rdf-schema#Resource"))
+										g.AddTriple(_s, NewResource("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), NewResource("http://www.w3.org/ns/ldp#Resource"))
 										// add type if RDF resource
 										//infoUrl, _ := url.Parse(info.Name())
 										guessType, _ := magic.TypeByFile(f.File)

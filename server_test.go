@@ -1088,10 +1088,10 @@ func TestLISTDIR(t *testing.T) {
 	assert.NotNil(t, g.One(f, ns.stat.Get("mtime"), nil))
 	assert.NotNil(t, g.One(f, ns.rdf.Get("type"), NewResource("http://example.org/abc")))
 	assert.Equal(t, g.One(f, ns.rdf.Get("type"), NewResource("http://example.org/abc")).Object, NewResource("http://example.org/abc"))
-	assert.Equal(t, g.One(f, ns.rdf.Get("type"), ns.stat.Get("File")).Object, ns.stat.Get("File"))
+	assert.Equal(t, g.One(f, ns.rdf.Get("type"), ns.ldp.Get("Resource")).Object, ns.ldp.Get("Resource"))
 
 	d := NewResource(testServer.URL + "/_test/dir/")
-	assert.Equal(t, g.One(d, ns.rdf.Get("type"), ns.stat.Get("Directory")).Object, ns.stat.Get("Directory"))
+	assert.Equal(t, g.One(d, ns.rdf.Get("type"), ns.ldp.Get("Container")).Object, ns.ldp.Get("Container"))
 	assert.NotNil(t, g.One(d, ns.stat.Get("size"), nil))
 	assert.NotNil(t, g.One(d, ns.stat.Get("mtime"), nil))
 }
