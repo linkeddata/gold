@@ -158,6 +158,7 @@ func main() {
 	)
 
 	tlsConfig.Certificates = make([]tls.Certificate, 1)
+	tlsConfig.MinVersion = tls.VersionTLS10
 	if len(config.TLSCert) == 0 && len(config.TLSKey) == 0 {
 		tlsConfig.Certificates[0], err = tls.X509KeyPair(tlsTestCert, tlsTestKey)
 	} else {
