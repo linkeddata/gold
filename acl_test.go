@@ -980,8 +980,10 @@ func TestACLCleanUp(t *testing.T) {
 func TestACLwalkPath(t *testing.T) {
 	config.Debug = false
 	s := NewServer(config)
+	req := &httpRequest{nil, s, "", ""}
+
 	path := "http://example.org/foo/bar/baz"
-	p, _ := s.pathInfo(path)
+	p, _ := req.pathInfo(path)
 
 	depth := strings.Split(p.Path, "/")
 	var results []string

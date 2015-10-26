@@ -1,10 +1,9 @@
 package gold
 
 import (
-	// "errors"
+	"errors"
 	crdf "github.com/presbrey/goraptor"
 	"mime"
-	// "net/http"
 	"path/filepath"
 )
 
@@ -119,86 +118,73 @@ func MimeLookup(path string) (string, string, bool) {
 // even if the resource (path) contains a different extension
 // Only works with Go 1.5+
 //@@TODO should switch to a more comprehensive list of mime-to-ext (instead of using go's internal list)
-// func MapPathToExtension(path string, ctype string, data ...[]byte) (string, error) {
-// 	if len(path) == 0 {
-// 		return "", errors.New("MapPathToExt -- missing path or ctype value")
-// 	}
-// 	if path[len(path)-1:] == "/" {
-// 		return path, nil
-// 	}
+func MapPathToExtension(path string, ctype string) (string, error) {
+	if len(path) == 0 {
+		return "", errors.New("MapPathToExt -- missing path or ctype value")
+	}
+	if path[len(path)-1:] == "/" {
+		return path, nil
+	}
 
-// 	fileCType, ext, _ := MimeLookup(path)
-// 	if len(fileCType) > 0 {
-// 		fileCType, _, _ = mime.ParseMediaType(fileCType)
-// 		if len(ctype) > 0 {
-// 			if fileCType != ctype {
-// 				// append the extension corresponding to Content-Type header
-// 				newExt, err := mime.ExtensionsByType(ctype)
-// 				if err != nil {
-// 					return "", err
-// 				}
-// 				if len(newExt) > 0 {
-// 					ext = newExt[0]
-// 				}
-// 				path += "$" + ext
-// 			}
-// 		}
-// 	} else {
-// 		if len(ext) > 0 {
-// 			if len(ctype) > 0 {
-// 				newExt, err := mime.ExtensionsByType(ctype)
-// 				if err != nil {
-// 					return "", err
-// 				}
-// 				if len(newExt) > 0 {
-// 					match := false
-// 					for _, e := range newExt {
-// 						if e == ext {
-// 							match = true
-// 							break
-// 						}
-// 					}
-// 					if !match {
-// 						// could not find matching extension
-// 						if !IsRdfExtension(newExt[0]) {
-// 							path += "$" + newExt[0]
-// 						}
-// 					}
-// 				}
-// 			}
-// 		} else {
-// 			// !fileCtype, !ext, ctype
-// 			if len(ctype) > 0 {
-// 				// maybe it's an RDF resource
-// 				if ext = LookupExt(ctype); len(ext) > 0 {
-// 					path += ext
-// 				} else {
-// 					newExt, err := mime.ExtensionsByType(ctype)
-// 					if err != nil {
-// 						return "", err
-// 					}
-// 					if len(newExt) > 0 {
-// 						path += newExt[0]
-// 					}
-// 				}
-// 			} else {
-// 				// try to infer from data
-// 				if len(data) == 0 {
-// 					return "", errors.New("Cannot infer mime type from from empty file")
-// 				}
-// 				// sniff
-// 				body := data[0]
-// 				fileCType = http.DetectContentType(body)
-// 				newExt, err := mime.ExtensionsByType(fileCType)
-// 				if err != nil {
-// 					return "", err
-// 				}
-// 				if len(newExt) > 0 {
-// 					path += newExt[0]
-// 				}
-// 			}
-// 		}
-// 	}
+	fileCType, ext, _ := MimeLookup(path)
+	if len(fileCType) > 0 {
+		fileCType, _, _ = mime.ParseMediaType(fileCType)
+		if len(ctype) > 0 {
+			if fileCType != ctype {
+				// append the extension corresponding to Content-Type header
+				newExt, err := mime.ExtensionsByType(ctype)
+				if err != nil {
+					return "", err
+				}
+				if len(newExt) > 0 {
+					ext = newExt[0]
+				}
+				path += "$" + ext
+			}
+		}
+	} else {
+		if len(ext) > 0 {
+			if len(ctype) > 0 {
+				newExt, err := mime.ExtensionsByType(ctype)
+				if err != nil {
+					return "", err
+				}
+				if len(newExt) > 0 {
+					match := false
+					for _, e := range newExt {
+						if e == ext {
+							match = true
+							break
+						}
+					}
+					if !match {
+						// could not find matching extension
+						if !IsRdfExtension(newExt[0]) {
+							path += "$" + newExt[0]
+						}
+					}
+				}
+			}
+		} else {
+			// !fileCtype, !ext, ctype
+			if len(ctype) > 0 {
+				// maybe it's an RDF resource
+				if ext = LookupExt(ctype); len(ext) > 0 {
+					path += ext
+				} else {
+					newExt, err := mime.ExtensionsByType(ctype)
+					if err != nil {
+						return "", err
+					}
+					if len(newExt) > 0 {
+						path += newExt[0]
+					}
+				}
+			} else {
+				return "", errors.New("Cannot infer mime type from from empty file")
+			}
+		}
+	}
 
-// 	return path, nil
-// }
+	return path, nil
+}

@@ -32,7 +32,7 @@ type pathInfo struct {
 	Size      int64
 }
 
-func (s *Server) pathInfo(path string) (*pathInfo, error) {
+func (req *httpRequest) pathInfo(path string) (*pathInfo, error) {
 	res := &pathInfo{}
 
 	if len(path) == 0 {
@@ -50,7 +50,7 @@ func (s *Server) pathInfo(path string) (*pathInfo, error) {
 	}
 
 	res.Base = p.Scheme + "://" + p.Host
-	res.Root = s.Config.DataRoot
+	res.Root = req.Server.Config.DataRoot
 	// include host and port if running in vhosts mode
 	host, port, _ := net.SplitHostPort(p.Host)
 	if len(host) == 0 {
@@ -59,8 +59,8 @@ func (s *Server) pathInfo(path string) (*pathInfo, error) {
 	if len(port) > 0 {
 		host += ":" + port
 	}
-	if s.Config.Vhosts {
-		res.Root = s.Config.DataRoot + host + "/"
+	if req.Server.Config.Vhosts {
+		res.Root = req.Server.Config.DataRoot + host + "/"
 		res.Base = p.Scheme + "://" + host
 	}
 
@@ -78,10 +78,10 @@ func (s *Server) pathInfo(path string) (*pathInfo, error) {
 	res.File = p.Path
 	res.Path = p.Path
 
-	if s.Config.Vhosts {
+	if req.Server.Config.Vhosts {
 		res.File = res.Root + p.Path
-	} else if len(s.Config.DataRoot) > 0 {
-		res.File = s.Config.DataRoot + p.Path
+	} else if len(req.Server.Config.DataRoot) > 0 {
+		res.File = req.Server.Config.DataRoot + p.Path
 	}
 
 	res.Exists = true
@@ -105,7 +105,7 @@ func (s *Server) pathInfo(path string) (*pathInfo, error) {
 			if len(res.FileType) == 0 {
 				res.FileType, err = magic.TypeByFile(res.File)
 				if err != nil {
-					s.debug.Println(err)
+					req.Server.debug.Println(err)
 				}
 			}
 		}
@@ -125,21 +125,21 @@ func (s *Server) pathInfo(path string) (*pathInfo, error) {
 		res.ParentURI = res.Base + "/" + filepath.Dir(res.Path) + "/"
 	}
 
-	if strings.HasSuffix(res.Path, s.Config.ACLSuffix) {
+	if strings.HasSuffix(res.Path, req.Server.Config.ACLSuffix) {
 		res.AclURI = res.URI
 		res.AclFile = res.File
 		res.MetaURI = res.URI
 		res.MetaFile = res.File
-	} else if strings.HasSuffix(res.Path, s.Config.MetaSuffix) {
-		res.AclURI = res.URI + s.Config.ACLSuffix
-		res.AclFile = res.File + s.Config.ACLSuffix
+	} else if strings.HasSuffix(res.Path, req.Server.Config.MetaSuffix) {
+		res.AclURI = res.URI + req.Server.Config.ACLSuffix
+		res.AclFile = res.File + req.Server.Config.ACLSuffix
 		res.MetaURI = res.URI
 		res.MetaFile = res.File
 	} else {
-		res.AclURI = res.URI + s.Config.ACLSuffix
-		res.AclFile = res.File + s.Config.ACLSuffix
-		res.MetaURI = res.URI + s.Config.MetaSuffix
-		res.MetaFile = res.File + s.Config.MetaSuffix
+		res.AclURI = res.URI + req.Server.Config.ACLSuffix
+		res.AclFile = res.File + req.Server.Config.ACLSuffix
+		res.MetaURI = res.URI + req.Server.Config.MetaSuffix
+		res.MetaFile = res.File + req.Server.Config.MetaSuffix
 	}
 
 	return res, nil

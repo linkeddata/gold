@@ -68,6 +68,8 @@ func (e *errorString) Error() string {
 type httpRequest struct {
 	*http.Request
 	*Server
+	AcceptType  string
+	ContentType string
 }
 
 func (req httpRequest) BaseURI() string {
@@ -214,7 +216,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	defer func() {
 		req.Body.Close()
 	}()
-	r := s.handle(w, &httpRequest{req, s})
+	r := s.handle(w, &httpRequest{req, s, "", ""})
 	for key := range r.headers {
 		w.Header().Set(key, r.headers.Get(key))
 	}
@@ -268,7 +270,7 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 		return r.respond(resp.Status, resp.Body)
 	}
 
-	resource, _ := s.pathInfo(req.BaseURI())
+	resource, _ := req.pathInfo(req.BaseURI())
 	s.debug.Println(req.RemoteAddr + " requested resource URI: " + resource.URI)
 	s.debug.Println(req.RemoteAddr + " requested resource Path: " + resource.File)
 
@@ -281,6 +283,7 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 			s.debug.Println("Request contains unsupported Media Type:" + dataMime)
 			return r.respond(415, "HTTP 415 - Unsupported Media Type:", dataMime)
 		}
+		req.ContentType = dataMime
 	}
 
 	// Content Negotiation
@@ -292,6 +295,7 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 			s.debug.Println("Accept type not acceptable: " + err.Error())
 			return r.respond(406, "HTTP 406 - Accept type not acceptable: "+err.Error())
 		}
+		req.AcceptType = contentType
 	}
 
 	// set ACL Link header
@@ -354,7 +358,7 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 			} else {
 				path += "/"
 			}
-			resource, err = s.pathInfo(resource.Base + "/" + path)
+			resource, err = req.pathInfo(resource.Base + "/" + path)
 			if err != nil {
 				return r.respond(500, err)
 			}
@@ -416,7 +420,7 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 					_, xerr := os.Stat(resource.File + dirIndex)
 					status = 200
 					if xerr == nil {
-						resource, err = s.pathInfo(resource.Base + "/" + resource.Path + dirIndex)
+						resource, err = req.pathInfo(resource.Base + "/" + resource.Path + dirIndex)
 						if err != nil {
 							return r.respond(500, err)
 						}
@@ -460,22 +464,7 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 					matches, err := filepath.Glob(globPath)
 					if err == nil {
 						for _, file := range matches {
-							// if !stat.IsDir() && serr == nil {
-							// 	// TODO: check acls
-							// 	guessType, _ := magic.TypeByFile(file)
-							// 	if guessType == "text/plain" {
-							// 		res, err := s.pathInfo(resource.Base + "/" + filepath.Dir(resource.Path) + "/" + filepath.Base(file))
-							// 		if err != nil {
-							// 			return r.respond(500, err)
-							// 		}
-							// 		aclStatus, err = acl.AllowRead(res.URI)
-							// 		if aclStatus == 200 && err == nil {
-							// 			g.AppendFile(res.File, res.URI)
-							// 			g.AddTriple(root, NewResource("http://www.w3.org/ns/ldp#contains"), NewResource(res.URI))
-							// 		}
-							// 	}
-							// }
-							res, err := s.pathInfo(resource.Base + "/" + filepath.Dir(resource.Path) + "/" + filepath.Base(file))
+							res, err := req.pathInfo(resource.Base + "/" + filepath.Dir(resource.Path) + "/" + filepath.Base(file))
 							if !res.IsDir && res.Exists && err == nil {
 								aclStatus, err = acl.AllowRead(res.URI)
 								if aclStatus == 200 && err == nil {
@@ -521,7 +510,7 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 								if info.IsDir() {
 									res += "/"
 								}
-								f, err := s.pathInfo(res)
+								f, err := req.pathInfo(res)
 								if err != nil {
 									r.respond(500, err)
 								}
@@ -827,9 +816,9 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 				if !strings.HasSuffix(resource.Path, "/") {
 					resource.Path += "/"
 				}
-				resource, err = s.pathInfo(resource.Base + "/" + resource.Path)
+				resource, err = req.pathInfo(resource.Base + "/" + resource.Path)
 				if err != nil {
-					s.debug.Println("POST LDPC s.pathInfo err: " + err.Error())
+					s.debug.Println("POST LDPC req.pathInfo err: " + err.Error())
 					return r.respond(500, err)
 				}
 
@@ -866,9 +855,9 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 				return r.respond(201)
 			}
 
-			resource, err = s.pathInfo(resource.Base + "/" + resource.Path)
+			resource, err = req.pathInfo(resource.Base + "/" + resource.Path)
 			if err != nil {
-				s.debug.Println("POST LDPR s.pathInfo err: " + err.Error())
+				s.debug.Println("POST LDPR req.pathInfo err: " + err.Error())
 				return r.respond(500, err)
 			}
 			w.Header().Set("Location", resource.URI)
@@ -1026,7 +1015,7 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 				return r.respond(500, err)
 			}
 			// refresh resource and set the right headers
-			resource, err = s.pathInfo(resource.URI)
+			resource, err = req.pathInfo(resource.URI)
 			w.Header().Set("Link", brack(resource.MetaURI)+"; rel=\"meta\", "+brack(resource.AclURI)+"; rel=\"acl\"")
 			// LDP header
 			w.Header().Add("Link", brack("http://www.w3.org/ns/ldp#Resource")+"; rel=\"type\"")

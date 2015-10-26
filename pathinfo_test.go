@@ -8,7 +8,8 @@ import (
 
 func TestPathInfoWithoutTrailingSlash(t *testing.T) {
 	sroot := serverDefaultRoot()
-	p, err := handler.pathInfo(testServer.URL)
+	req := &httpRequest{nil, handler, "", ""}
+	p, err := req.pathInfo(testServer.URL)
 	assert.Nil(t, err)
 	assert.Equal(t, testServer.URL+"/", p.URI)
 	assert.Equal(t, testServer.URL, p.Base)
@@ -24,8 +25,9 @@ func TestPathInfoWithoutTrailingSlash(t *testing.T) {
 
 func TestPathInfoWithTrailingSlash(t *testing.T) {
 	sroot := serverDefaultRoot()
+	req := &httpRequest{nil, handler, "", ""}
 
-	p, err := handler.pathInfo(testServer.URL + "/")
+	p, err := req.pathInfo(testServer.URL + "/")
 	assert.Nil(t, err)
 	assert.Equal(t, testServer.URL, p.Base)
 	assert.Equal(t, testServer.URL+"/", p.URI)
@@ -42,8 +44,9 @@ func TestPathInfoWithTrailingSlash(t *testing.T) {
 func TestPathInfoWithPath(t *testing.T) {
 	path := testServer.URL + "/_test/"
 	sroot := serverDefaultRoot()
+	req := &httpRequest{nil, handler, "", ""}
 
-	p, err := handler.pathInfo(path)
+	p, err := req.pathInfo(path)
 	assert.Nil(t, err)
 	assert.Equal(t, path, p.URI)
 	assert.Equal(t, testServer.URL, p.Base)
@@ -60,8 +63,9 @@ func TestPathInfoWithPath(t *testing.T) {
 func TestPathInfoWithPathAndChildDir(t *testing.T) {
 	path := testServer.URL + "/_test/"
 	sroot := serverDefaultRoot()
+	req := &httpRequest{nil, handler, "", ""}
 
-	p, err := handler.pathInfo(path + "dir/")
+	p, err := req.pathInfo(path + "dir/")
 	assert.Nil(t, err)
 	assert.Equal(t, path+"dir/", p.URI)
 	assert.Equal(t, testServer.URL, p.Base)
@@ -79,8 +83,9 @@ func TestPathInfoWithPathAndChildDir(t *testing.T) {
 func TestPathInfoWithPathAndChildFile(t *testing.T) {
 	path := testServer.URL + "/_test/"
 	sroot := serverDefaultRoot()
+	req := &httpRequest{nil, handler, "", ""}
 
-	p, err := handler.pathInfo(path + "abc")
+	p, err := req.pathInfo(path + "abc")
 	assert.Nil(t, err)
 	assert.Equal(t, path+"abc", p.URI)
 	assert.Equal(t, testServer.URL, p.Base)
@@ -98,9 +103,9 @@ func TestPathInfoWithPathAndChildFile(t *testing.T) {
 func TestPathInfoWithPathAndACLSuffix(t *testing.T) {
 	path := testServer.URL + "/_test/"
 	sroot := serverDefaultRoot()
+	req := &httpRequest{nil, handler, "", ""}
 
-	p, err := handler.pathInfo(path + config.ACLSuffix)
-	p, err = handler.pathInfo(path + config.ACLSuffix)
+	p, err := req.pathInfo(path + config.ACLSuffix)
 	assert.Nil(t, err)
 	assert.Equal(t, path+config.ACLSuffix, p.URI)
 	assert.Equal(t, testServer.URL, p.Base)
@@ -117,9 +122,9 @@ func TestPathInfoWithPathAndACLSuffix(t *testing.T) {
 func TestPathInfoWithPathAndMetaSuffix(t *testing.T) {
 	path := testServer.URL + "/_test/"
 	sroot := serverDefaultRoot()
+	req := &httpRequest{nil, handler, "", ""}
 
-	p, err := handler.pathInfo(path + config.MetaSuffix)
-	p, err = handler.pathInfo(path + config.MetaSuffix)
+	p, err := req.pathInfo(path + config.MetaSuffix)
 	assert.Nil(t, err)
 	assert.Equal(t, path+config.MetaSuffix, p.URI)
 	assert.Equal(t, testServer.URL, p.Base)

@@ -77,13 +77,13 @@ func sendRecoveryToken(w http.ResponseWriter, req *httpRequest, s *Server) Syste
 	webid := req.FormValue("webid")
 	// exit if not a local WebID
 	// log.Println("Host:" + req.Header.Get("Host"))
-	resource, err := s.pathInfo(req.BaseURI())
+	resource, err := req.pathInfo(req.BaseURI())
 	if err != nil {
 		s.debug.Println("PathInfo error: " + err.Error())
 		return SystemReturn{Status: 500, Body: err.Error()}
 	}
 	// try to fetch recovery email from root ,acl
-	resource, _ = s.pathInfo(resource.Base)
+	resource, _ = req.pathInfo(resource.Base)
 	email := ""
 	kb := NewGraph(resource.AclURI)
 	kb.ReadFile(resource.AclFile)
@@ -152,7 +152,7 @@ func validateRecoveryToken(w http.ResponseWriter, req *httpRequest, s *Server) S
 }
 
 func newAccount(w http.ResponseWriter, req *httpRequest, s *Server) SystemReturn {
-	resource, _ := s.pathInfo(req.BaseURI())
+	resource, _ := req.pathInfo(req.BaseURI())
 	host, port, _ := net.SplitHostPort(req.Host)
 	if len(host) == 0 {
 		host = req.Host
@@ -170,7 +170,7 @@ func newAccount(w http.ResponseWriter, req *httpRequest, s *Server) SystemReturn
 	}
 	webidURL := accountBase + "profile/card"
 	webidURI := webidURL + "#me"
-	resource, _ = s.pathInfo(webidURL)
+	resource, _ = req.pathInfo(webidURL)
 
 	spkac := req.FormValue("spkac")
 	var newSpkac []byte
@@ -282,7 +282,7 @@ func newAccount(w http.ResponseWriter, req *httpRequest, s *Server) SystemReturn
 
 	// Write default ACL for the whole account space
 	// No one but the user is allowed access by default
-	resource, _ = s.pathInfo(accountBase)
+	resource, _ = req.pathInfo(accountBase)
 	aclTerm := NewResource(resource.AclURI + "#owner")
 	g := NewGraph(resource.AclURI)
 	g.AddTriple(aclTerm, ns.rdf.Get("type"), ns.acl.Get("Authorization"))
@@ -329,7 +329,7 @@ func newAccount(w http.ResponseWriter, req *httpRequest, s *Server) SystemReturn
 }
 
 func newCert(w http.ResponseWriter, req *httpRequest, s *Server) SystemReturn {
-	resource, _ := s.pathInfo(req.BaseURI())
+	resource, _ := req.pathInfo(req.BaseURI())
 
 	name := req.FormValue("name")
 	webidURI := req.FormValue("webid")
@@ -373,7 +373,7 @@ func newCert(w http.ResponseWriter, req *httpRequest, s *Server) SystemReturn {
 // }
 // @@TODO treat exceptions
 func accountStatus(w http.ResponseWriter, req *httpRequest, s *Server) SystemReturn {
-	resource, _ := s.pathInfo(req.BaseURI())
+	resource, _ := req.pathInfo(req.BaseURI())
 	host, port, _ := net.SplitHostPort(req.Host)
 	if len(host) == 0 {
 		host = req.Host
@@ -407,7 +407,7 @@ func accountStatus(w http.ResponseWriter, req *httpRequest, s *Server) SystemRet
 		accURL = resource.Obj.Scheme + "://" + accName + "." + host + port + "/"
 	}
 	isAvailable := true
-	resource, _ = s.pathInfo(accURL)
+	resource, _ = req.pathInfo(accURL)
 
 	s.debug.Println("Checking if account <" + accReq.AccountName + "> exists...")
 	stat, err := os.Stat(resource.File)
@@ -437,7 +437,7 @@ func accountStatus(w http.ResponseWriter, req *httpRequest, s *Server) SystemRet
 }
 
 func accountInfo(w http.ResponseWriter, req *httpRequest, s *Server) SystemReturn {
-	resource, _ := s.pathInfo(req.BaseURI())
+	resource, _ := req.pathInfo(req.BaseURI())
 	totalSize, err := DiskUsage(resource.Root)
 	if err != nil {
 		return SystemReturn{Status: 500, Body: err.Error()}
