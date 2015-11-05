@@ -26,12 +26,16 @@ document.addEventListener('DOMContentLoaded', function() {
 </div>
 </body>
 </html>`,
-		"404": `<!DOCTYPE html>
+		"newCert": `<!DOCTYPE html>
 <html id="docHTML">
-<head>
-</head>
 <body>
-    <h1>404 - oh noes, there's nothing here</h1>
+    <form method="POST">
+    <h2>Issue new certificate</h2>
+    Name: <input type="text" name="name">
+    WebID: <input type="text" name="webid">
+    <keygen id="spkacWebID" name="spkac" challenge="randomchars" keytype="rsa" hidden></keygen>
+    <input type="submit" value="Issue">
+    </form>
 </body>
 </html>`,
 		"accountRecovery": `<!DOCTYPE html>
@@ -44,16 +48,30 @@ document.addEventListener('DOMContentLoaded', function() {
     </form>
 </body>
 </html>`,
-		"newCert": `<!DOCTYPE html>
+		"401": `<!DOCTYPE html>
 <html id="docHTML">
+<head>
+</head>
 <body>
-    <form method="POST">
-    <h2>Issue new certificate</h2>
-    Name: <input type="text" name="name">
-    WebID: <input type="text" name="webid">
-    <keygen id="spkacWebID" name="spkac" challenge="randomchars" keytype="rsa" hidden></keygen>
-    <input type="submit" value="Issue">
-    </form>
+    <h1>401 - oh noes, you need to authenticate!</h1>
+    <h2>Do you need a WebID? You can sign up for one at <a href="https://databox.me/" target="_blank">databox.me</a>.</h2>
+</body>
+</html>`,
+		"403": `<!DOCTYPE html>
+<html id="docHTML">
+<head>
+</head>
+<body>
+    <h1>403 - oh noes, access denied!</h1>
+    <h2>Please visit the <a href="/` + SystemPrefix + `/accountRecovery">recovery page</a> in case you have lost access to your credentials.</h2>
+</body>
+</html>`,
+		"404": `<!DOCTYPE html>
+<html id="docHTML">
+<head>
+</head>
+<body>
+    <h1>404 - oh noes, there's nothing here</h1>
 </body>
 </html>`,
 	}

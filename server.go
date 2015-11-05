@@ -136,9 +136,9 @@ func handleStatusText(status int, err error) string {
 	case 200:
 		return "HTTP 200 - OK"
 	case 401:
-		return "HTTP 401 - Unauthorized\n\n" + err.Error()
+		return Skins["401"]
 	case 403:
-		return "HTTP 403 - Forbidden\n\n" + err.Error()
+		return Skins["403"]
 	case 404:
 		return "HTTP 404 - Not found\n\n" + err.Error()
 	case 500:
