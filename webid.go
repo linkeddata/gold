@@ -21,12 +21,10 @@ const (
 )
 
 type webidAccount struct {
-	URI      string
-	Name     string
-	Email    string
-	Img      string
-	Modulus  string
-	Exponent string
+	URI   string
+	Name  string
+	Email string
+	Img   string
 }
 
 var (
@@ -271,29 +269,31 @@ func WebIDFromCert(cert []byte) (string, error) {
 	return "", nil
 }
 
-// NewWebIDProfileWithKeys creates a WebID profile graph and corresponding keys
-func NewWebIDProfileWithKeys(uri string) (*Graph, *rsa.PrivateKey, *rsa.PublicKey, error) {
+// AddProfileKeys creates a WebID profile graph and corresponding keys
+func AddProfileKeys(uri string, g *Graph) (*Graph, *rsa.PrivateKey, *rsa.PublicKey, error) {
 	priv, err := rsa.GenerateKey(rand.Reader, rsaBits)
 	if err != nil {
 		return nil, nil, nil, err
 	}
 	pub := &priv.PublicKey
-	var account = webidAccount{
-		URI:      uri,
-		Modulus:  fmt.Sprintf("%x", pub.N),
-		Exponent: fmt.Sprintf("%d", pub.E),
-	}
-	g := NewWebIDProfile(account)
+
+	profileURI := strings.Split(uri, "#")[0]
+	userTerm := NewResource(uri)
+	keyTerm := NewResource(profileURI + "#key")
+
+	g.AddTriple(userTerm, ns.cert.Get("key"), keyTerm)
+	g.AddTriple(keyTerm, ns.rdf.Get("type"), ns.cert.Get("RSAPublicKey"))
+	g.AddTriple(keyTerm, ns.cert.Get("modulus"), NewLiteralWithDatatype(fmt.Sprintf("%x", pub.N), NewResource("http://www.w3.org/2001/XMLSchema#hexBinary")))
+	g.AddTriple(keyTerm, ns.cert.Get("exponent"), NewLiteralWithDatatype(fmt.Sprintf("%d", pub.E), NewResource("http://www.w3.org/2001/XMLSchema#int")))
+
 	return g, priv, pub, nil
 }
 
 // NewWebIDProfile creates a WebID profile graph based on account data
 func NewWebIDProfile(account webidAccount) *Graph {
-
 	profileURI := strings.Split(account.URI, "#")[0]
 	userTerm := NewResource(account.URI)
 	profileTerm := NewResource(profileURI)
-	keyTerm := NewResource(profileURI + "#key")
 
 	g := NewGraph(profileURI)
 	g.AddTriple(profileTerm, ns.rdf.Get("type"), ns.foaf.Get("PersonalProfileDocument"))
@@ -311,9 +311,5 @@ func NewWebIDProfile(account webidAccount) *Graph {
 	if len(account.Img) > 0 {
 		g.AddTriple(userTerm, ns.foaf.Get("img"), NewResource(account.Img))
 	}
-	g.AddTriple(userTerm, ns.cert.Get("key"), keyTerm)
-	g.AddTriple(keyTerm, ns.rdf.Get("type"), ns.cert.Get("RSAPublicKey"))
-	g.AddTriple(keyTerm, ns.cert.Get("modulus"), NewLiteralWithDatatype(account.Modulus, NewResource("http://www.w3.org/2001/XMLSchema#hexBinary")))
-	g.AddTriple(keyTerm, ns.cert.Get("exponent"), NewLiteralWithDatatype(account.Exponent, NewResource("http://www.w3.org/2001/XMLSchema#int")))
 	return g
 }

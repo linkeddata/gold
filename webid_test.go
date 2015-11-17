@@ -18,8 +18,13 @@ func TestWebIDTLSauth(t *testing.T) {
 	assert.Equal(t, user1, response.Header.Get("User"))
 }
 
-func TestNewWebIDProfileWithKeys(t *testing.T) {
-	g, k, p, err := NewWebIDProfileWithKeys(user1)
+func TestAddProfileKeys(t *testing.T) {
+	webid := testServer.URL + "/_test/user1#id"
+	var account = webidAccount{
+		URI: webid,
+	}
+	g := NewWebIDProfile(account)
+	g, k, p, err := AddProfileKeys(webid, g)
 	assert.NoError(t, err)
 	assert.NotNil(t, k)
 	assert.NotNil(t, p)
