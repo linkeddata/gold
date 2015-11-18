@@ -1,6 +1,7 @@
 package gold
 
 import (
+	"crypto/rsa"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -170,9 +171,14 @@ func newAccount(w http.ResponseWriter, req *httpRequest, s *Server) SystemReturn
 	resource, _ = req.pathInfo(webidURL)
 
 	account := webidAccount{
-		URI:  webidURI,
-		Name: req.FormValue("name"),
-		Img:  req.FormValue("img"),
+		Root:     resource.Root,
+		BaseURI:  resource.Base,
+		Document: resource.File,
+		WebID:    webidURI,
+		PrefURI:  accountBase + "Preferences/prefs.ttl",
+		Email:    req.FormValue("email"),
+		Name:     req.FormValue("name"),
+		Img:      req.FormValue("img"),
 	}
 
 	s.debug.Println("Checking if account profile <" + resource.File + "> exists...")
@@ -237,6 +243,13 @@ func newAccount(w http.ResponseWriter, req *httpRequest, s *Server) SystemReturn
 	err = g.WriteFile(f, "text/turtle")
 	if err != nil {
 		s.debug.Println("Saving profile acl error: " + err.Error())
+		return SystemReturn{Status: 500, Body: err.Error()}
+	}
+
+	// Create workspaces and preferencesFile
+	err = req.AddWorkspaces(account, g)
+	if err != nil {
+		s.debug.Println("Error setting up workspaces: " + err.Error())
 		return SystemReturn{Status: 500, Body: err.Error()}
 	}
 
@@ -327,6 +340,22 @@ func newCert(w http.ResponseWriter, req *httpRequest, s *Server) SystemReturn {
 		}
 		// Prefer loading cert in iframe, to access onLoad events in the browser for the iframe
 		body := `<iframe width="0" height="0" style="display: none;" src="data:application/x-x509-user-cert;base64,` + base64.StdEncoding.EncodeToString(newSpkac) + `"></iframe>`
+
+		// Append cert to profile if it's the case
+		loggedUser := w.Header().Get("User")
+		if len(loggedUser) > 0 && loggedUser == webidURI && strings.HasPrefix(webidURI, req.BaseURI()) {
+			pubKey, err := ParseSPKAC(spkac)
+			if err != nil {
+				s.debug.Println("ParseSPKAC error: " + err.Error())
+			}
+			rsaPub := pubKey.(*rsa.PublicKey)
+			mod := fmt.Sprintf("%x", rsaPub.N)
+			exp := fmt.Sprintf("%d", rsaPub.E)
+			err = req.AddCertKeys(webidURI, mod, exp)
+			if err != nil {
+				s.debug.Println("Couldn't add cert keys to profile: " + err.Error())
+			}
+		}
 
 		return SystemReturn{Status: 200, Body: body}
 	} else if strings.Contains(req.Header.Get("Accept"), "text/html") {

@@ -20,7 +20,9 @@ func TestACLInit(t *testing.T) {
 
 	user1 = testServer.URL + "/_test/user1#id"
 	var user1_account = webidAccount{
-		URI: user1,
+		WebID:   user1,
+		BaseURI: testServer.URL + "/_test/",
+		PrefURI: testServer.URL + "/_test/Preferences/prefs.ttl",
 	}
 	user1g := NewWebIDProfile(user1_account)
 	user1g, user1k, user1p, err = AddProfileKeys(user1, user1g)
@@ -45,7 +47,9 @@ func TestACLInit(t *testing.T) {
 
 	user2 = testServer.URL + "/_test/user2#id"
 	var user2_account = webidAccount{
-		URI: user2,
+		WebID:   user2,
+		BaseURI: testServer.URL + "/_test/",
+		PrefURI: testServer.URL + "/_test/Preferences/prefs.ttl",
 	}
 	user2g := NewWebIDProfile(user2_account)
 	user2g, user2k, user2p, err = AddProfileKeys(user2, user2g)

@@ -9,6 +9,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -21,9 +22,20 @@ const (
 )
 
 type webidAccount struct {
-	URI  string
-	Name string
-	Img  string
+	Root     string
+	BaseURI  string
+	Document string
+	WebID    string
+	PrefURI  string
+	Name     string
+	Email    string
+	Img      string
+}
+
+type workspace struct {
+	Name  string
+	Label string
+	Type  string
 }
 
 var (
@@ -32,13 +44,14 @@ var (
 	notBefore = time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC)
 	notAfter  = time.Date(2049, 12, 31, 23, 59, 59, 0, time.UTC)
 
-	workspaces = map[string]bool{
-		"Public":       true,
-		"Private":      false,
-		"Work":         false,
-		"Shared":       false,
-		"Preferences":  false,
-		"Applications": false,
+	workspaces = []workspace{
+		{Name: "Public", Label: "Public workspace", Type: "PublicWorkspace"},
+		{Name: "Private", Label: "Private workspace", Type: "PrivateWorkspace"},
+		{Name: "Work", Label: "Work workspace", Type: ""},
+		{Name: "Shared", Label: "Shared workspace", Type: "SharedWorkspace"},
+		{Name: "Preferences", Label: "Preferences workspace", Type: ""},
+		{Name: "Applications", Label: "Applications workspace", Type: "PreferencesWorkspace"},
+		{Name: "Inbox", Label: "Inbox", Type: ""},
 	}
 
 	// cache
@@ -291,16 +304,47 @@ func AddProfileKeys(uri string, g *Graph) (*Graph, *rsa.PrivateKey, *rsa.PublicK
 
 	g.AddTriple(userTerm, ns.cert.Get("key"), keyTerm)
 	g.AddTriple(keyTerm, ns.rdf.Get("type"), ns.cert.Get("RSAPublicKey"))
+	g.AddTriple(keyTerm, ns.dct.Get("title"), NewLiteral("Created  "+time.Now().Format(time.RFC822)))
 	g.AddTriple(keyTerm, ns.cert.Get("modulus"), NewLiteralWithDatatype(fmt.Sprintf("%x", pub.N), NewResource("http://www.w3.org/2001/XMLSchema#hexBinary")))
 	g.AddTriple(keyTerm, ns.cert.Get("exponent"), NewLiteralWithDatatype(fmt.Sprintf("%d", pub.E), NewResource("http://www.w3.org/2001/XMLSchema#int")))
 
 	return g, priv, pub, nil
 }
 
+// AddCertKeys adds the modulus and exponent values to the profile document
+func (req *httpRequest) AddCertKeys(uri string, mod string, exp string) error {
+	profileURI := strings.Split(uri, "#")[0]
+	userTerm := NewResource(uri)
+	keyTerm := NewResource(profileURI + "#key")
+
+	g := NewGraph(profileURI)
+	g.AddTriple(userTerm, ns.cert.Get("key"), keyTerm)
+	g.AddTriple(keyTerm, ns.rdf.Get("type"), ns.cert.Get("RSAPublicKey"))
+	g.AddTriple(keyTerm, ns.dct.Get("title"), NewLiteral("Created  "+time.Now().Format(time.RFC822)))
+	g.AddTriple(keyTerm, ns.cert.Get("modulus"), NewLiteralWithDatatype(mod, NewResource("http://www.w3.org/2001/XMLSchema#hexBinary")))
+	g.AddTriple(keyTerm, ns.cert.Get("exponent"), NewLiteralWithDatatype(exp, NewResource("http://www.w3.org/2001/XMLSchema#int")))
+
+	resource, _ := req.pathInfo(profileURI)
+	// open account acl file
+	f, err := os.OpenFile(resource.File, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	// write account acl to disk
+	err = g.WriteFile(f, "text/turtle")
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // NewWebIDProfile creates a WebID profile graph based on account data
 func NewWebIDProfile(account webidAccount) *Graph {
-	profileURI := strings.Split(account.URI, "#")[0]
-	userTerm := NewResource(account.URI)
+	profileURI := strings.Split(account.WebID, "#")[0]
+	userTerm := NewResource(account.WebID)
 	profileTerm := NewResource(profileURI)
 
 	g := NewGraph(profileURI)
@@ -316,14 +360,99 @@ func NewWebIDProfile(account webidAccount) *Graph {
 	if len(account.Img) > 0 {
 		g.AddTriple(userTerm, ns.foaf.Get("img"), NewResource(account.Img))
 	}
+	g.AddTriple(userTerm, ns.space.Get("storage"), NewResource(account.BaseURI+"/"))
+	g.AddTriple(userTerm, ns.space.Get("preferencesFile"), NewResource(account.PrefURI))
+	g.AddTriple(userTerm, ns.st.Get("inbox"), NewResource(account.BaseURI+"/Inbox/"))
+
 	return g
 }
 
 // AddWorkspaces creates all the necessary workspaces corresponding to a new account
-func AddWorkspaces(uri string, g *Graph) error {
-	// for ws, pub := range workspaces {
+func (req *httpRequest) AddWorkspaces(account webidAccount, g *Graph) error {
+	pref := NewGraph(account.PrefURI)
+	prefTerm := NewResource(account.PrefURI)
+	pref.AddTriple(prefTerm, ns.rdf.Get("type"), ns.space.Get("ConfigurationFile"))
+	pref.AddTriple(prefTerm, ns.dct.Get("title"), NewLiteral("Preferences file"))
 
-	// }
+	pref.AddTriple(NewResource(account.WebID), ns.space.Get("preferencesFile"), NewResource(account.PrefURI))
+	pref.AddTriple(NewResource(account.WebID), ns.rdf.Get("type"), ns.foaf.Get("Person"))
+
+	for _, ws := range workspaces {
+		resource, _ := req.pathInfo(account.BaseURI + "/" + ws.Name + "/")
+		err := os.MkdirAll(resource.File, 0755)
+		if err != nil {
+			return err
+		}
+
+		// Write ACLs
+		// No one but the user is allowed access by default
+		aclTerm := NewResource(resource.AclURI + "#owner")
+		wsTerm := NewResource(resource.URI)
+		a := NewGraph(resource.AclURI)
+		a.AddTriple(aclTerm, ns.rdf.Get("type"), ns.acl.Get("Authorization"))
+		a.AddTriple(aclTerm, ns.acl.Get("accessTo"), wsTerm)
+		a.AddTriple(aclTerm, ns.acl.Get("accessTo"), NewResource(resource.AclURI))
+		a.AddTriple(aclTerm, ns.acl.Get("agent"), NewResource(account.WebID))
+		if len(req.FormValue("email")) > 0 {
+			a.AddTriple(aclTerm, ns.acl.Get("agent"), NewResource("mailto:"+account.Email))
+		}
+		a.AddTriple(aclTerm, ns.acl.Get("defaultForNew"), wsTerm)
+		a.AddTriple(aclTerm, ns.acl.Get("mode"), ns.acl.Get("Read"))
+		a.AddTriple(aclTerm, ns.acl.Get("mode"), ns.acl.Get("Write"))
+		a.AddTriple(aclTerm, ns.acl.Get("mode"), ns.acl.Get("Control"))
+		if ws.Type == "PublicWorkspace" {
+			readAllTerm := NewResource(resource.AclURI + "#readall")
+			a.AddTriple(readAllTerm, ns.rdf.Get("type"), ns.acl.Get("Authorization"))
+			a.AddTriple(readAllTerm, ns.acl.Get("accessTo"), wsTerm)
+			a.AddTriple(readAllTerm, ns.acl.Get("agentClass"), ns.foaf.Get("Agent"))
+			a.AddTriple(readAllTerm, ns.acl.Get("mode"), ns.acl.Get("Read"))
+		}
+		// Special case for Inbox (append only)
+		if ws.Name == "Inbox" {
+			appendAllTerm := NewResource(resource.AclURI + "#apendall")
+			a.AddTriple(appendAllTerm, ns.rdf.Get("type"), ns.acl.Get("Authorization"))
+			a.AddTriple(appendAllTerm, ns.acl.Get("accessTo"), wsTerm)
+			a.AddTriple(appendAllTerm, ns.acl.Get("agentClass"), ns.foaf.Get("Agent"))
+			a.AddTriple(appendAllTerm, ns.acl.Get("mode"), ns.acl.Get("Append"))
+		}
+
+		// open account acl file
+		f, err := os.OpenFile(resource.AclFile, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
+		if err != nil {
+			return err
+		}
+		defer f.Close()
+
+		// write account acl to disk
+		err = a.WriteFile(f, "text/turtle")
+		if err != nil {
+			return err
+		}
+
+		// Append workspace to the prefFile
+
+		pref.AddTriple(wsTerm, ns.rdf.Get("type"), ns.space.Get("Workspace"))
+		if len(ws.Type) > 0 {
+			pref.AddTriple(wsTerm, ns.rdf.Get("type"), ns.space.Get(ws.Type))
+		}
+		pref.AddTriple(wsTerm, ns.dct.Get("title"), NewLiteral(ws.Label))
+
+		pref.AddTriple(NewResource(account.WebID), ns.space.Get("workspace"), wsTerm)
+	}
+
+	resource, _ := req.pathInfo(account.PrefURI)
+	// open account acl file
+	f, err := os.OpenFile(resource.File, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	// write account acl to disk
+	err = pref.WriteFile(f, "text/turtle")
+	if err != nil {
+		return err
+	}
 
 	return nil
 }

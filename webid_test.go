@@ -21,12 +21,12 @@ func TestWebIDTLSauth(t *testing.T) {
 func TestAddProfileKeys(t *testing.T) {
 	webid := testServer.URL + "/_test/user1#id"
 	var account = webidAccount{
-		URI: webid,
+		WebID: webid,
 	}
 	g := NewWebIDProfile(account)
 	g, k, p, err := AddProfileKeys(webid, g)
 	assert.NoError(t, err)
 	assert.NotNil(t, k)
 	assert.NotNil(t, p)
-	assert.Equal(t, 8, g.Len())
+	assert.Equal(t, 12, g.Len())
 }

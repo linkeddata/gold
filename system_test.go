@@ -459,9 +459,14 @@ func TestAccountStatusWithoutVhosts(t *testing.T) {
 	response, err := user1h.Do(request)
 	assert.NoError(t, err)
 	body, _ := ioutil.ReadAll(response.Body)
+	println(string(body))
 	response.Body.Close()
 	assert.Equal(t, `{"method":"accountStatus","status":"success","formURL":"`+testServer1.URL+`/`+SystemPrefix+`/newAccount","loginURL":"`+testServer1.URL+`/user/","response":{"accountURL":"`+testServer1.URL+`/user/","available":true}}`, string(body))
 	assert.Equal(t, 200, response.StatusCode)
+
+	// delete user
+	err = os.RemoveAll("_test/")
+	assert.NoError(t, err)
 }
 
 func TestAccountStatusWithVhosts(t *testing.T) {
