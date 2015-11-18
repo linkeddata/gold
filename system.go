@@ -146,7 +146,7 @@ func validateRecoveryToken(w http.ResponseWriter, req *httpRequest, s *Server) S
 			s.debug.Println("Error setting new cookie: " + err.Error())
 			return SystemReturn{Status: 500, Body: err.Error()}
 		}
-		return SystemReturn{Status: 200, Body: value["webid"]}
+		return SystemReturn{Status: 200, Body: Skins["newCert"]}
 	}
 	return SystemReturn{Status: 499, Body: "Missing validity date for token."}
 }
