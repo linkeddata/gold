@@ -170,10 +170,9 @@ func newAccount(w http.ResponseWriter, req *httpRequest, s *Server) SystemReturn
 	resource, _ = req.pathInfo(webidURL)
 
 	account := webidAccount{
-		URI:   webidURI,
-		Name:  req.FormValue("name"),
-		Email: req.FormValue("email"),
-		Img:   req.FormValue("img"),
+		URI:  webidURI,
+		Name: req.FormValue("name"),
+		Img:  req.FormValue("img"),
 	}
 
 	s.debug.Println("Checking if account profile <" + resource.File + "> exists...")
@@ -271,6 +270,14 @@ func newAccount(w http.ResponseWriter, req *httpRequest, s *Server) SystemReturn
 		s.debug.Println("Saving account acl error: " + err.Error())
 		return SystemReturn{Status: 500, Body: err.Error()}
 	}
+
+	// Authenticate the user (set cookie)
+	err = s.userCookieSet(w, webidURI)
+	if err != nil {
+		s.debug.Println("Error setting new cookie: " + err.Error())
+		return SystemReturn{Status: 500, Body: err.Error()}
+	}
+	w.Header().Set("User", webidURI)
 
 	// Generate cert
 	spkac := req.FormValue("spkac")

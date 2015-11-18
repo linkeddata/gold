@@ -181,6 +181,8 @@ func TestNewAccountWithSPKAC(t *testing.T) {
 	response.Body.Close()
 	assert.False(t, strings.Contains(string(body), "iframe"))
 	assert.Equal(t, 200, response.StatusCode)
+	assert.Equal(t, "https://user."+strings.TrimLeft(testServer1.URL, "https://")+"/profile/card#me", response.Header.Get("User"))
+	assert.NotEmpty(t, response.Cookies())
 
 	webid, err := WebIDFromCert(body)
 	assert.NoError(t, err)
@@ -209,6 +211,8 @@ func TestNewAccountWithSPKAC(t *testing.T) {
 	response.Body.Close()
 	assert.True(t, strings.Contains(string(body), "iframe"))
 	assert.Equal(t, 200, response.StatusCode)
+	assert.Equal(t, "https://user."+strings.TrimLeft(testServer1.URL, "https://")+"/profile/card#me", response.Header.Get("User"))
+	assert.NotEmpty(t, response.Cookies())
 
 	certBase64 := strings.SplitAfter(string(body), "base64,")[1] //@@TODO indexOf
 	certBase64 = strings.TrimRight(certBase64, "\"></iframe>")
@@ -217,6 +221,48 @@ func TestNewAccountWithSPKAC(t *testing.T) {
 	webid, err = WebIDFromCert(cert)
 	assert.NoError(t, err)
 	assert.Equal(t, "https://user."+strings.TrimLeft(testServer1.URL, "https://")+"/profile/card#me", webid)
+
+	err = os.RemoveAll("_test/")
+	assert.NoError(t, err)
+}
+
+func TestNewAccountWithoutSPKAC(t *testing.T) {
+	testServer1 := httptest.NewUnstartedServer(handler1)
+	testServer1.TLS = new(tls.Config)
+	testServer1.TLS.ClientAuth = tls.RequestClientCert
+	testServer1.TLS.NextProtos = []string{"http/1.1"}
+	testServer1.StartTLS()
+
+	form := url.Values{
+		"username": {"user"},
+		"name":     {"Test User"},
+		"img":      {"https://img.org/"},
+	}
+	request, err := http.NewRequest("POST", testServer1.URL+"/"+SystemPrefix+"/newAccount", bytes.NewBufferString(form.Encode()))
+	assert.NoError(t, err)
+	request.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+	request.Header.Add("Content-Length", strconv.Itoa(len(form.Encode())))
+	response, err := httpClient.Do(request)
+	assert.NoError(t, err)
+	body, _ := ioutil.ReadAll(response.Body)
+	response.Body.Close()
+	assert.False(t, strings.Contains(string(body), "iframe"))
+	assert.Equal(t, 200, response.StatusCode)
+	assert.NotEqual(t, "application/x-x509-user-cert; charset=utf-8", response.Header.Get("Content-Type"))
+	assert.Equal(t, "https://user."+strings.TrimLeft(testServer1.URL, "https://")+"/profile/card#me", response.Header.Get("User"))
+	assert.NotEmpty(t, response.Cookies())
+
+	request, err = http.NewRequest("POST", testServer1.URL+"/"+SystemPrefix+"/newAccount", bytes.NewBufferString(form.Encode()))
+	assert.NoError(t, err)
+	request.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+	request.Header.Add("Content-Length", strconv.Itoa(len(form.Encode())))
+	response, err = httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.Equal(t, 406, response.StatusCode)
+
+	// delete user
+	err = os.RemoveAll("_test/user." + strings.TrimLeft(testServer1.URL, "https://"))
+	assert.NoError(t, err)
 
 	err = os.RemoveAll("_test/")
 	assert.NoError(t, err)

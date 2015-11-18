@@ -21,10 +21,9 @@ const (
 )
 
 type webidAccount struct {
-	URI   string
-	Name  string
-	Email string
-	Img   string
+	URI  string
+	Name string
+	Img  string
 }
 
 var (
@@ -32,6 +31,15 @@ var (
 
 	notBefore = time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC)
 	notAfter  = time.Date(2049, 12, 31, 23, 59, 59, 0, time.UTC)
+
+	workspaces = map[string]bool{
+		"Public":       true,
+		"Private":      false,
+		"Work":         false,
+		"Shared":       false,
+		"Preferences":  false,
+		"Applications": false,
+	}
 
 	// cache
 	webidL  = new(sync.Mutex)
@@ -305,11 +313,17 @@ func NewWebIDProfile(account webidAccount) *Graph {
 		g.AddTriple(profileTerm, ns.dct.Get("title"), NewLiteral("WebID profile of "+account.Name))
 		g.AddTriple(userTerm, ns.foaf.Get("name"), NewLiteral(account.Name))
 	}
-	if len(account.Email) > 0 {
-		g.AddTriple(userTerm, ns.foaf.Get("mbox"), NewResource("mailto:"+account.Email))
-	}
 	if len(account.Img) > 0 {
 		g.AddTriple(userTerm, ns.foaf.Get("img"), NewResource(account.Img))
 	}
 	return g
+}
+
+// AddWorkspaces creates all the necessary workspaces corresponding to a new account
+func AddWorkspaces(uri string, g *Graph) error {
+	// for ws, pub := range workspaces {
+
+	// }
+
+	return nil
 }
