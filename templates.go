@@ -55,6 +55,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <body>
     <h1>401 - oh noes, you need to authenticate!</h1>
     <h2>Do you need a WebID? You can sign up for one at <a href="https://databox.me/" target="_blank">databox.me</a>.</h2>
+    <h2>Also, please visit the <a href="/` + SystemPrefix + `/accountRecovery">recovery page</a> in case you have lost access to your credentials.</h2>
 </body>
 </html>`,
 		"403": `<!DOCTYPE html>
