@@ -304,6 +304,18 @@ func newAccount(w http.ResponseWriter, req *httpRequest, s *Server) SystemReturn
 			return SystemReturn{Status: 500, Body: err.Error()}
 		}
 
+		pubKey, err := ParseSPKAC(spkac)
+		if err != nil {
+			s.debug.Println("ParseSPKAC error: " + err.Error())
+		}
+		rsaPub := pubKey.(*rsa.PublicKey)
+		mod := fmt.Sprintf("%x", rsaPub.N)
+		exp := fmt.Sprintf("%d", rsaPub.E)
+		err = req.AddCertKeys(webidURI, mod, exp)
+		if err != nil {
+			s.debug.Println("Couldn't add cert keys to profile: " + err.Error())
+		}
+
 		ua := req.Header.Get("User-Agent")
 		if strings.Contains(ua, "Chrome") {
 			w.Header().Set(HCType, "application/x-x509-user-cert; charset=utf-8")
