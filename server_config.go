@@ -71,7 +71,7 @@ type ServerConfig struct {
 // NewServerConfig creates a new config object
 func NewServerConfig() *ServerConfig {
 	return &ServerConfig{
-		CookieAge:  24,
+		CookieAge:  8736, // hours (1 year)
 		TokenAge:   5,
 		MetaSuffix: ".meta",
 		ACLSuffix:  ".acl",
