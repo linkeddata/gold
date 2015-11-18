@@ -117,7 +117,7 @@ func sendRecoveryToken(w http.ResponseWriter, req *httpRequest, s *Server) Syste
 	link := resource.Base + "/" + SystemPrefix + "/accountRecovery?token=" + token
 	to := []string{email}
 	go s.sendRecoveryMail(resource.Obj.Host, IP, to, link)
-	return SystemReturn{Status: 200}
+	return SystemReturn{Status: 200, Body: "You should receive an email shortly, with further instructions."}
 }
 
 func validateRecoveryToken(w http.ResponseWriter, req *httpRequest, s *Server) SystemReturn {

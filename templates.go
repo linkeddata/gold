@@ -29,7 +29,7 @@ document.addEventListener('DOMContentLoaded', function() {
 		"newCert": `<!DOCTYPE html>
 <html id="docHTML">
 <body>
-    <form method="POST">
+    <form method="POST" action="/` + SystemPrefix + `/newCert">
     <h2>Issue new certificate</h2>
     Name: <input type="text" name="name">
     WebID: <input type="text" name="webid">
