@@ -70,17 +70,19 @@ func (srv *Server) userCookieSet(w http.ResponseWriter, user string) error {
 	value := map[string]string{
 		"user": user,
 	}
+
 	encoded, err := srv.cookie.Encode("Session", value)
 	if err != nil {
 		return err
 	}
 	t := time.Duration(srv.Config.CookieAge) * time.Hour
-	http.SetCookie(w, &http.Cookie{
+	cookieCfg := &http.Cookie{
 		Expires: time.Now().Add(t),
 		Name:    "Session",
 		Path:    "/",
 		Value:   encoded,
-	})
+	}
+	http.SetCookie(w, cookieCfg)
 	return nil
 }
 

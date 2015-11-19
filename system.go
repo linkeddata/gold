@@ -161,11 +161,16 @@ func newAccount(w http.ResponseWriter, req *httpRequest, s *Server) SystemReturn
 		port = ":" + port
 	}
 
+	accountBase := resource.Base + "/"
+
 	username := strings.ToLower(req.FormValue("username"))
-	accountBase := resource.Base + "/" + username + "/"
-	if s.Config.Vhosts == true {
-		accountBase = "https://" + username + "." + host + port + "/"
+	if !strings.HasPrefix(host, username) {
+		accountBase = resource.Base + "/" + username + "/"
+		if s.Config.Vhosts == true {
+			accountBase = "https://" + username + "." + host + port + "/"
+		}
 	}
+
 	webidURL := accountBase + "profile/card"
 	webidURI := webidURL + "#me"
 	resource, _ = req.pathInfo(webidURL)
