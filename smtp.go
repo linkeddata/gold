@@ -151,6 +151,10 @@ func (s *Server) sendSecureRecoveryMail(from mail.Address, to mail.Address, msg 
 	return nil
 }
 
+func sendWelcomeEmail() error {
+	return nil
+}
+
 func parseMailTemplate(tpl string, vals map[string]string) string {
 	body := SMTPTemplates[tpl]
 

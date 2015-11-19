@@ -89,5 +89,17 @@ document.addEventListener('DOMContentLoaded', function() {
 <p>Sincerely,<br>
 {{.From}}</p>
 `,
+		"welcomeMail": `<p>Hello {{.Name}},</p>
+<p>It looks like you have successfully created your WebID and Solid account on {{.Host}}. Congratulations!</p>
+
+<p>Here are some useful things you can do right away:</p>
+<p>* you can start browsing your files here: {{.AccountURI}}.</p>
+<p>* you can manage your personal profile information here: {{.ProfileEditor}}</p>
+
+<p>We would like to kindly remind you that we will not use your email address for any other purpose than allowing you to authenticate and/or recover your account credentials.</p>
+
+<p>Best,</p>
+<p>{{.Host}} team</p>
+`,
 	}
 )
