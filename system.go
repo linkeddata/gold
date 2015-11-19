@@ -246,6 +246,13 @@ func newAccount(w http.ResponseWriter, req *httpRequest, s *Server) SystemReturn
 		return SystemReturn{Status: 500, Body: err.Error()}
 	}
 
+	// Link from root meta file to the WebID
+	err = req.LinkToWebID(account)
+	if err != nil {
+		s.debug.Println("Error setting up workspaces: " + err.Error())
+		return SystemReturn{Status: 500, Body: err.Error()}
+	}
+
 	// Create workspaces and preferencesFile
 	err = req.AddWorkspaces(account, g)
 	if err != nil {

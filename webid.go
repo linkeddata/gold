@@ -367,6 +367,29 @@ func NewWebIDProfile(account webidAccount) *Graph {
 	return g
 }
 
+// LinkToWebID links the account URI (root container) to the WebID that owns the space
+func (req *httpRequest) LinkToWebID(account webidAccount) error {
+	resource, _ := req.pathInfo(account.BaseURI + "/")
+
+	g := NewGraph(resource.URI)
+	g.AddTriple(NewResource(account.WebID), ns.foaf.Get("account"), NewResource(resource.URI))
+
+	// open account root meta file
+	f, err := os.OpenFile(resource.MetaFile, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	// write account meta file to disk
+	err = g.WriteFile(f, "text/turtle")
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // AddWorkspaces creates all the necessary workspaces corresponding to a new account
 func (req *httpRequest) AddWorkspaces(account webidAccount, g *Graph) error {
 	pref := NewGraph(account.PrefURI)
