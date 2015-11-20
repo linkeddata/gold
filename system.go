@@ -356,6 +356,7 @@ func newCert(w http.ResponseWriter, req *httpRequest, s *Server) SystemReturn {
 			s.debug.Println("NewSPKACx509 error: " + err.Error())
 			return SystemReturn{Status: 500, Body: err.Error()}
 		}
+		s.debug.Println("Generating new cert for " + webidURI)
 
 		ua := req.Header.Get("User-Agent")
 		if strings.Contains(ua, "Chrome") {
@@ -379,7 +380,9 @@ func newCert(w http.ResponseWriter, req *httpRequest, s *Server) SystemReturn {
 			if err != nil {
 				s.debug.Println("Couldn't add cert keys to profile: " + err.Error())
 			}
+			s.debug.Println("Added cert public key to " + webidURI)
 		}
+		s.debug.Println("Done issuing new cert for " + webidURI)
 
 		return SystemReturn{Status: 200, Body: body}
 	} else if strings.Contains(req.Header.Get("Accept"), "text/html") {
