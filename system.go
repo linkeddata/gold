@@ -356,7 +356,27 @@ func newCert(w http.ResponseWriter, req *httpRequest, s *Server) SystemReturn {
 			s.debug.Println("NewSPKACx509 error: " + err.Error())
 			return SystemReturn{Status: 500, Body: err.Error()}
 		}
-		s.debug.Println("Generating new cert for " + webidURI)
+		s.debug.Println("Generated new cert for " + webidURI)
+
+		// Append cert to profile if it's the case
+		loggedUser := w.Header().Get("User")
+		if len(loggedUser) > 0 && loggedUser == webidURI && strings.HasPrefix(webidURI, req.BaseURI()) {
+			pubKey, err := ParseSPKAC(spkac)
+			if err != nil {
+				s.debug.Println("ParseSPKAC error: " + err.Error())
+				return SystemReturn{Status: 500, Body: err.Error()}
+			}
+			rsaPub := pubKey.(*rsa.PublicKey)
+			mod := fmt.Sprintf("%x", rsaPub.N)
+			exp := fmt.Sprintf("%d", rsaPub.E)
+			err = req.AddCertKeys(webidURI, mod, exp)
+			if err != nil {
+				s.debug.Println("Couldn't add cert keys to profile: " + err.Error())
+				return SystemReturn{Status: 500, Body: err.Error()}
+			}
+			s.debug.Println("Added cert public key to " + webidURI)
+		}
+		s.debug.Println("Done issuing new cert for " + webidURI)
 
 		ua := req.Header.Get("User-Agent")
 		if strings.Contains(ua, "Chrome") {
@@ -365,24 +385,6 @@ func newCert(w http.ResponseWriter, req *httpRequest, s *Server) SystemReturn {
 		}
 		// Prefer loading cert in iframe, to access onLoad events in the browser for the iframe
 		body := `<iframe width="0" height="0" style="display: none;" src="data:application/x-x509-user-cert;base64,` + base64.StdEncoding.EncodeToString(newSpkac) + `"></iframe>`
-
-		// Append cert to profile if it's the case
-		loggedUser := w.Header().Get("User")
-		if len(loggedUser) > 0 && loggedUser == webidURI && strings.HasPrefix(webidURI, req.BaseURI()) {
-			pubKey, err := ParseSPKAC(spkac)
-			if err != nil {
-				s.debug.Println("ParseSPKAC error: " + err.Error())
-			}
-			rsaPub := pubKey.(*rsa.PublicKey)
-			mod := fmt.Sprintf("%x", rsaPub.N)
-			exp := fmt.Sprintf("%d", rsaPub.E)
-			err = req.AddCertKeys(webidURI, mod, exp)
-			if err != nil {
-				s.debug.Println("Couldn't add cert keys to profile: " + err.Error())
-			}
-			s.debug.Println("Added cert public key to " + webidURI)
-		}
-		s.debug.Println("Done issuing new cert for " + webidURI)
 
 		return SystemReturn{Status: 200, Body: body}
 	} else if strings.Contains(req.Header.Get("Accept"), "text/html") {
