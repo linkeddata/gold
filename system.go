@@ -361,7 +361,7 @@ func newCert(w http.ResponseWriter, req *httpRequest, s *Server) SystemReturn {
 		// Append cert to profile if it's the case
 		loggedUser := w.Header().Get("User")
 		s.debug.Println("Checking if request is authenticated: " + loggedUser)
-		if len(loggedUser) > 0 && loggedUser == webidURI && strings.HasPrefix(webidURI, req.BaseURI()) {
+		if len(loggedUser) > 0 && loggedUser == webidURI && strings.HasPrefix(webidURI, resource.Base) {
 			pubKey, err := ParseSPKAC(spkac)
 			if err != nil {
 				s.debug.Println("ParseSPKAC error: " + err.Error())
@@ -377,7 +377,7 @@ func newCert(w http.ResponseWriter, req *httpRequest, s *Server) SystemReturn {
 			}
 			s.debug.Println("Also added cert public key to " + webidURI)
 		} else {
-			s.debug.Println("Not authenticated or local user: " + loggedUser + " != " + webidURI)
+			s.debug.Println("Not authenticated / local user: " + loggedUser + " != " + webidURI + " on " + resource.Base)
 		}
 
 		s.debug.Println("Done issuing new cert for " + webidURI)
