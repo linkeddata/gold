@@ -313,9 +313,12 @@ func AddProfileKeys(uri string, g *Graph) (*Graph, *rsa.PrivateKey, *rsa.PublicK
 
 // AddCertKeys adds the modulus and exponent values to the profile document
 func (req *httpRequest) AddCertKeys(uri string, mod string, exp string) error {
+	uuid := NewUUID()
+	uuid = uuid[:4]
+
 	profileURI := strings.Split(uri, "#")[0]
 	userTerm := NewResource(uri)
-	keyTerm := NewResource(profileURI + "#key")
+	keyTerm := NewResource(profileURI + "#key" + uuid)
 
 	resource, _ := req.pathInfo(profileURI)
 
@@ -323,7 +326,7 @@ func (req *httpRequest) AddCertKeys(uri string, mod string, exp string) error {
 	g.ReadFile(resource.File)
 	g.AddTriple(userTerm, ns.cert.Get("key"), keyTerm)
 	g.AddTriple(keyTerm, ns.rdf.Get("type"), ns.cert.Get("RSAPublicKey"))
-	g.AddTriple(keyTerm, ns.dct.Get("title"), NewLiteral("Created  "+time.Now().Format(time.RFC822)))
+	g.AddTriple(keyTerm, ns.dct.Get("title"), NewLiteral("Created "+time.Now().Format(time.RFC822)))
 	g.AddTriple(keyTerm, ns.cert.Get("modulus"), NewLiteralWithDatatype(mod, NewResource("http://www.w3.org/2001/XMLSchema#hexBinary")))
 	g.AddTriple(keyTerm, ns.cert.Get("exponent"), NewLiteralWithDatatype(exp, NewResource("http://www.w3.org/2001/XMLSchema#int")))
 
