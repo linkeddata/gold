@@ -326,7 +326,7 @@ func (req *httpRequest) AddCertKeys(uri string, mod string, exp string) error {
 	g.ReadFile(resource.File)
 	g.AddTriple(userTerm, ns.cert.Get("key"), keyTerm)
 	g.AddTriple(keyTerm, ns.rdf.Get("type"), ns.cert.Get("RSAPublicKey"))
-	g.AddTriple(keyTerm, ns.dct.Get("title"), NewLiteral("Created "+time.Now().Format(time.RFC822)))
+	g.AddTriple(keyTerm, ns.rdfs.Get("label"), NewLiteral("Created "+time.Now().Format(time.RFC822)+" on "+resource.Obj.Host))
 	g.AddTriple(keyTerm, ns.cert.Get("modulus"), NewLiteralWithDatatype(mod, NewResource("http://www.w3.org/2001/XMLSchema#hexBinary")))
 	g.AddTriple(keyTerm, ns.cert.Get("exponent"), NewLiteralWithDatatype(exp, NewResource("http://www.w3.org/2001/XMLSchema#int")))
 
