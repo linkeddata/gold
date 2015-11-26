@@ -180,7 +180,7 @@ func newAccount(w http.ResponseWriter, req *httpRequest, s *Server) SystemReturn
 		BaseURI:  resource.Base,
 		Document: resource.File,
 		WebID:    webidURI,
-		PrefURI:  accountBase + "Preferences/prefs.ttl",
+		PrefURI:  accountBase + "preferences/prefs.ttl",
 		Email:    req.FormValue("email"),
 		Name:     req.FormValue("name"),
 		Img:      req.FormValue("img"),
