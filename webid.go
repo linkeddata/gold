@@ -45,13 +45,13 @@ var (
 	notAfter  = time.Date(2049, 12, 31, 23, 59, 59, 0, time.UTC)
 
 	workspaces = []workspace{
-		{Name: "Public", Label: "Public workspace", Type: "PublicWorkspace"},
-		{Name: "Private", Label: "Private workspace", Type: "PrivateWorkspace"},
-		{Name: "Work", Label: "Work workspace", Type: ""},
-		{Name: "Shared", Label: "Shared workspace", Type: "SharedWorkspace"},
-		{Name: "Preferences", Label: "Preferences workspace", Type: ""},
-		{Name: "Applications", Label: "Applications workspace", Type: "PreferencesWorkspace"},
-		{Name: "Inbox", Label: "Inbox", Type: ""},
+		{Name: "public", Label: "Public workspace", Type: "PublicWorkspace"},
+		{Name: "private", Label: "Private workspace", Type: "PrivateWorkspace"},
+		{Name: "work", Label: "Work workspace", Type: ""},
+		{Name: "shared", Label: "Shared workspace", Type: "SharedWorkspace"},
+		{Name: "preferences", Label: "Preferences workspace", Type: ""},
+		{Name: "applications", Label: "Applications workspace", Type: "PreferencesWorkspace"},
+		{Name: "inbox", Label: "Inbox", Type: ""},
 	}
 
 	// cache
