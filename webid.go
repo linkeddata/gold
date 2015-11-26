@@ -436,7 +436,7 @@ func (req *httpRequest) AddWorkspaces(account webidAccount, g *Graph) error {
 			a.AddTriple(readAllTerm, ns.acl.Get("mode"), ns.acl.Get("Read"))
 		}
 		// Special case for Inbox (append only)
-		if ws.Name == "Inbox" {
+		if ws.Name == "inbox" {
 			appendAllTerm := NewResource(resource.AclURI + "#apendall")
 			a.AddTriple(appendAllTerm, ns.rdf.Get("type"), ns.acl.Get("Authorization"))
 			a.AddTriple(appendAllTerm, ns.acl.Get("accessTo"), wsTerm)
@@ -458,7 +458,7 @@ func (req *httpRequest) AddWorkspaces(account webidAccount, g *Graph) error {
 		}
 
 		// Append workspace URL to the preferencesFile
-		if ws.Name != "Inbox" {
+		if ws.Name != "inbox" {
 			pref.AddTriple(wsTerm, ns.rdf.Get("type"), ns.space.Get("Workspace"))
 			if len(ws.Type) > 0 {
 				pref.AddTriple(wsTerm, ns.rdf.Get("type"), ns.space.Get(ws.Type))
