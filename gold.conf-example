@@ -27,7 +27,7 @@
 
 	"DirSkin":   "http://linkeddata.github.io/warp/#list/",
 
-	"SignUpSkin": "http://linkeddata.github.io/signup/?tab=signup&endpointUrl=",
+	"SignUpSkin": "https://solid.github.io/solid-signup/?domain=",
 
 	"DirIndex":  ["index.html", "index.htm"],
 
