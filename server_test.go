@@ -258,10 +258,19 @@ func TestRedirectToSlashContainer(t *testing.T) {
 
 	request, err := http.NewRequest("GET", testServer.URL+"/_test", nil)
 	assert.NoError(t, err)
-	request.Header.Add("Accept", "text/html")
 	response, err := transport.RoundTrip(request)
 	assert.NoError(t, err)
 	body, _ := ioutil.ReadAll(response.Body)
+	response.Body.Close()
+	assert.Equal(t, 301, response.StatusCode)
+	assert.Equal(t, testServer.URL+"/_test/", response.Header.Get("Location"))
+
+	request, err = http.NewRequest("GET", testServer.URL+"/_test", nil)
+	assert.NoError(t, err)
+	request.Header.Add("Accept", "text/html")
+	response, err = transport.RoundTrip(request)
+	assert.NoError(t, err)
+	body, _ = ioutil.ReadAll(response.Body)
 	response.Body.Close()
 	assert.Equal(t, 301, response.StatusCode)
 	assert.Equal(t, testServer.URL+"/_test/", response.Header.Get("Location"))
@@ -278,7 +287,7 @@ func TestRedirectToDirSkin(t *testing.T) {
 	response, err := transport.RoundTrip(request)
 	assert.NoError(t, err)
 	assert.Equal(t, 303, response.StatusCode)
-	assert.True(t, strings.HasPrefix(response.Header.Get("Location"), "http://linkeddata.github.io/warp/#list/https/"))
+	assert.True(t, strings.HasPrefix(response.Header.Get("Location"), handler.Config.DirSkin))
 }
 
 func TestLDPPUTContainer(t *testing.T) {
