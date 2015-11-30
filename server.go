@@ -271,7 +271,7 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 	}
 
 	resource, _ := req.pathInfo(req.BaseURI())
-	s.debug.Println(req.RemoteAddr + " requested resource URI: " + resource.URI)
+	s.debug.Println(req.RemoteAddr + " requested resource URI: " + req.URL.String())
 	s.debug.Println(req.RemoteAddr + " requested resource Path: " + resource.File)
 
 	dataMime := req.Header.Get(HCType)
@@ -382,9 +382,6 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 		if resource.IsDir {
 			w.Header().Add("Link", brack("http://www.w3.org/ns/ldp#BasicContainer")+"; rel=\"type\"")
 		}
-		if req.Method == "HEAD" {
-			w.Header().Set("Content-Length", fmt.Sprintf("%d", resource.Size))
-		}
 		w.Header().Add("Link", brack("http://www.w3.org/ns/ldp#Resource")+"; rel=\"type\"")
 
 		status := 501
@@ -395,6 +392,10 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 
 		unlock := lock(resource.File)
 		defer unlock()
+
+		if req.Method == "HEAD" {
+			w.Header().Set("Content-Length", fmt.Sprintf("%d", resource.Size))
+		}
 
 		etag, err = NewETag(resource.File)
 		if err != nil {
@@ -429,6 +430,13 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 					} else if req.Method != "HEAD" {
 						//TODO load file manager skin from local preference file
 						w.Header().Set(HCType, contentType)
+						// First redirect to path + trailing slash if it's missing
+						if !strings.HasSuffix(resource.Obj.Path, "/") {
+							urlStr := resource.Obj.Scheme + "://" + resource.Obj.Host + "/" + resource.Obj.Path + "/"
+							s.debug.Println("Redirecting to", urlStr)
+							http.Redirect(w, req.Request, urlStr, 301)
+							return
+						}
 						urlStr := s.Config.DirSkin + resource.Obj.Scheme + "/" + resource.Obj.Host + "/" + resource.Obj.Path + "?" + req.Request.URL.RawQuery
 						s.debug.Println("Redirecting to", urlStr)
 						http.Redirect(w, req.Request, urlStr, 303)

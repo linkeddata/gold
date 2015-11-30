@@ -3,6 +3,7 @@ package gold
 import (
 	"crypto/rsa"
 	"crypto/tls"
+	// "errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -41,6 +42,10 @@ func init() {
 	testServer.URL = strings.Replace(testServer.URL, "127.0.0.1", "localhost", 1)
 }
 
+// func noRedirect(req *http.Request, via []*http.Request) error {
+// 	return errors.New("Don't redirect!")
+// }
+
 func TestMKCOL(t *testing.T) {
 	request, err := http.NewRequest("MKCOL", testServer.URL+"/_test", nil)
 	assert.NoError(t, err)
@@ -68,23 +73,70 @@ func TestMKCOL(t *testing.T) {
 	assert.Equal(t, 200, response.StatusCode)
 }
 
-func TestSkin(t *testing.T) {
-	request, err := http.NewRequest("GET", testServer.URL+"/_test/", nil)
+func TestOPTIONS(t *testing.T) {
+	request, err := http.NewRequest("OPTIONS", testServer.URL+"/", nil)
 	assert.NoError(t, err)
-	request.Header.Add("Accept", "text/html")
+	request.Header.Add("Accept", "text/turtle")
+	request.Header.Add("Access-Control-Request-Method", "PATCH")
+	response, err := httpClient.Do(request)
+	assert.NoError(t, err)
+	body, err := ioutil.ReadAll(response.Body)
+	response.Body.Close()
+	assert.Empty(t, string(body))
+	assert.Equal(t, 200, response.StatusCode)
+}
+
+func TestOPTIONSOrigin(t *testing.T) {
+	origin := "http://localhost:1234"
+	request, err := http.NewRequest("OPTIONS", testServer.URL+"/", nil)
+	assert.NoError(t, err)
+	request.Header.Add("Accept", "text/turtle")
+	request.Header.Add("Origin", origin)
 	response, err := httpClient.Do(request)
 	assert.NoError(t, err)
 	assert.Equal(t, 200, response.StatusCode)
-	assert.Contains(t, response.Header.Get("Content-Type"), "text/html")
+	assert.Equal(t, response.Header.Get("Access-Control-Allow-Origin"), origin)
+}
 
-	request, err = http.NewRequest("PUT", testServer.URL+"/_test/index.html", strings.NewReader("<html>Hello world!</html>"))
+func TestURIwithSpaces(t *testing.T) {
+	request, err := http.NewRequest("PUT", testServer.URL+"/_test/file name", nil)
 	assert.NoError(t, err)
-	request.Header.Add("Content-Type", "text/html")
-	response, err = httpClient.Do(request)
+	request.Header.Add("Content-Type", "text/turtle")
+	response, err := httpClient.Do(request)
 	assert.NoError(t, err)
 	assert.Equal(t, 201, response.StatusCode)
 
-	request, err = http.NewRequest("GET", testServer.URL+"/_test/index.html", nil)
+	request, err = http.NewRequest("DELETE", testServer.URL+"/_test/file name", nil)
+	assert.NoError(t, err)
+	response, err = httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, response.StatusCode)
+}
+
+func TestURIwithWeirdChars(t *testing.T) {
+	request, err := http.NewRequest("PUT", testServer.URL+"/_test/file name + %23frag", nil)
+	assert.NoError(t, err)
+	request.Header.Add("Content-Type", "text/turtle")
+	response, err := httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.Equal(t, 201, response.StatusCode)
+
+	request, err = http.NewRequest("DELETE", testServer.URL+"/_test/file name + %23frag", nil)
+	assert.NoError(t, err)
+	response, err = httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, response.StatusCode)
+}
+
+func TestIndexHTMLFile(t *testing.T) {
+	request, err := http.NewRequest("PUT", testServer.URL+"/_test/index.html", strings.NewReader("<html>Hello world!</html>"))
+	assert.NoError(t, err)
+	request.Header.Add("Content-Type", "text/html")
+	response, err := httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.Equal(t, 201, response.StatusCode)
+
+	request, err = http.NewRequest("GET", testServer.URL+"/_test/", nil)
 	assert.NoError(t, err)
 	request.Header.Add("Accept", "text/html")
 	response, err = httpClient.Do(request)
@@ -93,41 +145,9 @@ func TestSkin(t *testing.T) {
 	assert.Contains(t, response.Header.Get("Content-Type"), "text/html")
 	body, err := ioutil.ReadAll(response.Body)
 	response.Body.Close()
-	assert.Contains(t, string(body), "<html")
-}
-
-func TestRedirectSignUpWithVhosts(t *testing.T) {
-	// test vhosts
-	testServer1 := httptest.NewUnstartedServer(handler1)
-	testServer1.TLS = new(tls.Config)
-	testServer1.TLS.ClientAuth = tls.RequestClientCert
-	testServer1.TLS.NextProtos = []string{"http/1.1"}
-	testServer1.StartTLS()
-
-	request, err := http.NewRequest("GET", testServer1.URL, nil)
-	assert.NoError(t, err)
-	request.Header.Add("Accept", "text/html")
-	response, err := user1h.Do(request)
-	assert.NoError(t, err)
-	body, _ := ioutil.ReadAll(response.Body)
-	response.Body.Close()
-	assert.Equal(t, 200, response.StatusCode)
-	assert.NotEmpty(t, string(body))
-
-	request, err = http.NewRequest("GET", testServer1.URL+"/dir/", nil)
-	assert.NoError(t, err)
-	request.Header.Add("Accept", "text/html")
-	response, err = user1h.Do(request)
-	assert.NoError(t, err)
-	response.Body.Close()
-	assert.Equal(t, 404, response.StatusCode)
-
-	request, err = http.NewRequest("GET", testServer1.URL+"/file", nil)
-	assert.NoError(t, err)
-	request.Header.Add("Accept", "text/html")
-	response, err = user1h.Do(request)
-	assert.NoError(t, err)
-	assert.Equal(t, 404, response.StatusCode)
+	assert.Contains(t, string(body), "<html>Hello world!</html>")
+	assert.Equal(t, request.URL.String()+"index.html"+config.MetaSuffix, ParseLinkHeader(response.Header.Get("Link")).MatchRel("meta"))
+	assert.Equal(t, request.URL.String()+"index.html"+config.ACLSuffix, ParseLinkHeader(response.Header.Get("Link")).MatchRel("acl"))
 }
 
 func TestWebContent(t *testing.T) {
@@ -190,31 +210,6 @@ func TestWebContent(t *testing.T) {
 	response, err = httpClient.Do(request)
 	assert.NoError(t, err)
 	assert.Equal(t, 200, response.StatusCode)
-}
-
-func TestHTMLIndex(t *testing.T) {
-	request, err := http.NewRequest("HEAD", testServer.URL+"/_test/index.html", nil)
-	assert.NoError(t, err)
-	request.Header.Add("Accept", "text/html")
-	response, err := httpClient.Do(request)
-	assert.NoError(t, err)
-	assert.Equal(t, 200, response.StatusCode)
-
-	request, err = http.NewRequest("GET", testServer.URL+"/_test/", nil)
-	assert.NoError(t, err)
-	request.Header.Add("Accept", "text/html")
-	response, err = httpClient.Do(request)
-	assert.NoError(t, err)
-	assert.Equal(t, 200, response.StatusCode)
-
-	request, err = http.NewRequest("HEAD", testServer.URL+"/_test/", nil)
-	assert.NoError(t, err)
-	request.Header.Add("Accept", "text/html")
-	response, err = httpClient.Do(request)
-	assert.NoError(t, err)
-	assert.Equal(t, 200, response.StatusCode)
-	assert.Equal(t, request.URL.String()+"index.html"+config.MetaSuffix, ParseLinkHeader(response.Header.Get("Link")).MatchRel("meta"))
-	assert.Equal(t, request.URL.String()+"index.html"+config.ACLSuffix, ParseLinkHeader(response.Header.Get("Link")).MatchRel("acl"))
 
 	request, err = http.NewRequest("DELETE", testServer.URL+"/_test/index.html", nil)
 	assert.NoError(t, err)
@@ -223,59 +218,67 @@ func TestHTMLIndex(t *testing.T) {
 	assert.Equal(t, 200, response.StatusCode)
 }
 
-func TestOPTIONS(t *testing.T) {
-	request, err := http.NewRequest("OPTIONS", testServer.URL+"/", nil)
+func TestRedirectSignUpWithVhosts(t *testing.T) {
+	// test vhosts
+	testServer1 := httptest.NewUnstartedServer(handler1)
+	testServer1.TLS = new(tls.Config)
+	testServer1.TLS.ClientAuth = tls.RequestClientCert
+	testServer1.TLS.NextProtos = []string{"http/1.1"}
+	testServer1.StartTLS()
+
+	request, err := http.NewRequest("GET", testServer1.URL, nil)
 	assert.NoError(t, err)
-	request.Header.Add("Accept", "text/turtle")
-	request.Header.Add("Access-Control-Request-Method", "PATCH")
-	response, err := httpClient.Do(request)
+	request.Header.Add("Accept", "text/html")
+	response, err := user1h.Do(request)
 	assert.NoError(t, err)
-	body, err := ioutil.ReadAll(response.Body)
+	body, _ := ioutil.ReadAll(response.Body)
 	response.Body.Close()
-	assert.Empty(t, string(body))
 	assert.Equal(t, 200, response.StatusCode)
+	assert.NotEmpty(t, string(body))
+
+	request, err = http.NewRequest("GET", testServer1.URL+"/dir/", nil)
+	assert.NoError(t, err)
+	request.Header.Add("Accept", "text/html")
+	response, err = user1h.Do(request)
+	assert.NoError(t, err)
+	response.Body.Close()
+	assert.Equal(t, 404, response.StatusCode)
+
+	request, err = http.NewRequest("GET", testServer1.URL+"/file", nil)
+	assert.NoError(t, err)
+	request.Header.Add("Accept", "text/html")
+	response, err = user1h.Do(request)
+	assert.NoError(t, err)
+	assert.Equal(t, 404, response.StatusCode)
 }
 
-func TestOPTIONSOrigin(t *testing.T) {
-	origin := "http://localhost:1234"
-	request, err := http.NewRequest("OPTIONS", testServer.URL+"/", nil)
+func TestRedirectToSlashContainer(t *testing.T) {
+	transport := http.Transport{}
+	transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+
+	request, err := http.NewRequest("GET", testServer.URL+"/_test", nil)
 	assert.NoError(t, err)
-	request.Header.Add("Accept", "text/turtle")
-	request.Header.Add("Origin", origin)
-	response, err := httpClient.Do(request)
+	request.Header.Add("Accept", "text/html")
+	response, err := transport.RoundTrip(request)
 	assert.NoError(t, err)
-	assert.Equal(t, 200, response.StatusCode)
-	assert.Equal(t, response.Header.Get("Access-Control-Allow-Origin"), origin)
+	body, _ := ioutil.ReadAll(response.Body)
+	response.Body.Close()
+	assert.Equal(t, 301, response.StatusCode)
+	assert.Equal(t, testServer.URL+"/_test/", response.Header.Get("Location"))
+	assert.NotEmpty(t, string(body))
 }
 
-func TestURIwithSpaces(t *testing.T) {
-	request, err := http.NewRequest("PUT", testServer.URL+"/_test/file name", nil)
-	assert.NoError(t, err)
-	request.Header.Add("Content-Type", "text/turtle")
-	response, err := httpClient.Do(request)
-	assert.NoError(t, err)
-	assert.Equal(t, 201, response.StatusCode)
+func TestRedirectToDirSkin(t *testing.T) {
+	transport := http.Transport{}
+	transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 
-	request, err = http.NewRequest("DELETE", testServer.URL+"/_test/file name", nil)
+	request, err := http.NewRequest("GET", testServer.URL+"/_test/", nil)
 	assert.NoError(t, err)
-	response, err = httpClient.Do(request)
+	request.Header.Add("Accept", "text/html")
+	response, err := transport.RoundTrip(request)
 	assert.NoError(t, err)
-	assert.Equal(t, 200, response.StatusCode)
-}
-
-func TestURIwithWeirdChars(t *testing.T) {
-	request, err := http.NewRequest("PUT", testServer.URL+"/_test/file name + %23frag", nil)
-	assert.NoError(t, err)
-	request.Header.Add("Content-Type", "text/turtle")
-	response, err := httpClient.Do(request)
-	assert.NoError(t, err)
-	assert.Equal(t, 201, response.StatusCode)
-
-	request, err = http.NewRequest("DELETE", testServer.URL+"/_test/file name + %23frag", nil)
-	assert.NoError(t, err)
-	response, err = httpClient.Do(request)
-	assert.NoError(t, err)
-	assert.Equal(t, 200, response.StatusCode)
+	assert.Equal(t, 303, response.StatusCode)
+	assert.True(t, strings.HasPrefix(response.Header.Get("Location"), "http://linkeddata.github.io/warp/#list/https/"))
 }
 
 func TestLDPPUTContainer(t *testing.T) {
