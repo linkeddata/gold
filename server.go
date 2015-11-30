@@ -414,6 +414,14 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 		g := NewGraph(resource.URI)
 
 		if resource.IsDir {
+			// First redirect to path + trailing slash if it's missing
+			if !strings.HasSuffix(resource.Obj.Path, "/") && req.Method != "HEAD" {
+				w.Header().Set(HCType, contentType)
+				urlStr := resource.Obj.Scheme + "://" + resource.Obj.Host + "/" + resource.Obj.Path + "/"
+				s.debug.Println("Redirecting to", urlStr)
+				http.Redirect(w, req.Request, urlStr, 301)
+				return
+			}
 			if len(s.Config.DirIndex) > 0 && contentType == "text/html" {
 				magicType = "text/html"
 				maybeRDF = false
@@ -430,13 +438,6 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 					} else if req.Method != "HEAD" {
 						//TODO load file manager skin from local preference file
 						w.Header().Set(HCType, contentType)
-						// First redirect to path + trailing slash if it's missing
-						if !strings.HasSuffix(resource.Obj.Path, "/") {
-							urlStr := resource.Obj.Scheme + "://" + resource.Obj.Host + "/" + resource.Obj.Path + "/"
-							s.debug.Println("Redirecting to", urlStr)
-							http.Redirect(w, req.Request, urlStr, 301)
-							return
-						}
 						urlStr := s.Config.DirSkin + resource.Obj.Scheme + "/" + resource.Obj.Host + "/" + resource.Obj.Path + "?" + req.Request.URL.RawQuery
 						s.debug.Println("Redirecting to", urlStr)
 						http.Redirect(w, req.Request, urlStr, 303)
