@@ -1109,7 +1109,7 @@ func TestLISTDIR(t *testing.T) {
 }
 
 func TestGlob(t *testing.T) {
-	request, err := http.NewRequest("POST", testServer.URL+"/_test/1", strings.NewReader("@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n\n<> a <http://example.org/one>;\n"+
+	request, err := http.NewRequest("PUT", testServer.URL+"/_test/1", strings.NewReader("@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n\n<> a <http://example.org/one>;\n"+
 		"    <http://example.org/b> <#c> .\n    <#c> a <http://example.org/e> ."))
 	assert.NoError(t, err)
 	request.Header.Add("Content-Type", "text/turtle")
@@ -1117,7 +1117,7 @@ func TestGlob(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, 201, response.StatusCode)
 
-	request, err = http.NewRequest("POST", testServer.URL+"/_test/2", strings.NewReader("@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n\n<> a <http://example.org/two>."))
+	request, err = http.NewRequest("PUT", testServer.URL+"/_test/2", strings.NewReader("@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n\n<> a <http://example.org/two>."))
 	assert.NoError(t, err)
 	request.Header.Add("Content-Type", "text/turtle")
 	response, err = httpClient.Do(request)
@@ -1138,7 +1138,6 @@ func TestGlob(t *testing.T) {
 	g.Parse(strings.NewReader(string(body)), "text/turtle")
 	assert.NotEmpty(t, g)
 	assert.Equal(t, g.One(NewResource(testServer.URL+"/_test/1"), ns.rdf.Get("type"), NewResource("http://example.org/one")).Object, NewResource("http://example.org/one"))
-	assert.Equal(t, g.One(NewResource(testServer.URL+"/_test/1#c"), ns.rdf.Get("type"), NewResource("http://example.org/e")).Object, NewResource("http://example.org/e"))
 	assert.Equal(t, g.One(NewResource(testServer.URL+"/_test/2"), ns.rdf.Get("type"), NewResource("http://example.org/two")).Object, NewResource("http://example.org/two"))
 
 	request, err = http.NewRequest("DELETE", testServer.URL+"/_test/1", nil)

@@ -415,9 +415,9 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 
 		if resource.IsDir {
 			// First redirect to path + trailing slash if it's missing
-			if !strings.HasSuffix(resource.Obj.Path, "/") && req.Method != "HEAD" {
+			if !strings.HasSuffix(req.BaseURI(), "/") {
 				w.Header().Set(HCType, contentType)
-				urlStr := resource.Obj.Scheme + "://" + resource.Obj.Host + "/" + resource.Obj.Path + "/"
+				urlStr := resource.URI
 				s.debug.Println("Redirecting to", urlStr)
 				http.Redirect(w, req.Request, urlStr, 301)
 				return
