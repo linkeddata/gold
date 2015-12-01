@@ -339,6 +339,9 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 		return r.respond(200)
 
 	case "GET", "HEAD":
+		unlock := lock(resource.File)
+		defer unlock()
+
 		var (
 			magicType = resource.FileType
 			maybeRDF  bool
@@ -364,6 +367,19 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 			}
 		}
 
+		if !resource.Exists {
+			return r.respond(404, Skins["404"])
+		}
+
+		// First redirect to path + trailing slash if it's missing
+		if resource.IsDir && !strings.HasSuffix(req.BaseURI(), "/") {
+			w.Header().Set(HCType, contentType)
+			urlStr := resource.URI
+			s.debug.Println("Redirecting to", urlStr)
+			http.Redirect(w, req.Request, urlStr, 301)
+			return
+		}
+
 		// overwrite ACL Link header
 		w.Header().Set("Link", brack(resource.AclURI)+"; rel=\"acl\", "+brack(resource.MetaURI)+"; rel=\"meta\"")
 
@@ -373,10 +389,6 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 			urlStr := s.Config.SignUpSkin + url.QueryEscape(resource.Obj.Scheme+"://"+resource.Obj.Host+"/"+SystemPrefix+"/accountStatus")
 			http.Redirect(w, req.Request, urlStr, 303)
 			return
-		}
-
-		if !resource.Exists {
-			return r.respond(404, Skins["404"])
 		}
 
 		if resource.IsDir {
@@ -389,9 +401,6 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 		if aclStatus > 200 || err != nil {
 			return r.respond(aclStatus, handleStatusText(aclStatus, err))
 		}
-
-		unlock := lock(resource.File)
-		defer unlock()
 
 		if req.Method == "HEAD" {
 			w.Header().Set("Content-Length", fmt.Sprintf("%d", resource.Size))
@@ -414,14 +423,6 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 		g := NewGraph(resource.URI)
 
 		if resource.IsDir {
-			// First redirect to path + trailing slash if it's missing
-			if !strings.HasSuffix(req.BaseURI(), "/") {
-				w.Header().Set(HCType, contentType)
-				urlStr := resource.URI
-				s.debug.Println("Redirecting to", urlStr)
-				http.Redirect(w, req.Request, urlStr, 301)
-				return
-			}
 			if len(s.Config.DirIndex) > 0 && contentType == "text/html" {
 				magicType = "text/html"
 				maybeRDF = false
