@@ -372,7 +372,7 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 		}
 
 		// First redirect to path + trailing slash if it's missing
-		if resource.IsDir && !strings.HasSuffix(req.BaseURI(), "/") {
+		if resource.IsDir && glob == false && !strings.HasSuffix(req.BaseURI(), "/") {
 			w.Header().Set(HCType, contentType)
 			urlStr := resource.URI
 			s.debug.Println("Redirecting to", urlStr)
