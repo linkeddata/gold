@@ -59,9 +59,7 @@ func TestNewAccountWithoutVhosts(t *testing.T) {
 
 	form := url.Values{
 		"username": {"user"},
-		"name":     {"Test User"},
 		"email":    {"test@user.org"},
-		"img":      {"https://img.org/"},
 	}
 	request, err := http.NewRequest("POST", testServer1.URL+"/"+SystemPrefix+"/newAccount", bytes.NewBufferString(form.Encode()))
 	assert.NoError(t, err)
