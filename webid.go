@@ -45,13 +45,13 @@ var (
 	notAfter  = time.Date(2049, 12, 31, 23, 59, 59, 0, time.UTC)
 
 	workspaces = []workspace{
-		{Name: "public", Label: "Public workspace", Type: "PublicWorkspace"},
-		{Name: "private", Label: "Private workspace", Type: "PrivateWorkspace"},
-		{Name: "work", Label: "Work workspace", Type: ""},
-		{Name: "shared", Label: "Shared workspace", Type: "SharedWorkspace"},
-		{Name: "preferences", Label: "Preferences workspace", Type: ""},
-		{Name: "applications", Label: "Applications workspace", Type: "PreferencesWorkspace"},
-		{Name: "inbox", Label: "Inbox", Type: ""},
+		{Name: "Public", Label: "Public workspace", Type: "PublicWorkspace"},
+		{Name: "Private", Label: "Private workspace", Type: "PrivateWorkspace"},
+		{Name: "Work", Label: "Work workspace", Type: ""},
+		{Name: "Shared", Label: "Shared workspace", Type: "SharedWorkspace"},
+		{Name: "Preferences", Label: "Preferences workspace", Type: ""},
+		{Name: "Applications", Label: "Applications workspace", Type: "PreferencesWorkspace"},
+		{Name: "Inbox", Label: "Inbox", Type: ""},
 	}
 
 	// cache
@@ -436,7 +436,7 @@ func (req *httpRequest) AddWorkspaces(account webidAccount, g *Graph) error {
 			a.AddTriple(readAllTerm, ns.acl.Get("mode"), ns.acl.Get("Read"))
 		}
 		// Special case for Inbox (append only)
-		if ws.Name == "inbox" {
+		if ws.Name == "Inbox" {
 			appendAllTerm := NewResource(resource.AclURI + "#apendall")
 			a.AddTriple(appendAllTerm, ns.rdf.Get("type"), ns.acl.Get("Authorization"))
 			a.AddTriple(appendAllTerm, ns.acl.Get("accessTo"), wsTerm)
@@ -458,7 +458,7 @@ func (req *httpRequest) AddWorkspaces(account webidAccount, g *Graph) error {
 		}
 
 		// Append workspace URL to the preferencesFile
-		if ws.Name != "inbox" {
+		if ws.Name != "Inbox" {
 			pref.AddTriple(wsTerm, ns.rdf.Get("type"), ns.space.Get("Workspace"))
 			if len(ws.Type) > 0 {
 				pref.AddTriple(wsTerm, ns.rdf.Get("type"), ns.space.Get(ws.Type))
