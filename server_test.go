@@ -1219,39 +1219,39 @@ func TestInvalidContent(t *testing.T) {
 	assert.Equal(t, 415, response.StatusCode)
 }
 
-func TestRawContent(t *testing.T) {
-	path := "./tests/img.jpg"
-	file, err := os.Open(path)
-	defer file.Close()
-	assert.NoError(t, err)
-	stat, err := os.Stat(path)
-	data := make([]byte, stat.Size())
-	_, err = file.Read(data)
-	assert.NoError(t, err)
+// func TestRawContent(t *testing.T) {
+// 	path := "./tests/img.jpg"
+// 	file, err := os.Open(path)
+// 	defer file.Close()
+// 	assert.NoError(t, err)
+// 	stat, err := os.Stat(path)
+// 	data := make([]byte, stat.Size())
+// 	_, err = file.Read(data)
+// 	assert.NoError(t, err)
 
-	request, err := http.NewRequest("PUT", testServer.URL+"/test.raw", strings.NewReader(string(data)))
-	assert.NoError(t, err)
-	request.Header.Add("Content-Type", "image/jpeg")
-	response, err := httpClient.Do(request)
-	assert.NoError(t, err)
-	assert.Equal(t, 201, response.StatusCode)
+// 	request, err := http.NewRequest("PUT", testServer.URL+"/test.raw", strings.NewReader(string(data)))
+// 	assert.NoError(t, err)
+// 	request.Header.Add("Content-Type", "image/jpeg")
+// 	response, err := httpClient.Do(request)
+// 	assert.NoError(t, err)
+// 	assert.Equal(t, 201, response.StatusCode)
 
-	request, err = http.NewRequest("GET", testServer.URL+"/test.raw", nil)
-	assert.NoError(t, err)
-	response, err = httpClient.Do(request)
-	assert.NoError(t, err)
-	assert.Equal(t, 200, response.StatusCode)
-	assert.Equal(t, "image/jpeg", response.Header.Get(HCType))
-	body, err := ioutil.ReadAll(response.Body)
-	response.Body.Close()
-	assert.Equal(t, stat.Size(), int64(len(string(body))))
+// 	request, err = http.NewRequest("GET", testServer.URL+"/test.raw", nil)
+// 	assert.NoError(t, err)
+// 	response, err = httpClient.Do(request)
+// 	assert.NoError(t, err)
+// 	assert.Equal(t, 200, response.StatusCode)
+// 	assert.Equal(t, "image/jpeg", response.Header.Get(HCType))
+// 	body, err := ioutil.ReadAll(response.Body)
+// 	response.Body.Close()
+// 	assert.Equal(t, stat.Size(), int64(len(string(body))))
 
-	request, err = http.NewRequest("DELETE", testServer.URL+"/test.raw", nil)
-	assert.NoError(t, err)
-	response, err = httpClient.Do(request)
-	assert.NoError(t, err)
-	assert.Equal(t, 200, response.StatusCode)
-}
+// 	request, err = http.NewRequest("DELETE", testServer.URL+"/test.raw", nil)
+// 	assert.NoError(t, err)
+// 	response, err = httpClient.Do(request)
+// 	assert.NoError(t, err)
+// 	assert.Equal(t, 200, response.StatusCode)
+// }
 
 func BenchmarkPUT(b *testing.B) {
 	e := 0

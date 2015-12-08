@@ -103,10 +103,17 @@ func (req *httpRequest) pathInfo(path string) (*pathInfo, error) {
 		} else {
 			res.FileType, res.Extension, res.MaybeRDF = MimeLookup(res.File)
 			if len(res.FileType) == 0 {
-				res.FileType, err = magic.TypeByFile(res.File)
+				req.Server.debug.Println("Finding mime for", res.File)
+				res.FileType, err = GuessMimeType(res.File)
 				if err != nil {
 					req.Server.debug.Println(err)
 				}
+
+				// Old
+				// res.FileType, err = magic.TypeByFile(res.File)
+				// if err != nil {
+				// 	req.Server.debug.Println(err)
+				// }
 			}
 		}
 	}

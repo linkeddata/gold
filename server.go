@@ -7,7 +7,6 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
-	// _mime "mime"
 	"net"
 	"net/http"
 	"net/url"
@@ -17,7 +16,7 @@ import (
 	"strings"
 
 	"github.com/gorilla/securecookie"
-	"github.com/presbrey/magicmime"
+	// "github.com/presbrey/magicmime"
 	"golang.org/x/net/webdav"
 )
 
@@ -39,7 +38,7 @@ var (
 	debugFlags  = log.Flags() | log.Lshortfile
 	debugPrefix = "[debug] "
 
-	magic *magicmime.Magic
+	// magic *magicmime.Magic
 
 	methodsAll = []string{
 		"OPTIONS", "HEAD", "GET",
@@ -47,15 +46,6 @@ var (
 		"COPY", "MOVE", "LOCK", "UNLOCK",
 	}
 )
-
-func init() {
-	var err error
-
-	magic, err = magicmime.New()
-	if err != nil {
-		panic(err)
-	}
-}
 
 type errorString struct {
 	s string
@@ -545,7 +535,7 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 										g.AddTriple(_s, NewResource("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), NewResource("http://www.w3.org/ns/ldp#Resource"))
 										// add type if RDF resource
 										//infoUrl, _ := url.Parse(info.Name())
-										guessType, _ := magic.TypeByFile(f.File)
+										guessType := f.FileType
 
 										if guessType == "text/plain" {
 											// open file and attempt to read the first line
@@ -560,7 +550,7 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 
 											// stop after the first line
 											for scanner.Scan() {
-												if strings.HasPrefix(scanner.Text(), "@prefix") {
+												if strings.HasPrefix(scanner.Text(), "@prefix") || strings.HasPrefix(scanner.Text(), "@base") {
 													kb := NewGraph(f.URI)
 													kb.ReadFile(f.File)
 													if kb.Len() > 0 {
