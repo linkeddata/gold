@@ -81,6 +81,7 @@ func (srv *Server) userCookieSet(w http.ResponseWriter, user string) error {
 		Name:    "Session",
 		Path:    "/",
 		Value:   encoded,
+		Secure:  true,
 	}
 	http.SetCookie(w, cookieCfg)
 	return nil
