@@ -969,7 +969,9 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 			}
 
 			onUpdateURI(updateURI)
-			onUpdateURI(resource.ParentURI)
+			if updateURI != resource.ParentURI {
+				onUpdateURI(resource.ParentURI)
+			}
 			if isNew {
 				return r.respond(201)
 			}
