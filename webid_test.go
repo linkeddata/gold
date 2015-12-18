@@ -28,5 +28,5 @@ func TestAddProfileKeys(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, k)
 	assert.NotNil(t, p)
-	assert.Equal(t, 12, g.Len())
+	assert.Equal(t, 13, g.Len())
 }

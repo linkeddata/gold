@@ -52,6 +52,7 @@ var (
 		{Name: "Preferences", Label: "Preferences workspace", Type: ""},
 		{Name: "Applications", Label: "Applications workspace", Type: "PreferencesWorkspace"},
 		{Name: "Inbox", Label: "Inbox", Type: ""},
+		{Name: "Timeline", Label: "Timeline", Type: ""},
 	}
 
 	// cache
@@ -368,6 +369,7 @@ func NewWebIDProfile(account webidAccount) *Graph {
 	g.AddTriple(userTerm, ns.space.Get("storage"), NewResource(account.BaseURI+"/"))
 	g.AddTriple(userTerm, ns.space.Get("preferencesFile"), NewResource(account.PrefURI))
 	g.AddTriple(userTerm, ns.st.Get("inbox"), NewResource(account.BaseURI+"/Inbox/"))
+	g.AddTriple(userTerm, ns.st.Get("timeline"), NewResource(account.BaseURI+"/Timeline/"))
 
 	return g
 }
@@ -458,7 +460,7 @@ func (req *httpRequest) AddWorkspaces(account webidAccount, g *Graph) error {
 		}
 
 		// Append workspace URL to the preferencesFile
-		if ws.Name != "Inbox" {
+		if ws.Name != "Inbox" || ws.Name != "Timeline" {
 			pref.AddTriple(wsTerm, ns.rdf.Get("type"), ns.space.Get("Workspace"))
 			if len(ws.Type) > 0 {
 				pref.AddTriple(wsTerm, ns.rdf.Get("type"), ns.space.Get(ws.Type))
