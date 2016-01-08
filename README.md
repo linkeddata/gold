@@ -3,11 +3,15 @@
 [![](https://img.shields.io/badge/project-Solid-7C4DFF.svg?style=flat-square)](https://github.com/solid/solid)
 [![Join the chat at https://gitter.im/linkeddata/gold](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/linkeddata/gold?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
-Linked Data server for Go, based on [initial work done by William Waites](https://bitbucket.org/ww/gold).
+`gold` is a reference Linked Data Platform server for the
+**[Solid platform](https://github.com/solid/solid-spec)**.
+
+Written in Go, based on
+[initial work done by William Waites](https://bitbucket.org/ww/gold).
 
 [![Build Status](https://travis-ci.org/linkeddata/gold.svg?branch=master)](https://travis-ci.org/linkeddata/gold)
 
-## Install
+## Installing
 
 ### From docker repository:
 
@@ -27,51 +31,122 @@ To check the status of the container, type:
 
 This will mount the host directory, `/home/user/data`, into the container as the `/data/` directory. Doing this will allow you to reuse the data directory without worrying about persistence inside the container.
 
-
 ### From Github:
 
-Setup Go + dependencies:
+1. Setup Go + dependencies:
 
-    # on OSX eg.
-    brew install go raptor libmagic
+  * **Mac OS X**: `brew install go raptor libmagic`
+  * **Ubuntu**: `sudo apt-get install golang-go libraptor2-dev libmagic-dev`
 
-    # on Ubuntu eg.
-    sudo apt-get install golang-go libraptor2-dev libmagic-dev
+2. Set the `GOPATH` variable (required by Go):
 
-    mkdir ~/go; export GOPATH=~/go
-    go version
+  ```bash
+  mkdir ~/go
+  export GOPATH=~/go
+  ```
 
-`IMPORTANT`: Please check that you have at least Go version 1.4 installed. If you don't, please consider [installing](http://golang.org/doc/install) a more recent version.
+  (Optionally consider adding `export GOPATH=~/go` to your `.bashrc` or profile).
 
-Use the `go get` command to install the server and all the dependencies:
+3. Check that you have the required Go version (**Go 1.4 or later**):
+
+  ```
+  go version
+  ```
+
+  If you don't, please [install](http://golang.org/doc/install) a more recent
+  version.
+
+4. Use the `go get` command to install the server and all the dependencies:
 
     go get github.com/linkeddata/gold/server
 
-Optionally, you can install some extra dependencies used by the tests:
+5. (Optional) Install extra dependencies used by the tests:
 
     go get github.com/stretchr/testify/assert
 
-Run the server:
+## Running the Server
 
-    cd ~/go/src/github.com/linkeddata/gold/server && go install
-    ~/go/bin/server -https=":8443" -root=/home/user/data/ -debug
+**IMPORTANT**: Among other things, `gold` is a web server. Please consider
+running it as a regular user instead of root. Since gold treats all files
+equally, and even though uploaded files are not made executable, it will not
+prevent clients from uploading malicious shell scripts.
 
-Alternatively, you can compile and run it from the source dir in one command:
+Pay attention to the data root parameter, `-root`. By default, it will serve
+files from its current directory (so, for example, if you installed it from
+Github, its data root will be `$GOPATH/src/github.com/linkeddata/gold/`).
+Otherwise, make sure to pass it a dedicated data directory to serve, either
+using a command-line parameter or the [config file](#configuration).
+Something like: `-root=/var/www/data/` or `-root=~/data/`.
 
-    go run ~/go/src/github.com/linkeddata/gold/server/*.go -http=":8080" -https=":8443" -root=/home/user/data/ -debug
+1. If you installed it from package via `go get`, you can run it by:
 
-You can also use the provided `gold.conf-example` file to create your own configuration file:
+  ```
+  $GOPATH/bin/server -http=":8080" -https=":8443" -debug
+  ```
 
-    cp ~/go/src/github.com/linkeddata/gold/gold.conf-example ~/go/src/github.com/linkeddata/gold/server/gold.conf
-    nano ~/go/src/github.com/linkeddata/gold/gold.conf
-    ~/go/bin/server -conf=/home/user/go/src/github.com/linkeddata/gold/gold.conf
+2. When developing locally, you can `cd` into the repo cloned by `go get`:
+
+  ```
+  cd $GOPATH/src/github.com/linkeddata/gold
+  ```
+
+  And launch the server by:
+
+  ```
+  go run server/*.go -http=":8080" -https=":8443" -debug
+  ```
+
+  Alternatively, you can compile and run it from the source dir in one command:
+
+  ```
+  go run $GOPATH/src/github.com/linkeddata/gold/server/*.go -http=":8080" -https=":8443" \
+    -root=/home/user/data/ -debug
+  ```
+
+## Configuration
+
+You can use the provided `gold.conf-example` file to create your own
+configuration file, and specify it with the `-conf` parameter.
+
+```bash
+cd $GOPATH/src/github.com/linkeddata/gold/
+cp gold.conf-example server/gold.conf
+
+# edit the configuration file
+nano server/gold.conf
+
+# pass the config file when launching the gold server
+$GOPATH/bin/server -conf=$GOPATH/src/github.com/linkeddata/gold/server/gold.conf
+```
 
 To see a list of available options:
 
     ~/go/bin/server -help
 
-`IMPORTANT`: Please consider running gold as a regular user instead of root. Since gold treats all files equally, and even though uploaded files are not made executable, it will not prevent clients from uploading malicious shell scripts.
+Some important options and defaults:
+
+* `-conf` - Optional path to a config file.
+
+* `-debug` - Outputs config parameters and extra logging. Default: `false`.
+
+* `-root` - Specifies the data root directory which `gold` will be serving.
+  Default: `.` (so, likely to be `$GOPATH/src/github.com/linkeddata/gold/`).
+
+* `-http` - HTTP port on which the server listens. For local development,
+  the default HTTP port, `80`, is likely to be reserved, so pass in an
+  alternative. Default: `":80"`. Example: `-http=":8080"`.
+
+* `-https` - HTTPS port on which the server listens. For local development,
+  the default HTTPS port, `443`, is likely to be reserved, so pass in an
+  alternative. Default: `":443"`. Example: `-https=":8443"`.
+
+## Testing
+To run the unit tests (assuming you've installed `assert` via
+`go get github.com/stretchr/testify/assert`):
+
+```
+make test
+```
 
 ## License
-
 [MIT](http://joe.mit-license.org/)
