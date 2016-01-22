@@ -49,14 +49,14 @@ type ServerConfig struct {
 	// ACLSuffix sets the default suffix for ACL files (e.g. ,acl or .acl)
 	ACLSuffix string
 
-	// DataSkin sets the default skin for viewing RDF resources
-	DataSkin string
+	// DataApp sets the default app for viewing RDF resources
+	DataApp string
 
-	// DirSkin points to the skin/app for browsing the data space
-	DirSkin string
+	// DirApp points to the app for browsing the data space
+	DirApp string
 
-	// SignUpSkin points to the skin/app used for creating new accounts
-	SignUpSkin string
+	// SignUpApp points to the app used for creating new accounts
+	SignUpApp string
 
 	// DirIndex contains the default index file name
 	DirIndex []string
@@ -75,10 +75,10 @@ func NewServerConfig() *ServerConfig {
 		TokenAge:   5,
 		MetaSuffix: ".meta",
 		ACLSuffix:  ".acl",
-		DataSkin:   "tabulator",
+		DataApp:   "tabulator",
 		DirIndex:   []string{"index.html", "index.htm"},
-		DirSkin:    "http://linkeddata.github.io/warp/#list/",
-		SignUpSkin: "https://solid.github.io/solid-signup/?domain=",
+		DirApp:    "http://linkeddata.github.io/warp/#list/",
+		SignUpApp: "https://solid.github.io/solid-signup/?domain=",
 		DiskLimit:  100000000, // 100MB
 		DataRoot:   serverDefaultRoot(),
 	}

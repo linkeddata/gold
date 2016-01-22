@@ -126,9 +126,9 @@ func handleStatusText(status int, err error) string {
 	case 200:
 		return "HTTP 200 - OK"
 	case 401:
-		return Skins["401"]
+		return Apps["401"]
 	case 403:
-		return Skins["403"]
+		return Apps["403"]
 	case 404:
 		return "HTTP 404 - Not found\n\n" + err.Error()
 	case 500:
@@ -358,7 +358,7 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 		}
 
 		if !resource.Exists {
-			return r.respond(404, Skins["404"])
+			return r.respond(404, Apps["404"])
 		}
 
 		// First redirect to path + trailing slash if it's missing
@@ -373,10 +373,10 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 		// overwrite ACL Link header
 		w.Header().Set("Link", brack(resource.AclURI)+"; rel=\"acl\", "+brack(resource.MetaURI)+"; rel=\"meta\"")
 
-		// redirect to skin
+		// redirect to app
 		if s.Config.Vhosts && !resource.Exists && resource.Base == strings.TrimRight(req.BaseURI(), "/") && contentType == "text/html" && req.Method != "HEAD" {
 			w.Header().Set(HCType, contentType)
-			urlStr := s.Config.SignUpSkin + url.QueryEscape(resource.Obj.Scheme+"://"+resource.Obj.Host+"/"+SystemPrefix+"/accountStatus")
+			urlStr := s.Config.SignUpApp + url.QueryEscape(resource.Obj.Scheme+"://"+resource.Obj.Host+"/"+SystemPrefix+"/accountStatus")
 			http.Redirect(w, req.Request, urlStr, 303)
 			return
 		}
@@ -427,9 +427,9 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 						w.Header().Set("Link", brack(resource.MetaURI)+"; rel=\"meta\", "+brack(resource.AclURI)+"; rel=\"acl\"")
 						break
 					} else if req.Method != "HEAD" {
-						//TODO load file manager skin from local preference file
+						//TODO load file manager app from local preference file
 						w.Header().Set(HCType, contentType)
-						urlStr := s.Config.DirSkin + resource.Obj.Scheme + "/" + resource.Obj.Host + "/" + resource.Obj.Path + "?" + req.Request.URL.RawQuery
+						urlStr := s.Config.DirApp + resource.Obj.Scheme + "/" + resource.Obj.Host + "/" + resource.Obj.Path + "?" + req.Request.URL.RawQuery
 						s.debug.Println("Redirecting to", urlStr)
 						http.Redirect(w, req.Request, urlStr, 303)
 						return
@@ -596,12 +596,12 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 			status = 200
 
 			if req.Method == "GET" && strings.Contains(contentType, "text/html") {
-				// delete ETag to force load the skin
+				// delete ETag to force load the app
 				w.Header().Del("ETag")
 				w.Header().Set("Link", brack(resource.MetaURI)+"; rel=\"meta\", "+brack(resource.AclURI)+"; rel=\"acl\"")
 				if maybeRDF {
 					w.Header().Set(HCType, contentType)
-					return r.respond(200, Skins[s.Config.DataSkin])
+					return r.respond(200, Apps[s.Config.DataApp])
 				}
 				w.Header().Set(HCType, magicType)
 				w.WriteHeader(200)
@@ -1083,7 +1083,7 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 		err = os.Remove(resource.File)
 		if err != nil {
 			if os.IsNotExist(err) {
-				return r.respond(404, Skins["404"])
+				return r.respond(404, Apps["404"])
 			}
 			return r.respond(500, err)
 		}
