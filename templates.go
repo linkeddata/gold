@@ -1,8 +1,8 @@
 package gold
 
 var (
-	// Skins contains a list of skins that get server instead of RDF
-	Skins = map[string]string{
+	// Apps contains a list of default apps that get server instead of RDF
+	Apps = map[string]string{
 		"tabulator": `<!DOCTYPE html>
 <html id="docHTML">
 <head>

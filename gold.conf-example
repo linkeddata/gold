@@ -23,11 +23,11 @@
 
 	"ACLSuffix": ".acl",
 
-	"DataSkin":  "tabulator",
+	"DataApp":  "tabulator",
 
-	"DirSkin":   "http://linkeddata.github.io/warp/#list/",
+	"DirApp":   "http://linkeddata.github.io/warp/#list/",
 
-	"SignUpSkin": "https://solid.github.io/solid-signup/?domain=",
+	"SignUpApp": "https://solid.github.io/solid-signup/?domain=",
 
 	"DirIndex":  ["index.html", "index.htm"],
 

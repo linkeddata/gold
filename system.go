@@ -69,8 +69,8 @@ func accountRecovery(w http.ResponseWriter, req *httpRequest, s *Server) SystemR
 	} else if len(req.FormValue("token")) > 0 {
 		return validateRecoveryToken(w, req, s)
 	}
-	// return default skin with form
-	return SystemReturn{Status: 200, Body: Skins["accountRecovery"]}
+	// return default app with form
+	return SystemReturn{Status: 200, Body: Apps["accountRecovery"]}
 }
 
 func sendRecoveryToken(w http.ResponseWriter, req *httpRequest, s *Server) SystemReturn {
@@ -146,7 +146,7 @@ func validateRecoveryToken(w http.ResponseWriter, req *httpRequest, s *Server) S
 			s.debug.Println("Error setting new cookie: " + err.Error())
 			return SystemReturn{Status: 500, Body: err.Error()}
 		}
-		return SystemReturn{Status: 200, Body: Skins["newCert"]}
+		return SystemReturn{Status: 200, Body: Apps["newCert"]}
 	}
 	return SystemReturn{Status: 499, Body: "Missing validity date for token."}
 }
@@ -392,7 +392,7 @@ func newCert(w http.ResponseWriter, req *httpRequest, s *Server) SystemReturn {
 
 		return SystemReturn{Status: 200, Body: body}
 	} else if strings.Contains(req.Header.Get("Accept"), "text/html") {
-		return SystemReturn{Status: 200, Body: Skins["newCert"]}
+		return SystemReturn{Status: 200, Body: Apps["newCert"]}
 	}
 	return SystemReturn{Status: 500, Body: "Your request could not be processed. Either no WebID or no SPKAC value was provided."}
 }

@@ -25,7 +25,7 @@ var (
 	cookieT = flag.Int64("cookieAge", 24, "lifetime for cookies (in hours)")
 	debug   = flag.Bool("debug", false, "output extra logging?")
 	root    = flag.String("root", ".", "path to file storage root")
-	skin    = flag.String("skin", "tabulator", "default view for HTML clients")
+	app    = flag.String("app", "tabulator", "default viewer app for HTML clients")
 	tlsCert = flag.String("tlsCertFile", "", "TLS certificate eg. cert.pem")
 	tlsKey  = flag.String("tlsKeyFile", "", "TLS certificate eg. key.pem")
 	vhosts  = flag.Bool("vhosts", false, "run in virtual hosts mode?")

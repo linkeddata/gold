@@ -277,7 +277,7 @@ func TestRedirectToSlashContainer(t *testing.T) {
 	assert.NotEmpty(t, string(body))
 }
 
-func TestRedirectToDirSkin(t *testing.T) {
+func TestRedirectToDirApp(t *testing.T) {
 	transport := http.Transport{}
 	transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 
@@ -287,7 +287,7 @@ func TestRedirectToDirSkin(t *testing.T) {
 	response, err := transport.RoundTrip(request)
 	assert.NoError(t, err)
 	assert.Equal(t, 303, response.StatusCode)
-	assert.True(t, strings.HasPrefix(response.Header.Get("Location"), handler.Config.DirSkin))
+	assert.True(t, strings.HasPrefix(response.Header.Get("Location"), handler.Config.DirApp))
 }
 
 func TestLDPPUTContainer(t *testing.T) {
