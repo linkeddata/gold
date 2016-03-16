@@ -187,6 +187,16 @@ func (r *response) respond(status int, a ...interface{}) *response {
 
 // ServeHTTP handles the response
 func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	origin := ""
+	origins := req.Header["Origin"] // all CORS requests
+	if len(origins) > 0 {
+		origin = origins[0]
+		w.Header().Set("Access-Control-Allow-Origin", origin)
+	}
+	if len(origin) < 1 {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+	}
+
 	if ProxyPath != "" && strings.HasPrefix(req.URL.Path, "/"+ProxyPath) {
 		uri, err := url.Parse(req.FormValue("uri"))
 		if err != nil {
@@ -232,14 +242,6 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 	// RWW
 	w.Header().Set("MS-Author-Via", "DAV, SPARQL")
 	w.Header().Set("Updates-Via", "wss://"+req.Host+"/")
-
-	// TODO: WAC
-	origin := ""
-	origins := req.Header["Origin"] // all CORS requests
-	if len(origins) > 0 {
-		origin = origins[0]
-		w.Header().Set("Access-Control-Allow-Origin", origin)
-	}
 
 	// Get request key
 	rKey := req.Request.FormValue("key")
@@ -308,9 +310,6 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 			w.Header().Set("Access-Control-Allow-Methods", strings.Join(corsReqM, ", "))
 		} else {
 			w.Header().Set("Access-Control-Allow-Methods", strings.Join(methodsAll, ", "))
-		}
-		if len(origin) < 1 {
-			w.Header().Set("Access-Control-Allow-Origin", "*")
 		}
 
 		// set LDP Link headers
