@@ -25,7 +25,7 @@ var (
 	cookieT = flag.Int64("cookieAge", 24, "lifetime for cookies (in hours)")
 	debug   = flag.Bool("debug", false, "output extra logging?")
 	root    = flag.String("root", ".", "path to file storage root")
-	app    = flag.String("app", "tabulator", "default viewer app for HTML clients")
+	app     = flag.String("app", "tabulator", "default viewer app for HTML clients")
 	tlsCert = flag.String("tlsCertFile", "", "TLS certificate eg. cert.pem")
 	tlsKey  = flag.String("tlsKeyFile", "", "TLS certificate eg. key.pem")
 	vhosts  = flag.Bool("vhosts", false, "run in virtual hosts mode?")
@@ -157,6 +157,7 @@ func main() {
 		tlsL net.Listener
 	)
 
+	tlsConfig.CipherSuites = []uint16{tls.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA, tls.TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA, tls.TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA}
 	tlsConfig.Certificates = make([]tls.Certificate, 1)
 	tlsConfig.MinVersion = tls.VersionTLS10
 	if len(config.TLSCert) == 0 && len(config.TLSKey) == 0 {
