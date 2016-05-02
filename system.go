@@ -362,6 +362,12 @@ func newCert(w http.ResponseWriter, req *httpRequest, s *Server) SystemReturn {
 		loggedUser := w.Header().Get("User")
 		s.debug.Println("Checking if request is authenticated: " + loggedUser)
 		if len(loggedUser) > 0 && loggedUser == webidURI && strings.HasPrefix(webidURI, resource.Base) {
+			acl := NewWAC(req, s, w, loggedUser, "")
+			aclStatus, err := acl.AllowWrite(strings.Split(webidURI, "#")[0])
+			if aclStatus > 200 || err != nil {
+				return SystemReturn{Status: aclStatus, Body: err.Error()}
+			}
+
 			pubKey, err := ParseSPKAC(spkac)
 			if err != nil {
 				s.debug.Println("ParseSPKAC error: " + err.Error())
