@@ -379,7 +379,7 @@ func (req *httpRequest) LinkToWebID(account webidAccount) error {
 	resource, _ := req.pathInfo(account.BaseURI + "/")
 
 	g := NewGraph(resource.URI)
-	g.AddTriple(NewResource(account.WebID), ns.foaf.Get("account"), NewResource(resource.URI))
+	g.AddTriple(NewResource(account.WebID), ns.st.Get("account"), NewResource(resource.URI))
 
 	// open account root meta file
 	f, err := os.OpenFile(resource.MetaFile, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
