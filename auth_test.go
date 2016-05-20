@@ -2,6 +2,8 @@ package gold
 
 import (
 	"bytes"
+	"crypto/rand"
+	"crypto/rsa"
 	"crypto/sha1"
 	"crypto/x509"
 	"encoding/base64"
@@ -130,8 +132,13 @@ func TestWebIDRSAAuth(t *testing.T) {
 
 	p, _ := ParseDigestAuthenticateHeader(wwwAuth)
 
+	// Generate new key pair
+	priv, err := rsa.GenerateKey(rand.Reader, 2048)
+	assert.NoError(t, err)
+	pub := &priv.PublicKey
+
 	// Load private key
-	pKey := x509.MarshalPKCS1PrivateKey(user1k)
+	pKey := x509.MarshalPKCS1PrivateKey(priv)
 	keyBytes := pem.EncodeToMemory(&pem.Block{
 		Type:  "RSA PRIVATE KEY",
 		Bytes: pKey,
@@ -141,7 +148,7 @@ func TestWebIDRSAAuth(t *testing.T) {
 
 	// Load public key
 	pubPEM := bytes.NewBuffer(nil)
-	pubBytes, err := x509.MarshalPKIXPublicKey(user1p)
+	pubBytes, err := x509.MarshalPKIXPublicKey(pub)
 	assert.NoError(t, err)
 	err = pem.Encode(pubPEM, &pem.Block{Type: "RSA PUBLIC KEY", Bytes: pubBytes})
 	assert.NoError(t, err)
@@ -149,6 +156,15 @@ func TestWebIDRSAAuth(t *testing.T) {
 	// Hash the key to use in the URL and store it on the server
 	hash := fmt.Sprintf("%x", sha1.Sum([]byte(pubPEM.String())))
 	keyURL := testServer.URL + "/_test/keys/" + hash
+
+	keyGraph, err := AddPEMKey(keyURL, pubPEM.String(), user1, "Test key")
+	assert.NoError(t, err)
+	request, err = http.NewRequest("PUT", keyURL, strings.NewReader(keyGraph))
+	assert.NoError(t, err)
+	response, err = user1h.Do(request)
+	assert.NoError(t, err)
+	response.Body.Close()
+	assert.Equal(t, 201, response.StatusCode)
 
 	claim := sha1.Sum([]byte(p.Source + user1 + keyURL + p.Nonce))
 	signed, err := signer.Sign(claim[:])
