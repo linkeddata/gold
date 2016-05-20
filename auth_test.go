@@ -1,10 +1,12 @@
 package gold
 
 import (
+	"bytes"
 	"crypto/sha1"
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/pem"
+	"fmt"
 	"net/http"
 	"strings"
 	"testing"
@@ -24,21 +26,13 @@ func TestNewSecureToken(t *testing.T) {
 }
 
 func TestParseDigestAuthorizationHeader(t *testing.T) {
-	h := "WebID-RSA source=\"http://server.org/\", username=\"http://example.org/\", nonce=\"string1\", sig=\"string2\""
+	h := "WebID-RSA source=\"http://server.org/\", webid=\"http://example.org/\", keyurl=\"http://example.org/keys/abc\", nonce=\"string1\", sig=\"string2\""
 	p, err := ParseDigestAuthorizationHeader(h)
 	assert.NoError(t, err)
 	assert.Equal(t, "WebID-RSA", p.Type)
 	assert.Equal(t, "http://server.org/", p.Source)
-	assert.Equal(t, "http://example.org/", p.Username)
-	assert.Equal(t, "string1", p.Nonce)
-	assert.Equal(t, "string2", p.Signature)
-
-	h = "WebID-RSA source=\"http://server.org/\", \nusername=\"http://example.org/\", \nnonce=\"string1\",\n sig=\"string2\""
-	p, err = ParseDigestAuthorizationHeader(h)
-	assert.NoError(t, err)
-	assert.Equal(t, "WebID-RSA", p.Type)
-	assert.Equal(t, "http://server.org/", p.Source)
-	assert.Equal(t, "http://example.org/", p.Username)
+	assert.Equal(t, "http://example.org/", p.Webid)
+	assert.Equal(t, "http://example.org/keys/abc", p.KeyURL)
 	assert.Equal(t, "string1", p.Nonce)
 	assert.Equal(t, "string2", p.Signature)
 }
@@ -145,13 +139,24 @@ func TestWebIDRSAAuth(t *testing.T) {
 	signer, err := ParseRSAPrivatePEMKey(keyBytes)
 	assert.NoError(t, err)
 
-	claim := sha1.Sum([]byte(p.Source + user1 + p.Nonce))
+	// Load public key
+	pubPEM := bytes.NewBuffer(nil)
+	pubBytes, err := x509.MarshalPKIXPublicKey(user1p)
+	assert.NoError(t, err)
+	err = pem.Encode(pubPEM, &pem.Block{Type: "RSA PUBLIC KEY", Bytes: pubBytes})
+	assert.NoError(t, err)
+
+	// Hash the key to use in the URL and store it on the server
+	hash := fmt.Sprintf("%x", sha1.Sum([]byte(pubPEM.String())))
+	keyURL := testServer.URL + "/_test/keys/" + hash
+
+	claim := sha1.Sum([]byte(p.Source + user1 + keyURL + p.Nonce))
 	signed, err := signer.Sign(claim[:])
 	assert.NoError(t, err)
 	b64Sig := base64.StdEncoding.EncodeToString(signed)
 	assert.NotEmpty(t, b64Sig)
 
-	authHeader := `WebID-RSA source="` + p.Source + `", username="` + user1 + `", nonce="` + p.Nonce + `", sig="` + b64Sig + `"`
+	authHeader := `WebID-RSA source="` + p.Source + `", webid="` + user1 + `", keyurl="` + keyURL + `", nonce="` + p.Nonce + `", sig="` + b64Sig + `"`
 
 	request, err = http.NewRequest("GET", testServer.URL+aclDir+"abc", nil)
 	request.Header.Add("Authorization", authHeader)
@@ -229,13 +234,13 @@ func TestCleanupAuth(t *testing.T) {
 }
 
 func TestACLCleanUsers(t *testing.T) {
-	request, err := http.NewRequest("DELETE", testServer.URL+"/_test/user1", nil)
+	request, err := http.NewRequest("DELETE", testServer.URL+"/_test/profile/user1", nil)
 	assert.NoError(t, err)
 	response, err := user1h.Do(request)
 	assert.NoError(t, err)
 	assert.Equal(t, 200, response.StatusCode)
 
-	request, err = http.NewRequest("DELETE", testServer.URL+"/_test/user2", nil)
+	request, err = http.NewRequest("DELETE", testServer.URL+"/_test/profile/user2", nil)
 	assert.NoError(t, err)
 	response, err = user1h.Do(request)
 	assert.NoError(t, err)

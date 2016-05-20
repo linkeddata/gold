@@ -43,6 +43,9 @@ type ServerConfig struct {
 	// TokenAge contains the validity duration for recovery tokens (in minutes)
 	TokenAge int64
 
+	// TokenAge contains the validity duration for recovery tokens (in minutes)
+	AuthProtocol string
+
 	// METASuffix sets the default suffix for meta files (e.g. ,meta or .meta)
 	MetaSuffix string
 
@@ -71,16 +74,17 @@ type ServerConfig struct {
 // NewServerConfig creates a new config object
 func NewServerConfig() *ServerConfig {
 	return &ServerConfig{
-		CookieAge:  8736, // hours (1 year)
-		TokenAge:   5,
-		MetaSuffix: ".meta",
-		ACLSuffix:  ".acl",
-		DataApp:   "tabulator",
-		DirIndex:   []string{"index.html", "index.htm"},
-		DirApp:    "http://linkeddata.github.io/warp/#list/",
-		SignUpApp: "https://solid.github.io/solid-signup/?domain=",
-		DiskLimit:  100000000, // 100MB
-		DataRoot:   serverDefaultRoot(),
+		CookieAge:    8736, // hours (1 year)
+		TokenAge:     5,
+		AuthProtocol: "webid",
+		MetaSuffix:   ".meta",
+		ACLSuffix:    ".acl",
+		DataApp:      "tabulator",
+		DirIndex:     []string{"index.html", "index.htm"},
+		DirApp:       "http://linkeddata.github.io/warp/#list/",
+		SignUpApp:    "https://solid.github.io/solid-signup/?domain=",
+		DiskLimit:    100000000, // 100MB
+		DataRoot:     serverDefaultRoot(),
 	}
 }
 

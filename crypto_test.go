@@ -36,7 +36,8 @@ oYi+1hqp1fIekaxsyQIDAQAB
 	pubN := "c2144346c37df21a2872f76a438d94219740b7eab3c98fe0af7d20bcfaadbc871035eb5405354775df0b824d472ad10776aac05eff6845c9cd83089260d21d4befcfba67850c47b10e7297dd504f477f79bf86cf85511e39b8125e0cad474851c3f1b1ca0fa92ff053c67c94e8b5cfb6c63270a188bed61aa9d5f21e91ac6cc9"
 	pubE := "65537"
 
-	h := `WebID-RSA source="https://deiu.me/Private/", username="https://deiu.me/profile#me", nonce="MTQzODc4MzA5NXxtS1dYcVd4bGRjVXQ2bFVEMXk2NE5KMDU1TFB3Nk9qM2FmMWduMk4tdl9tWDdvZXBtdUJSa1ZMRHE4WWZ1dUE0RlNGeDl0OGt6SGZnbkpZbW5CWE96TUxRamJ6a3xCC-Ik7gERpCBc__l2OK0DxVxyIiLTDVZ7rLIib2MNSQ==", sig="qiTKnXaXgMfGEA2LLCqhFWiB+6T9gXvLR6nO2dCvk71nBoK3MiwLxbsF83uKT81ur9SucDJ2fmjLKPbP9o7NrkYrM45rkPJsXHjbAzHDw2DftKLez5DF70HtDa1rEaUEF1mLrNMGfL4VYea5z15lNNNiDKaJpCwhgeHNB1x2qNY="`
+	h := `WebID-RSA source="https://deiu.me/Private/", webid="https://deiu.me/profile#me", keyurl="https://deiu.me/keys/abc", nonce="MTQzODc4MzA5NXxtS1dYcVd4bGRjVXQ2bFVEMXk2NE5KMDU1TFB3Nk9qM2FmMWduMk4tdl9tWDdvZXBtdUJSa1ZMRHE4WWZ1dUE0RlNGeDl0OGt6SGZnbkpZbW5CWE96TUxRamJ6a3xCC-Ik7gERpCBc__l2OK0DxVxyIiLTDVZ7rLIib2MNSQ==", sig="qiTKnXaXgMfGEA2LLCqhFWiB+6T9gXvLR6nO2dCvk71nBoK3MiwLxbsF83uKT81ur9SucDJ2fmjLKPbP9o7NrkYrM45rkPJsXHjbAzHDw2DftKLez5DF70HtDa1rEaUEF1mLrNMGfL4VYea5z15lNNNiDKaJpCwhgeHNB1x2qNY="`
+	// TODO: update sig
 	_toSign := `https://deiu.me/Private/https://deiu.me/profile#meMTQzODc4MzA5NXxtS1dYcVd4bGRjVXQ2bFVEMXk2NE5KMDU1TFB3Nk9qM2FmMWduMk4tdl9tWDdvZXBtdUJSa1ZMRHE4WWZ1dUE0RlNGeDl0OGt6SGZnbkpZbW5CWE96TUxRamJ6a3xCC-Ik7gERpCBc__l2OK0DxVxyIiLTDVZ7rLIib2MNSQ==`
 	_sig := `qiTKnXaXgMfGEA2LLCqhFWiB+6T9gXvLR6nO2dCvk71nBoK3MiwLxbsF83uKT81ur9SucDJ2fmjLKPbP9o7NrkYrM45rkPJsXHjbAzHDw2DftKLez5DF70HtDa1rEaUEF1mLrNMGfL4VYea5z15lNNNiDKaJpCwhgeHNB1x2qNY=`
 	p, err := ParseDigestAuthorizationHeader(h)
@@ -53,7 +54,7 @@ oYi+1hqp1fIekaxsyQIDAQAB
 	signer, err := ParseRSAPrivatePEMKey(privKey)
 	assert.NoError(t, err)
 
-	toSign := p.Source + p.Username + p.Nonce
+	toSign := p.Source + p.Webid + p.Nonce
 	assert.Equal(t, _toSign, toSign)
 
 	claim := sha1.Sum([]byte(toSign))

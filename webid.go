@@ -45,14 +45,9 @@ var (
 	notAfter  = time.Date(2049, 12, 31, 23, 59, 59, 0, time.UTC)
 
 	workspaces = []workspace{
-		{Name: "Public", Label: "Public workspace", Type: "PublicWorkspace"},
-		{Name: "Private", Label: "Private workspace", Type: "PrivateWorkspace"},
-		{Name: "Work", Label: "Work workspace", Type: ""},
-		{Name: "Shared", Label: "Shared workspace", Type: "SharedWorkspace"},
-		{Name: "Preferences", Label: "Preferences workspace", Type: ""},
-		{Name: "Applications", Label: "Applications workspace", Type: "PreferencesWorkspace"},
-		{Name: "Inbox", Label: "Inbox", Type: ""},
-		{Name: "Timeline", Label: "Timeline", Type: ""},
+		{Name: "prefs", Label: "Preferences workspace", Type: ""},
+		{Name: "inbox", Label: "Inbox", Type: ""},
+		{Name: "keys", Label: "Keys", Type: ""},
 	}
 
 	// cache
@@ -86,19 +81,21 @@ func WebIDDigestAuth(req *httpRequest) (string, error) {
 		return "", errors.New("Bad source URI for auth token: " + authH.Source + " -- possible MITM attack!")
 	}
 
-	claim := sha1.Sum([]byte(authH.Source + authH.Username + authH.Nonce))
+	claim := sha1.Sum([]byte(authH.Source + authH.Webid + authH.KeyURL + authH.Nonce))
 	signature, err := base64.StdEncoding.DecodeString(authH.Signature)
 	if err != nil {
 		return "", errors.New(err.Error() + " in " + authH.Signature)
 	}
 
-	if len(authH.Username) == 0 || len(claim) == 0 || len(signature) == 0 {
-		return "", errors.New("No WebID and/or claim found in the Authorization header")
+	// Sanity checks
+	if len(authH.Webid) == 0 || len(authH.KeyURL) == 0 || len(claim) == 0 || len(signature) == 0 {
+		return "", errors.New("Incomplete Authorization header")
 	}
-
-	// fetch WebID to get pubKey
-	if !strings.HasPrefix(authH.Username, "http") {
-		return "", errors.New("Username is not a valid HTTP URI: " + authH.Username)
+	if !strings.HasPrefix(authH.Webid, "http") {
+		return "", errors.New("WebID is not a valid HTTP URI: " + authH.Webid)
+	}
+	if !strings.HasPrefix(authH.KeyURL, "http") {
+		return "", errors.New("Key URL is not a valid HTTP URIL: " + authH.KeyURL)
 	}
 
 	// Decrypt and validate nonce from secure token
@@ -111,7 +108,7 @@ func WebIDDigestAuth(req *httpRequest) (string, error) {
 		return "", err
 	}
 	if time.Now().Local().Unix() > v {
-		return "", errors.New("Token expired for " + authH.Username)
+		return "", errors.New("Token expired for " + authH.Webid)
 	}
 	if len(tValues["secret"]) == 0 {
 		return "", errors.New("Missing secret from token (tempered with?)")
@@ -120,42 +117,52 @@ func WebIDDigestAuth(req *httpRequest) (string, error) {
 		return "", errors.New("Wrong secret value in client token!")
 	}
 
-	g := NewGraph(authH.Username)
-	err = g.LoadURI(authH.Username)
+	// Fetch WebID to get key location
+	g := NewGraph(authH.Webid)
+	err = g.LoadURI(authH.Webid)
 	if err != nil {
 		return "", err
 	}
 
-	req.debug.Println("Checking for public keys for user", authH.Username)
-	for _, keyT := range g.All(NewResource(authH.Username), ns.cert.Get("key"), nil) {
-		for range g.All(keyT.Object, ns.rdf.Get("type"), ns.cert.Get("RSAPublicKey")) {
-			req.debug.Println("Found RSA key in user's profile", keyT.Object.String())
-			for _, pubP := range g.All(keyT.Object, ns.cert.Get("pem"), nil) {
-				keyP := term2C(pubP.Object).String()
-				req.debug.Println("Found matching public key in user's profile", keyP[:10], "...", keyP[len(keyP)-10:len(keyP)])
-				parser, err := ParseRSAPublicPEMKey([]byte(keyP))
-				if err == nil {
-					err = parser.Verify(claim[:], signature)
-					if err == nil {
-						return authH.Username, nil
-					}
-				}
-				req.debug.Println("Unable to verify signature with key", keyP[:10], "...", keyP[len(keyP)-10:len(keyP)], "-- reason:", err)
+	// go through each key location store
+	req.debug.Println("Checking for public keys for user", authH.Webid)
+	for _, keyT := range g.All(NewResource(authH.Webid), ns.st.Get("keys"), nil) {
+		keyURL := term2C(keyT.Object).String()
+		if strings.HasPrefix(authH.KeyURL, keyURL) {
+			gk := NewGraph(authH.KeyURL)
+			err = gk.LoadURI(authH.KeyURL)
+			if err != nil {
+				return "", err
 			}
-			// also loop through modulus/exp
-			for _, pubN := range g.All(keyT.Object, ns.cert.Get("modulus"), nil) {
-				keyN := term2C(pubN.Object).String()
-				for _, pubE := range g.All(keyT.Object, ns.cert.Get("exponent"), nil) {
-					keyE := term2C(pubE.Object).String()
-					req.debug.Println("Found matching modulus and exponent in user's profile", keyN[:10], "...", keyN[len(keyN)-10:len(keyN)])
-					parser, err := ParseRSAPublicKeyNE("RSAPublicKey", keyN, keyE)
+			for range gk.All(nil, ns.rdf.Get("type"), ns.cert.Get("RSAPublicKey")) {
+				req.debug.Println("Found RSA key in user's profile", keyT.Object.String())
+				for _, pubP := range gk.All(nil, ns.cert.Get("pem"), nil) {
+					keyP := term2C(pubP.Object).String()
+					req.debug.Println("Found matching public key in user's profile", keyP[:10], "...", keyP[len(keyP)-10:len(keyP)])
+					parser, err := ParseRSAPublicPEMKey([]byte(keyP))
 					if err == nil {
 						err = parser.Verify(claim[:], signature)
 						if err == nil {
-							return authH.Username, nil
+							return authH.Webid, nil
 						}
 					}
-					req.debug.Println("Unable to verify signature with key", keyN[:10], "...", keyN[len(keyN)-10:len(keyN)], "-- reason:", err)
+					req.debug.Println("Unable to verify signature with key", keyP[:10], "...", keyP[len(keyP)-10:len(keyP)], "-- reason:", err)
+				}
+				// also loop through modulus/exp in case we didn't find a PEM key
+				for _, pubN := range gk.All(keyT.Object, ns.cert.Get("modulus"), nil) {
+					keyN := term2C(pubN.Object).String()
+					for _, pubE := range gk.All(keyT.Object, ns.cert.Get("exponent"), nil) {
+						keyE := term2C(pubE.Object).String()
+						req.debug.Println("Found matching modulus and exponent in user's profile", keyN[:10], "...", keyN[len(keyN)-10:len(keyN)])
+						parser, err := ParseRSAPublicKeyNE("RSAPublicKey", keyN, keyE)
+						if err == nil {
+							err = parser.Verify(claim[:], signature)
+							if err == nil {
+								return authH.Webid, nil
+							}
+						}
+						req.debug.Println("Unable to verify signature with key", keyN[:10], "...", keyN[len(keyN)-10:len(keyN)], "-- reason:", err)
+					}
 				}
 			}
 		}
@@ -312,6 +319,27 @@ func AddProfileKeys(uri string, g *Graph) (*Graph, *rsa.PrivateKey, *rsa.PublicK
 	return g, priv, pub, nil
 }
 
+// AddPEMKey creates a PEM key graph
+func AddPEMKey(uri string, key string, webid string, comment string) (string, error) {
+	g := NewGraph(uri)
+	userTerm := NewResource(webid)
+	keyTerm := NewResource(uri + "#key")
+	if len(comment) == 0 {
+		comment = "Created  " + time.Now().Format(time.RFC822)
+	}
+
+	g.AddTriple(userTerm, ns.cert.Get("key"), keyTerm)
+	g.AddTriple(keyTerm, ns.rdf.Get("type"), ns.cert.Get("RSAPublicKey"))
+	g.AddTriple(keyTerm, ns.rdfs.Get("comment"), NewLiteral(comment))
+	g.AddTriple(keyTerm, ns.cert.Get("pem"), NewLiteral(key))
+
+	data, err := g.Serialize("text/turtle")
+	if err != nil {
+		return "", err
+	}
+	return data, nil
+}
+
 // AddCertKeys adds the modulus and exponent values to the profile document
 func (req *httpRequest) AddCertKeys(uri string, mod string, exp string) error {
 	uuid := NewUUID()
@@ -366,10 +394,10 @@ func NewWebIDProfile(account webidAccount) *Graph {
 	if len(account.Img) > 0 {
 		g.AddTriple(userTerm, ns.foaf.Get("img"), NewResource(account.Img))
 	}
-	g.AddTriple(userTerm, ns.space.Get("storage"), NewResource(account.BaseURI+"/"))
+	g.AddTriple(userTerm, ns.space.Get("storage"), NewResource(account.BaseURI))
 	g.AddTriple(userTerm, ns.space.Get("preferencesFile"), NewResource(account.PrefURI))
-	g.AddTriple(userTerm, ns.st.Get("inbox"), NewResource(account.BaseURI+"/Inbox/"))
-	g.AddTriple(userTerm, ns.st.Get("timeline"), NewResource(account.BaseURI+"/Timeline/"))
+	g.AddTriple(userTerm, ns.st.Get("inbox"), NewResource(account.BaseURI+"inbox/"))
+	g.AddTriple(userTerm, ns.st.Get("keys"), NewResource(account.BaseURI+"keys/"))
 
 	return g
 }
@@ -460,7 +488,7 @@ func (req *httpRequest) AddWorkspaces(account webidAccount, g *Graph) error {
 		}
 
 		// Append workspace URL to the preferencesFile
-		if ws.Name != "Inbox" || ws.Name != "Timeline" {
+		if ws.Name != "Inbox" {
 			pref.AddTriple(wsTerm, ns.rdf.Get("type"), ns.space.Get("Workspace"))
 			if len(ws.Type) > 0 {
 				pref.AddTriple(wsTerm, ns.rdf.Get("type"), ns.space.Get(ws.Type))

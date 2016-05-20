@@ -2,8 +2,13 @@
 package gold
 
 import (
+	"bytes"
 	"crypto/rand"
+	"crypto/sha1"
 	"crypto/tls"
+	"crypto/x509"
+	"encoding/pem"
+	"fmt"
 	"net/http"
 	"strings"
 	"testing"
@@ -18,11 +23,12 @@ const (
 func TestACLInit(t *testing.T) {
 	var err error
 
-	user1 = testServer.URL + "/_test/user1#id"
+	// ------- USER 1 --------
+	user1 = testServer.URL + "/_test/profile/user1#id"
 	var user1_account = webidAccount{
 		WebID:   user1,
 		BaseURI: testServer.URL + "/_test/",
-		PrefURI: testServer.URL + "/_test/Preferences/prefs.ttl",
+		PrefURI: testServer.URL + "/_test/profile/prefs.ttl",
 	}
 	user1g := NewWebIDProfile(user1_account)
 	user1g, user1k, user1p, err = AddProfileKeys(user1, user1g)
@@ -45,11 +51,31 @@ func TestACLInit(t *testing.T) {
 	resp1.Body.Close()
 	assert.Equal(t, 201, resp1.StatusCode)
 
-	user2 = testServer.URL + "/_test/user2#id"
+	// Store public PEM key
+	pubPEM := bytes.NewBuffer(nil)
+	pubBytes, err := x509.MarshalPKIXPublicKey(user1p)
+	assert.NoError(t, err)
+	err = pem.Encode(pubPEM, &pem.Block{Type: "RSA PUBLIC KEY", Bytes: pubBytes})
+	assert.NoError(t, err)
+
+	// Hash the key to use in the URL and store it on the server
+	hash := fmt.Sprintf("%x", sha1.Sum([]byte(pubPEM.String())))
+	keyURI := testServer.URL + "/_test/keys/" + hash
+	keyGraph, err := AddPEMKey(keyURI, pubPEM.String(), user1, "Test key")
+	assert.NoError(t, err)
+	req1, err = http.NewRequest("PUT", keyURI, strings.NewReader(keyGraph))
+	assert.NoError(t, err)
+	resp1, err = httpClient.Do(req1)
+	assert.NoError(t, err)
+	resp1.Body.Close()
+	assert.Equal(t, 201, resp1.StatusCode)
+
+	// ------- USER 2 --------
+	user2 = testServer.URL + "/_test/profile/user2#id"
 	var user2_account = webidAccount{
 		WebID:   user2,
 		BaseURI: testServer.URL + "/_test/",
-		PrefURI: testServer.URL + "/_test/Preferences/prefs.ttl",
+		PrefURI: testServer.URL + "/_test/profile/prefs.ttl",
 	}
 	user2g := NewWebIDProfile(user2_account)
 	user2g, user2k, user2p, err = AddProfileKeys(user2, user2g)

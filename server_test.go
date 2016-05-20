@@ -1161,38 +1161,6 @@ func TestDELETEFile(t *testing.T) {
 	assert.Equal(t, 200, response.StatusCode)
 }
 
-func TestDELETEFolders(t *testing.T) {
-	request, err := http.NewRequest("DELETE", testServer.URL+"/_test/dir", nil)
-	assert.NoError(t, err)
-	response, err := httpClient.Do(request)
-	assert.NoError(t, err)
-	assert.Equal(t, 200, response.StatusCode)
-
-	request, err = http.NewRequest("DELETE", testServer.URL+"/_test/", nil)
-	assert.NoError(t, err)
-	response, err = httpClient.Do(request)
-	assert.NoError(t, err)
-	assert.Equal(t, 200, response.StatusCode)
-
-	request, err = http.NewRequest("GET", testServer.URL+"/_test/", nil)
-	assert.NoError(t, err)
-	response, err = httpClient.Do(request)
-	assert.NoError(t, err)
-	assert.Equal(t, 404, response.StatusCode)
-
-	request, err = http.NewRequest("DELETE", testServer.URL+"/_test/", nil)
-	assert.NoError(t, err)
-	response, err = httpClient.Do(request)
-	assert.NoError(t, err)
-	assert.Equal(t, 404, response.StatusCode)
-
-	request, err = http.NewRequest("DELETE", testServer.URL+"/", nil)
-	assert.NoError(t, err)
-	response, err = httpClient.Do(request)
-	assert.NoError(t, err)
-	assert.Equal(t, 500, response.StatusCode)
-}
-
 func TestInvalidMethod(t *testing.T) {
 	request, err := http.NewRequest("TEST", testServer.URL+"/test", nil)
 	assert.NoError(t, err)

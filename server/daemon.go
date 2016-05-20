@@ -35,6 +35,8 @@ var (
 
 	tokenT = flag.Int64("tokenAge", 5, "recovery token lifetime (in minutes)")
 
+	authProtocol = flag.String("authProtocol", "webid", "authentication protocol (webid-tls / webid-rsa)")
+
 	emailName     = flag.String("emailName", "", "remote SMTP server account name")
 	emailAddr     = flag.String("emailAddr", "", "remote SMTP server email address")
 	emailUser     = flag.String("emailUser", "", "remote SMTP server username")
@@ -100,6 +102,7 @@ func main() {
 		config.TLSKey = *tlsKey
 		config.CookieAge = *cookieT
 		config.TokenAge = *tokenT
+		config.AuthProtocol = *authProtocol
 		config.Debug = *debug
 		config.DataRoot = serverRoot
 		config.Vhosts = *vhosts
@@ -160,6 +163,9 @@ func main() {
 	tlsConfig.CipherSuites = []uint16{tls.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA, tls.TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA, tls.TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA}
 	tlsConfig.Certificates = make([]tls.Certificate, 1)
 	tlsConfig.MinVersion = tls.VersionTLS10
+	if config.AuthProtocol != "webid" {
+		tlsConfig.ClientAuth = tls.NoClientCert
+	}
 	if len(config.TLSCert) == 0 && len(config.TLSKey) == 0 {
 		tlsConfig.Certificates[0], err = tls.X509KeyPair(tlsTestCert, tlsTestKey)
 	} else {
