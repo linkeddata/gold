@@ -24,9 +24,9 @@ const (
 	// HCType is the header Content-Type
 	HCType = "Content-Type"
 	// SystemPrefix is the generic name for the system-reserved namespace (e.g. APIs)
-	SystemPrefix = ",system"
+	SystemPrefix = "api"
 	// ProxyPath provides CORS proxy (empty to disable)
-	ProxyPath = ",proxy"
+	ProxyPath = "proxy"
 	// RDFExtension is the default extension for RDF documents (i.e. turtle for now)
 	RDFExtension = ".ttl"
 )
