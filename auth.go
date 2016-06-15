@@ -150,6 +150,9 @@ func ParseDigestAuthorizationHeader(header string) (*DigestAuthorization, error)
 
 	opts := make(map[string]string)
 	parts := strings.SplitN(header, " ", 2)
+	if len(parts) <= 1 {
+		return &auth, errors.New("Malformed Authorization header")
+	}
 	opts["type"] = parts[0]
 	parts = strings.Split(parts[1], ",")
 

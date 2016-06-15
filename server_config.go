@@ -86,7 +86,7 @@ func NewServerConfig() *ServerConfig {
 		DirIndex:     []string{"index.html", "index.htm"},
 		DirApp:       "http://linkeddata.github.io/warp/#list/",
 		SignUpApp:    "https://solid.github.io/solid-signup/?domain=",
-		SignInApp:    "http://localhost:9000/",
+		SignInApp:    "https://solid.github.io/solid-signup-ui/signin/",
 		DiskLimit:    100000000, // 100MB
 		DataRoot:     serverDefaultRoot(),
 	}

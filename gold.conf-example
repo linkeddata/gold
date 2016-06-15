@@ -29,6 +29,8 @@
 
 	"SignUpApp": "https://solid.github.io/solid-signup/?domain=",
 
+	"SignInApp": "https://solid.github.io/solid-signup-ui/signin/",
+
 	"DirIndex":  ["index.html", "index.htm"],
 
 	"DiskLimit": 100000000,
