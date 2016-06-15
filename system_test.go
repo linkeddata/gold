@@ -488,6 +488,15 @@ func TestAccountStatusWithVhosts(t *testing.T) {
 	assert.Equal(t, 200, response.StatusCode)
 }
 
+func TestLoginPage(t *testing.T) {
+	request, err := http.NewRequest("GET", testServer.URL+"/"+SystemPrefix+"/login", nil)
+	assert.NoError(t, err)
+	request.Header.Add("Content-Type", "text/html")
+	response, err := httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, response.StatusCode)
+}
+
 func TestAccountInfo(t *testing.T) {
 	err := os.MkdirAll("_test/user", 0755)
 	assert.NoError(t, err)

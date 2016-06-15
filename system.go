@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	_path "path"
 	"path/filepath"
@@ -48,7 +49,10 @@ type accountInformation struct {
 
 // HandleSystem is a router for system specific APIs
 func HandleSystem(w http.ResponseWriter, req *httpRequest, s *Server) SystemReturn {
-	if strings.Contains(req.BaseURI(), "accountStatus") {
+	if strings.Contains(req.BaseURI(), "login") {
+		loginPage(w, req, s)
+		return SystemReturn{}
+	} else if strings.Contains(req.BaseURI(), "accountStatus") {
 		// unsupported yet when server is running on one host
 		return accountStatus(w, req, s)
 	} else if strings.Contains(req.Request.URL.Path, "newAccount") {
@@ -61,6 +65,19 @@ func HandleSystem(w http.ResponseWriter, req *httpRequest, s *Server) SystemRetu
 		return accountRecovery(w, req, s)
 	}
 	return SystemReturn{Status: 200}
+}
+
+func loginPage(w http.ResponseWriter, req *httpRequest, s *Server) {
+	pathUri := strings.Split(req.RequestURI, SystemPrefix+"/login")[1]
+	uri, err := url.Parse(req.Server.Config.SignInApp)
+	if err != nil {
+		s.debug.Println("Could not parse URL:", req.RequestURI, err.Error())
+	}
+	uri.Path = _path.Join(uri.Path, pathUri)
+	req.Request.URL = uri
+	req.Request.Host = uri.Host
+	req.Request.RequestURI = uri.RequestURI()
+	NewProxy().ServeHTTP(w, req.Request)
 }
 
 func accountRecovery(w http.ResponseWriter, req *httpRequest, s *Server) SystemReturn {

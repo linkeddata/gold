@@ -61,6 +61,9 @@ type ServerConfig struct {
 	// SignUpApp points to the app used for creating new accounts
 	SignUpApp string
 
+	// SignInApp points to the app used for signing in
+	SignInApp string
+
 	// DirIndex contains the default index file name
 	DirIndex []string
 
@@ -83,6 +86,7 @@ func NewServerConfig() *ServerConfig {
 		DirIndex:     []string{"index.html", "index.htm"},
 		DirApp:       "http://linkeddata.github.io/warp/#list/",
 		SignUpApp:    "https://solid.github.io/solid-signup/?domain=",
+		SignInApp:    "http://localhost:9000/",
 		DiskLimit:    100000000, // 100MB
 		DataRoot:     serverDefaultRoot(),
 	}

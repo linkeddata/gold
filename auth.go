@@ -1,7 +1,7 @@
 package gold
 
 import (
-	"crypto/sha1"
+	"crypto/sha256"
 	"crypto/x509"
 	"encoding/asn1"
 	"encoding/base64"
@@ -186,7 +186,7 @@ func WebIDDigestAuth(req *httpRequest) (string, error) {
 		return "", errors.New("Bad source URI for auth token: " + authH.Source + " -- possible MITM attack!")
 	}
 
-	claim := sha1.Sum([]byte(authH.Source + authH.Webid + authH.KeyURL + authH.Nonce))
+	claim := sha256.Sum256([]byte(authH.Source + authH.Webid + authH.KeyURL + authH.Nonce))
 	signature, err := base64.StdEncoding.DecodeString(authH.Signature)
 	if err != nil {
 		return "", errors.New(err.Error() + " in " + authH.Signature)
@@ -243,15 +243,18 @@ func WebIDDigestAuth(req *httpRequest) (string, error) {
 				req.debug.Println("Found RSA key in user's profile", keyT.Object.String())
 				for _, pubP := range gk.All(nil, ns.cert.Get("pem"), nil) {
 					keyP := term2C(pubP.Object).String()
-					req.debug.Println("Found matching public key in user's profile", keyP[:10], "...", keyP[len(keyP)-10:len(keyP)])
+					req.debug.Println("Found matching public key in user's profile")
 					parser, err := ParseRSAPublicPEMKey([]byte(keyP))
-					if err == nil {
-						err = parser.Verify(claim[:], signature)
-						if err == nil {
-							return authH.Webid, nil
-						}
+					if err != nil {
+						req.debug.Println("Unable to parse public PEM key", "-- reason:", err)
+						continue
 					}
-					req.debug.Println("Unable to verify signature with key", keyP[:10], "...", keyP[len(keyP)-10:len(keyP)], "-- reason:", err)
+					err = parser.Verify(claim[:], signature)
+					if err != nil {
+						req.debug.Println("Unable to verify signature with key", authH.KeyURL, "-- reason:", err)
+						continue
+					}
+					return authH.Webid, nil
 				}
 				// also loop through modulus/exp in case we didn't find a PEM key
 				for _, pubN := range gk.All(keyT.Object, ns.cert.Get("modulus"), nil) {
@@ -425,4 +428,20 @@ func ValidateSecureToken(tokenType string, token string, s *Server) (map[string]
 	}
 
 	return values, nil
+}
+
+// Store token
+func StoreSecureToken(token string) error {
+	if len(token) == 0 {
+		return errors.New("No token provided")
+	}
+	return nil
+}
+
+// Read token
+func ReadSecureToken(token string) error {
+	if len(token) == 0 {
+		return errors.New("No token provided")
+	}
+	return nil
 }

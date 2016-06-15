@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/sha1"
+	"crypto/sha256"
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/pem"
@@ -166,7 +167,7 @@ func TestWebIDRSAAuth(t *testing.T) {
 	response.Body.Close()
 	assert.Equal(t, 201, response.StatusCode)
 
-	claim := sha1.Sum([]byte(p.Source + user1 + keyURL + p.Nonce))
+	claim := sha256.Sum256([]byte(p.Source + user1 + keyURL + p.Nonce))
 	signed, err := signer.Sign(claim[:])
 	assert.NoError(t, err)
 	b64Sig := base64.StdEncoding.EncodeToString(signed)
@@ -203,7 +204,7 @@ func TestWebIDRSAAuthBadSource(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Bad source
-	claim := sha1.Sum([]byte("http://baddude.org/" + user1 + p.Nonce))
+	claim := sha256.Sum256([]byte("http://baddude.org/" + user1 + p.Nonce))
 	signed, err := signer.Sign(claim[:])
 	assert.NoError(t, err)
 	b64Sig := base64.StdEncoding.EncodeToString(signed)

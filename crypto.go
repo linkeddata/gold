@@ -70,7 +70,7 @@ func ParseRSAPrivateKey(key *rsa.PrivateKey) (Signer, error) {
 func ParseRSAPublicPEMKey(pemBytes []byte) (Verifier, error) {
 	block, _ := pem.Decode(pemBytes)
 	if block == nil {
-		return nil, errors.New("No key found")
+		return nil, errors.New("Could not parse key or no key found")
 	}
 
 	var rawkey interface{}
@@ -133,10 +133,10 @@ func newVerifierFromKey(k interface{}) (Verifier, error) {
 
 // Sign signs data with rsa-sha256
 func (r *rsaPrivKey) Sign(data []byte) ([]byte, error) {
-	return rsa.SignPKCS1v15(rand.Reader, r.PrivateKey, crypto.SHA1, data)
+	return rsa.SignPKCS1v15(rand.Reader, r.PrivateKey, crypto.SHA256, data)
 }
 
 // Verify verifies the message using a rsa-sha256 signature
 func (r *rsaPubKey) Verify(message []byte, sig []byte) error {
-	return rsa.VerifyPKCS1v15(r.PublicKey, crypto.SHA1, message, sig)
+	return rsa.VerifyPKCS1v15(r.PublicKey, crypto.SHA256, message, sig)
 }

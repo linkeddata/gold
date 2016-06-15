@@ -24,7 +24,7 @@ const (
 	// HCType is the header Content-Type
 	HCType = "Content-Type"
 	// SystemPrefix is the generic name for the system-reserved namespace (e.g. APIs)
-	SystemPrefix = "api"
+	SystemPrefix = "server"
 	// ProxyPath provides CORS proxy (empty to disable)
 	ProxyPath = "proxy"
 	// RDFExtension is the default extension for RDF documents (i.e. turtle for now)
@@ -205,7 +205,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		req.URL = uri
 		req.Host = uri.Host
 		req.RequestURI = uri.RequestURI()
-		proxy.ServeHTTP(w, req)
+		NewProxy().ServeHTTP(w, req)
 		return
 	}
 	if websocketUpgrade(req) {
