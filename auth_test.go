@@ -28,9 +28,9 @@ func TestNewSecureToken(t *testing.T) {
 	assert.Equal(t, 184, len(token))
 }
 
-func TestParseDigestAuthorizationHeader(t *testing.T) {
+func TestParseRSAAuthorizationHeader(t *testing.T) {
 	h := "WebID-RSA source=\"http://server.org/\", webid=\"http://example.org/\", keyurl=\"http://example.org/keys/abc\", nonce=\"string1\", sig=\"string2\""
-	p, err := ParseDigestAuthorizationHeader(h)
+	p, err := ParseRSAAuthorizationHeader(h)
 	assert.NoError(t, err)
 	assert.Equal(t, "WebID-RSA", p.Type)
 	assert.Equal(t, "http://server.org/", p.Source)
@@ -40,10 +40,10 @@ func TestParseDigestAuthorizationHeader(t *testing.T) {
 	assert.Equal(t, "string2", p.Signature)
 }
 
-func TestParseDigestAuthenticateHeader(t *testing.T) {
+func TestParseRSAAuthenticateHeader(t *testing.T) {
 	h := `WebID-RSA source="http://server.org/", nonce="string1"`
 
-	p, err := ParseDigestAuthenticateHeader(h)
+	p, err := ParseRSAAuthenticateHeader(h)
 	assert.NoError(t, err)
 	assert.Equal(t, "WebID-RSA", p.Type)
 	assert.Equal(t, "string1", p.Nonce)
@@ -131,7 +131,7 @@ func TestWebIDRSAAuth(t *testing.T) {
 	wwwAuth := response.Header.Get("WWW-Authenticate")
 	assert.NotEmpty(t, wwwAuth)
 
-	p, _ := ParseDigestAuthenticateHeader(wwwAuth)
+	p, _ := ParseRSAAuthenticateHeader(wwwAuth)
 
 	// Generate new key pair
 	priv, err := rsa.GenerateKey(rand.Reader, 2048)
@@ -180,6 +180,15 @@ func TestWebIDRSAAuth(t *testing.T) {
 	assert.NoError(t, err)
 	response, err = httpClient.Do(request)
 	assert.NoError(t, err)
+	assert.Contains(t, response.Header.Get("Authorization"), "WebID-Token")
+	token := response.Header.Get("Authorization")
+	assert.Equal(t, 200, response.StatusCode)
+
+	request, err = http.NewRequest("GET", testServer.URL+aclDir+"abc", nil)
+	request.Header.Add("Authorization", token)
+	assert.NoError(t, err)
+	response, err = httpClient.Do(request)
+	assert.NoError(t, err)
 	assert.Equal(t, 200, response.StatusCode)
 }
 
@@ -192,7 +201,7 @@ func TestWebIDRSAAuthBadSource(t *testing.T) {
 	wwwAuth := response.Header.Get("WWW-Authenticate")
 	assert.NotEmpty(t, wwwAuth)
 
-	p, _ := ParseDigestAuthenticateHeader(wwwAuth)
+	p, _ := ParseRSAAuthenticateHeader(wwwAuth)
 
 	// Load private key
 	pKey := x509.MarshalPKCS1PrivateKey(user1k)

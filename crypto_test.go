@@ -40,7 +40,7 @@ oYi+1hqp1fIekaxsyQIDAQAB
 	// TODO: update sig
 	_toSign := `https://deiu.me/Private/https://deiu.me/profile#meMTQzODc4MzA5NXxtS1dYcVd4bGRjVXQ2bFVEMXk2NE5KMDU1TFB3Nk9qM2FmMWduMk4tdl9tWDdvZXBtdUJSa1ZMRHE4WWZ1dUE0RlNGeDl0OGt6SGZnbkpZbW5CWE96TUxRamJ6a3xCC-Ik7gERpCBc__l2OK0DxVxyIiLTDVZ7rLIib2MNSQ==`
 	_sig := `maL09+BVHz0ExWZV+93WXDuhKXfz3tKTkqq088kK5hHp59OC7nEb3T23bxtUDLN/eknHaK09DtlF9hfLz9DTdgSrPZ9DndXkjgF5B25r5BvRtSASOKdb2ctdDozg09OQQdRVTf8+HRdgzn/e8ec/rF7Y7SB0E8Kgd0QXBVGZ5Xk=`
-	p, err := ParseDigestAuthorizationHeader(h)
+	p, err := ParseRSAAuthorizationHeader(h)
 	assert.NoError(t, err)
 
 	assert.Equal(t, _sig, p.Signature)

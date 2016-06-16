@@ -14,13 +14,13 @@ import (
 	"unicode"
 )
 
-// DigestAuthentication structure
-type DigestAuthentication struct {
+// RSAAuthentication structure
+type RSAAuthentication struct {
 	Type, Source, Webid, KeyURL, Realm, Nonce, URI, QOP, NC, CNonce, Response, Opaque, Algorithm string
 }
 
-// DigestAuthorization structure
-type DigestAuthorization struct {
+// RSAAuthorization structure
+type RSAAuthorization struct {
 	Type, Source, Webid, KeyURL, Nonce, Signature string
 }
 
@@ -35,13 +35,46 @@ func (req *httpRequest) authn(w http.ResponseWriter) string {
 	}
 
 	if len(req.Header.Get("Authorization")) > 0 {
-		user, err = WebIDDigestAuth(req)
-		if err != nil {
-			req.Server.debug.Println("WebID-RSA auth error:", err)
-		}
-		if len(user) > 0 {
-			req.Server.debug.Println("WebID-RSA auth OK for User: " + user)
-			return user
+		parts := strings.SplitN(req.Header.Get("Authorization"), " ", 2)
+		digestType := parts[0]
+		digestValue := strings.Replace(parts[1], "\"", "", -1)
+		switch digestType {
+		case "WebID-RSA":
+			user, err = WebIDRSAAuth(req)
+			if err != nil {
+				req.Server.debug.Println("WebID-RSA auth error:", err)
+			}
+			if len(user) > 0 {
+				req.Server.debug.Println("WebID-RSA auth OK for User: " + user)
+				// All good, set the bearer token
+				// set validity for now + 30 days
+				validity := 30 * 24 * time.Hour
+				tokenValues := map[string]string{
+					"secret": string(req.Server.cookieSalt),
+					"webid":  user,
+				}
+				token, err := NewSecureToken("Authorization", tokenValues, validity, req.Server)
+				if err != nil {
+					req.Server.debug.Println("Error generating Auth token: ", err)
+					return ""
+				}
+				wwwAuth := `WebID-Token "` + token + `"`
+				w.Header().Set("Authorization", wwwAuth)
+				return user
+			}
+			break
+		case "WebID-Token":
+			user, err := WebIDTokenAuth(req, digestValue)
+			if err != nil {
+				req.Server.debug.Println("WebID-Token auth error:", err)
+				w.Write([]byte(err.Error()))
+				return ""
+			}
+			if len(user) > 0 {
+				req.Server.debug.Println("WebID-Token auth OK for User: " + user)
+				return user
+			}
+			break
 		}
 	}
 
@@ -102,9 +135,9 @@ func (srv *Server) userCookieDelete(w http.ResponseWriter) {
 	})
 }
 
-// ParseDigestAuthenticateHeader parses an Authenticate header and returns a DigestAuthentication object
-func ParseDigestAuthenticateHeader(header string) (*DigestAuthentication, error) {
-	auth := DigestAuthentication{}
+// ParseRSAAuthenticateHeader parses an Authenticate header and returns an RSAAuthentication object
+func ParseRSAAuthenticateHeader(header string) (*RSAAuthentication, error) {
+	auth := RSAAuthentication{}
 
 	if len(header) == 0 {
 		return &auth, errors.New("Cannot parse WWW-Authenticate header: no header present")
@@ -122,7 +155,7 @@ func ParseDigestAuthenticateHeader(header string) (*DigestAuthentication, error)
 		opts[key] = val
 	}
 
-	auth = DigestAuthentication{
+	auth = RSAAuthentication{
 		opts["type"],
 		opts["source"],
 		opts["webid"],
@@ -140,9 +173,9 @@ func ParseDigestAuthenticateHeader(header string) (*DigestAuthentication, error)
 	return &auth, nil
 }
 
-// ParseDigestAuthorizationHeader parses an Authorization header and returns a DigestAuthorization object
-func ParseDigestAuthorizationHeader(header string) (*DigestAuthorization, error) {
-	auth := DigestAuthorization{}
+// ParseRSAAuthorizationHeader parses an Authorization header and returns a DigestAuthorization object
+func ParseRSAAuthorizationHeader(header string) (*RSAAuthorization, error) {
+	auth := RSAAuthorization{}
 
 	if len(header) == 0 {
 		return &auth, errors.New("Cannot parse Authorization header: no header present")
@@ -163,7 +196,7 @@ func ParseDigestAuthorizationHeader(header string) (*DigestAuthorization, error)
 		opts[key] = val
 	}
 
-	auth = DigestAuthorization{
+	auth = RSAAuthorization{
 		opts["type"],
 		opts["source"],
 		opts["webid"],
@@ -174,13 +207,13 @@ func ParseDigestAuthorizationHeader(header string) (*DigestAuthorization, error)
 	return &auth, nil
 }
 
-// WebIDDigestAuth performs a digest authentication using WebID-RSA
-func WebIDDigestAuth(req *httpRequest) (string, error) {
+// WebIDRSAAuth performs a digest authentication using WebID-RSA
+func WebIDRSAAuth(req *httpRequest) (string, error) {
 	if len(req.Header.Get("Authorization")) == 0 {
 		return "", nil
 	}
 
-	authH, err := ParseDigestAuthorizationHeader(req.Header.Get("Authorization"))
+	authH, err := ParseRSAAuthorizationHeader(req.Header.Get("Authorization"))
 	if err != nil {
 		return "", err
 	}
@@ -280,6 +313,28 @@ func WebIDDigestAuth(req *httpRequest) (string, error) {
 	}
 
 	return "", err
+}
+
+func WebIDTokenAuth(req *httpRequest, token string) (uri string, err error) {
+	tValues, err := ValidateSecureToken("Authorization", token, req.Server)
+	if err != nil {
+		return "", err
+	}
+	webid := tValues["webid"]
+	v, err := strconv.ParseInt(tValues["valid"], 10, 60)
+	if err != nil {
+		return "", err
+	}
+	if time.Now().Local().Unix() > v {
+		return "", errors.New("Token expired for " + webid)
+	}
+	if len(tValues["secret"]) == 0 {
+		return "", errors.New("Missing secret from token (tempered with?)")
+	}
+	if tValues["secret"] != string(req.Server.cookieSalt) {
+		return "", errors.New("Wrong secret value in client token!")
+	}
+	return webid, nil
 }
 
 // WebIDTLSAuth - performs WebID-TLS authentication
@@ -431,20 +486,4 @@ func ValidateSecureToken(tokenType string, token string, s *Server) (map[string]
 	}
 
 	return values, nil
-}
-
-// Store token
-func StoreSecureToken(token string) error {
-	if len(token) == 0 {
-		return errors.New("No token provided")
-	}
-	return nil
-}
-
-// Read token
-func ReadSecureToken(token string) error {
-	if len(token) == 0 {
-		return errors.New("No token provided")
-	}
-	return nil
 }
