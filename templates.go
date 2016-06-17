@@ -38,7 +38,7 @@ document.addEventListener('DOMContentLoaded', function() {
     </form>
 </body>
 </html>`,
-		"accountRecovery": `<!DOCTYPE html>
+		"accountSignin": `<!DOCTYPE html>
 <html id="docHTML">
 <body>
     <form method="POST">
@@ -55,7 +55,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <body>
     <h1>401 - oh noes, you need to authenticate!</h1>
     <h2>Do you need a WebID? You can sign up for one at <a href="https://databox.me/" target="_blank">databox.me</a>.</h2>
-    <h2>Also, please visit the <a href="/` + SystemPrefix + `/accountRecovery">recovery page</a> in case you have lost access to your credentials.</h2>
+    <h2>Have lost access to your credentials? We can email you a <a href="/` + SystemPrefix + `/accountSignin">Sign In link</a>.</h2>
 </body>
 </html>`,
 		"403": `<!DOCTYPE html>
@@ -63,8 +63,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <head>
 </head>
 <body>
-    <h1>403 - oh noes, access denied!</h1>
-    <h2>Please visit the <a href="/` + SystemPrefix + `/accountRecovery">recovery page</a> in case you have lost access to your credentials.</h2>
+    <h1>403 - Access denied!</h1>
 </body>
 </html>`,
 		"404": `<!DOCTYPE html>
@@ -72,19 +71,19 @@ document.addEventListener('DOMContentLoaded', function() {
 <head>
 </head>
 <body>
-    <h1>404 - oh noes, there's nothing here</h1>
+    <h1>404 - Oops, there's nothing here</h1>
 </body>
 </html>`,
 	}
 	// SMTPTemplates contains a list of templates for sending emails
 	SMTPTemplates = map[string]string{
-		"accountRecovery": `<p>Hello,</p>
+		"accountSignin": `<p>Hello,</p>
 
-<p>We have a received a request to recover you account, originating from <strong>{{.IP}}</strong>. Please ignore this email if you did not send this request.</p>
+<p>We have a received a sign in request for your account, originating from <strong>{{.IP}}</strong>. Please ignore this email if you did not send this request.</p>
 
-<p>Click the following link to recover your account: <a href="{{.Link}}" target="_blank">{{.Link}}</a></p>
+<p>Click the following link to sign into your account: <a href="{{.Link}}" target="_blank">{{.Link}}</a></p>
 
-<p>This email was generated automatically. No one will respond if you reply to it.</p>
+<p>This email was generated automatically.</p>
 
 <p>Sincerely,<br>
 {{.From}}</p>
@@ -96,7 +95,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <p>* you can start browsing your files here: {{.AccountURI}}.</p>
 <p>* you can manage your personal profile information here: {{.ProfileEditor}}</p>
 
-<p>We would like to kindly remind you that we will not use your email address for any other purpose than allowing you to authenticate and/or recover your account credentials.</p>
+<p>We would like to kindly remind you that we will not use your email address for any other purpose than allowing you to authenticate and/or recover access to your account.</p>
 
 <p>Best,</p>
 <p>{{.Host}} team</p>

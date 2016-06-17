@@ -57,7 +57,7 @@ func (s *Server) sendRecoveryMail(goldHost string, IP string, to []string, link 
 	vals["{{.IP}}"] = IP
 	vals["{{.From}}"] = smtpCfg.Name
 	vals["{{.Link}}"] = link
-	body := parseMailTemplate("accountRecovery", vals)
+	body := parseMailTemplate("accountSignin", vals)
 
 	message := ""
 	for k, v := range headers {

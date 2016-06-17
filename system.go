@@ -61,8 +61,8 @@ func HandleSystem(w http.ResponseWriter, req *httpRequest, s *Server) SystemRetu
 		return newCert(w, req, s)
 	} else if strings.Contains(req.Request.URL.Path, "accountInfo") {
 		return accountInfo(w, req, s)
-	} else if strings.Contains(req.Request.URL.Path, "accountRecovery") {
-		return accountRecovery(w, req, s)
+	} else if strings.Contains(req.Request.URL.Path, "accountSignin") {
+		return accountSignin(w, req, s)
 	}
 	return SystemReturn{Status: 200}
 }
@@ -80,14 +80,14 @@ func loginPage(w http.ResponseWriter, req *httpRequest, s *Server) {
 	NewProxy().ServeHTTP(w, req.Request)
 }
 
-func accountRecovery(w http.ResponseWriter, req *httpRequest, s *Server) SystemReturn {
+func accountSignin(w http.ResponseWriter, req *httpRequest, s *Server) SystemReturn {
 	if len(req.FormValue("webid")) > 0 && strings.HasPrefix(req.FormValue("webid"), "http") {
 		return sendRecoveryToken(w, req, s)
 	} else if len(req.FormValue("token")) > 0 {
 		return validateRecoveryToken(w, req, s)
 	}
 	// return default app with form
-	return SystemReturn{Status: 200, Body: Apps["accountRecovery"]}
+	return SystemReturn{Status: 200, Body: Apps["accountSignin"]}
 }
 
 func sendRecoveryToken(w http.ResponseWriter, req *httpRequest, s *Server) SystemReturn {
@@ -131,7 +131,7 @@ func sendRecoveryToken(w http.ResponseWriter, req *httpRequest, s *Server) Syste
 	}
 	// create recovery URL
 	IP, _, _ := net.SplitHostPort(req.Request.RemoteAddr)
-	link := resource.Base + "/" + SystemPrefix + "/accountRecovery?token=" + token
+	link := resource.Base + "/" + SystemPrefix + "/accountSignin?token=" + token
 	to := []string{email}
 	go s.sendRecoveryMail(resource.Obj.Host, IP, to, link)
 	return SystemReturn{Status: 200, Body: "You should receive an email shortly, with further instructions."}

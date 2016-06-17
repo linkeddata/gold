@@ -263,8 +263,8 @@ func TestNewAccountWithoutSPKAC(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func TestAccountRecoveryForm(t *testing.T) {
-	request, err := http.NewRequest("POST", testServer.URL+"/"+SystemPrefix+"/accountRecovery", nil)
+func TestaccountSigninForm(t *testing.T) {
+	request, err := http.NewRequest("POST", testServer.URL+"/"+SystemPrefix+"/accountSignin", nil)
 	assert.NoError(t, err)
 	response, err := httpClient.Do(request)
 	assert.NoError(t, err)
@@ -274,12 +274,12 @@ func TestAccountRecoveryForm(t *testing.T) {
 	assert.Contains(t, string(body), "What is your WebID?")
 }
 
-func TestAccountRecovery(t *testing.T) {
+func TestaccountSignin(t *testing.T) {
 	webid := "https://user.example.org/card#me"
 	form := url.Values{
 		"webid": {webid},
 	}
-	request, err := http.NewRequest("POST", testServer.URL+"/"+SystemPrefix+"/accountRecovery", bytes.NewBufferString(form.Encode()))
+	request, err := http.NewRequest("POST", testServer.URL+"/"+SystemPrefix+"/accountSignin", bytes.NewBufferString(form.Encode()))
 	assert.NoError(t, err)
 	request.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 	request.Header.Add("Content-Length", strconv.Itoa(len(form.Encode())))
@@ -318,7 +318,7 @@ func TestAccountRecovery(t *testing.T) {
 	form = url.Values{
 		"webid": {webid},
 	}
-	request, err = http.NewRequest("POST", testServer1.URL+"/"+SystemPrefix+"/accountRecovery", bytes.NewBufferString(form.Encode()))
+	request, err = http.NewRequest("POST", testServer1.URL+"/"+SystemPrefix+"/accountSignin", bytes.NewBufferString(form.Encode()))
 	assert.NoError(t, err)
 	request.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 	request.Header.Add("Content-Length", strconv.Itoa(len(form.Encode())))
@@ -338,7 +338,7 @@ func TestAccountRecovery(t *testing.T) {
 	form = url.Values{
 		"token": {token},
 	}
-	request, err = http.NewRequest("POST", testServer1.URL+"/"+SystemPrefix+"/accountRecovery", bytes.NewBufferString(form.Encode()))
+	request, err = http.NewRequest("POST", testServer1.URL+"/"+SystemPrefix+"/accountSignin", bytes.NewBufferString(form.Encode()))
 	assert.NoError(t, err)
 	request.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 	request.Header.Add("Content-Length", strconv.Itoa(len(form.Encode())))
@@ -353,7 +353,7 @@ func TestAccountRecovery(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func TestAccountRecoverySecureSMTP(t *testing.T) {
+func TestaccountSigninSecureSMTP(t *testing.T) {
 	sc := NewServerConfig()
 	sc.DataRoot += "_test/"
 	sc.Vhosts = true
@@ -399,7 +399,7 @@ func TestAccountRecoverySecureSMTP(t *testing.T) {
 		"webid": {webid},
 	}
 	// @@@TODO test
-	request, err = http.NewRequest("POST", testServer1.URL+"/"+SystemPrefix+"/accountRecovery", bytes.NewBufferString(form.Encode()))
+	request, err = http.NewRequest("POST", testServer1.URL+"/"+SystemPrefix+"/accountSignin", bytes.NewBufferString(form.Encode()))
 	assert.NoError(t, err)
 	request.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 	request.Header.Add("Content-Length", strconv.Itoa(len(form.Encode())))
@@ -419,7 +419,7 @@ func TestAccountRecoverySecureSMTP(t *testing.T) {
 	form = url.Values{
 		"token": {token},
 	}
-	request, err = http.NewRequest("POST", testServer1.URL+"/"+SystemPrefix+"/accountRecovery", bytes.NewBufferString(form.Encode()))
+	request, err = http.NewRequest("POST", testServer1.URL+"/"+SystemPrefix+"/accountSignin", bytes.NewBufferString(form.Encode()))
 	assert.NoError(t, err)
 	request.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 	request.Header.Add("Content-Length", strconv.Itoa(len(form.Encode())))
