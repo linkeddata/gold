@@ -1,6 +1,7 @@
 package gold
 
 import (
+	"crypto/sha1"
 	"crypto/sha256"
 	"crypto/x509"
 	"encoding/asn1"
@@ -24,6 +25,16 @@ type RSAAuthorization struct {
 	Type, Source, Webid, KeyURL, Nonce, Signature string
 }
 
+// RSAAuthentication structure
+type TokenAuthentication struct {
+	Nonce string
+}
+
+// TokenAuthorization structure
+type TokenAuthorization struct {
+	Webid, Nonce string
+}
+
 func (req *httpRequest) authn(w http.ResponseWriter) string {
 	user, err := req.userCookie()
 	if err != nil {
@@ -35,46 +46,71 @@ func (req *httpRequest) authn(w http.ResponseWriter) string {
 	}
 
 	if len(req.Header.Get("Authorization")) > 0 {
-		parts := strings.SplitN(req.Header.Get("Authorization"), " ", 2)
-		digestType := parts[0]
-		digestValue := strings.Replace(parts[1], "\"", "", -1)
-		switch digestType {
-		case "WebID-RSA":
-			user, err = WebIDRSAAuth(req)
-			if err != nil {
-				req.Server.debug.Println("WebID-RSA auth error:", err)
-			}
-			if len(user) > 0 {
-				req.Server.debug.Println("WebID-RSA auth OK for User: " + user)
-				// All good, set the bearer token
-				// set validity for now + 30 days
-				validity := 30 * 24 * time.Hour
-				tokenValues := map[string]string{
-					"secret": string(req.Server.cookieSalt),
-					"webid":  user,
-				}
-				token, err := NewSecureToken("Authorization", tokenValues, validity, req.Server)
+		authorizations := strings.SplitN(req.Header.Get("Authorization"), ";", -1)
+		for _, authorization := range authorizations {
+			parts := strings.SplitN(authorization, " ", 2)
+			challengeType := parts[0]
+			switch challengeType {
+			case "WebID-RSA":
+				user, err = WebIDRSAAuth(req, authorization)
 				if err != nil {
-					req.Server.debug.Println("Error generating Auth token: ", err)
+					req.Server.debug.Println("WebID-RSA auth error:", err)
+				}
+				if len(user) > 0 {
+					req.Server.debug.Println("WebID-RSA auth OK for User: " + user)
+					// All good, set the bearer token
+					// set validity for now + 30 days
+					validity := 30 * 24 * time.Hour
+					tokenValues := map[string]string{
+						"secret": string(req.Server.cookieSalt),
+						"webid":  user,
+					}
+					token, err := NewSecureToken("Authorization", tokenValues, validity, req.Server)
+					if err != nil {
+						req.Server.debug.Println("Error generating Auth token: ", err)
+						return ""
+					}
+					authz := `WebID-Bearer-Token "` + token + `"`
+					w.Header().Set("Authorization", authz)
+					return user
+				}
+				break
+			case "WebID-Token":
+				user, err = WebIDTokenAuth(req, authorization)
+				if err != nil {
+					req.Server.debug.Println("WebID-Token auth error:", err)
+				}
+				if len(user) > 0 {
+					req.Server.debug.Println("WebID-Token auth OK for User: " + user)
+					// All good, set the bearer token
+					// set validity for now + 30 days
+					validity := 30 * 24 * time.Hour
+					tokenValues := map[string]string{
+						"secret": string(req.Server.cookieSalt),
+						"webid":  user,
+					}
+					token, err := NewSecureToken("Authorization", tokenValues, validity, req.Server)
+					if err != nil {
+						req.Server.debug.Println("Error generating WebID-Bearer-Token: ", err)
+						return ""
+					}
+					authz := `WebID-Bearer-Token "` + token + `"`
+					w.Header().Set("Authorization", authz)
+					return user
+				}
+				break
+			case "WebID-Bearer-Token":
+				user, err := WebIDBearerAuth(req, authorization)
+				if err != nil {
+					req.Server.debug.Println("WebID-Bearer-Token auth error:", err)
 					return ""
 				}
-				wwwAuth := `WebID-Token "` + token + `"`
-				w.Header().Set("Authorization", wwwAuth)
-				return user
+				if len(user) > 0 {
+					req.Server.debug.Println("WebID-Bearer-Token auth OK for User: " + user)
+					return user
+				}
+				break
 			}
-			break
-		case "WebID-Token":
-			user, err := WebIDTokenAuth(req, digestValue)
-			if err != nil {
-				req.Server.debug.Println("WebID-Token auth error:", err)
-				w.Write([]byte(err.Error()))
-				return ""
-			}
-			if len(user) > 0 {
-				req.Server.debug.Println("WebID-Token auth OK for User: " + user)
-				return user
-			}
-			break
 		}
 	}
 
@@ -135,6 +171,51 @@ func (srv *Server) userCookieDelete(w http.ResponseWriter) {
 	})
 }
 
+// ParseTokenAuthenticateHeader parses an Authenticate header and returns a TokenAuthentication object
+func ParseTokenAuthenticateHeader(header string) (string, error) {
+	if len(header) == 0 {
+		return "", errors.New("Cannot parse WWW-Authenticate header: no header present")
+	}
+
+	parts := strings.SplitN(header, " ", 2)
+	if len(parts) < 2 {
+		return "", errors.New("Malformed WWW-Authenticate header")
+	}
+
+	parts = strings.SplitN(strings.TrimSpace(parts[1]), "=", 2)
+	return strings.Replace(parts[1], "\"", "", -1), nil
+}
+
+// ParseTokenAuthorizationHeader parses an Authorization header and returns a TokenAuthorization object
+func ParseTokenAuthorizationHeader(header string) (*TokenAuthorization, error) {
+	auth := TokenAuthorization{}
+
+	if len(header) == 0 {
+		return &auth, errors.New("Cannot parse Authorization header: no header present")
+	}
+
+	opts := make(map[string]string)
+	parts := strings.SplitN(header, " ", 2)
+	if len(parts) < 2 {
+		return &auth, errors.New("Malformed Authorization header")
+	}
+	opts["type"] = parts[0]
+	parts = strings.Split(parts[1], ",")
+
+	for _, part := range parts {
+		vals := strings.SplitN(strings.TrimSpace(part), "=", 2)
+		key := vals[0]
+		val := strings.Replace(vals[1], "\"", "", -1)
+		opts[key] = val
+	}
+
+	auth = TokenAuthorization{
+		opts["webid"],
+		opts["nonce"],
+	}
+	return &auth, nil
+}
+
 // ParseRSAAuthenticateHeader parses an Authenticate header and returns an RSAAuthentication object
 func ParseRSAAuthenticateHeader(header string) (*RSAAuthentication, error) {
 	auth := RSAAuthentication{}
@@ -145,6 +226,9 @@ func ParseRSAAuthenticateHeader(header string) (*RSAAuthentication, error) {
 
 	opts := make(map[string]string)
 	parts := strings.SplitN(header, " ", 2)
+	if len(parts) < 2 {
+		return &auth, errors.New("Malformed WWW-Authenticate header")
+	}
 	opts["type"] = parts[0]
 	parts = strings.Split(parts[1], ",")
 
@@ -173,7 +257,7 @@ func ParseRSAAuthenticateHeader(header string) (*RSAAuthentication, error) {
 	return &auth, nil
 }
 
-// ParseRSAAuthorizationHeader parses an Authorization header and returns a DigestAuthorization object
+// ParseRSAAuthorizationHeader parses an Authorization header and returns a RSAAuthorization object
 func ParseRSAAuthorizationHeader(header string) (*RSAAuthorization, error) {
 	auth := RSAAuthorization{}
 
@@ -183,7 +267,7 @@ func ParseRSAAuthorizationHeader(header string) (*RSAAuthorization, error) {
 
 	opts := make(map[string]string)
 	parts := strings.SplitN(header, " ", 2)
-	if len(parts) <= 1 {
+	if len(parts) < 2 {
 		return &auth, errors.New("Malformed Authorization header")
 	}
 	opts["type"] = parts[0]
@@ -207,13 +291,80 @@ func ParseRSAAuthorizationHeader(header string) (*RSAAuthorization, error) {
 	return &auth, nil
 }
 
-// WebIDRSAAuth performs a digest authentication using WebID-RSA
-func WebIDRSAAuth(req *httpRequest) (string, error) {
-	if len(req.Header.Get("Authorization")) == 0 {
-		return "", nil
+// WebIDTokenAuth performs a digest authentication using the WebID-Token protocol
+func WebIDTokenAuth(req *httpRequest, challenge string) (string, error) {
+	if len(challenge) == 0 {
+		return "", errors.New("Empty challenge in WWW-Authenticate header")
 	}
 
-	authH, err := ParseRSAAuthorizationHeader(req.Header.Get("Authorization"))
+	authH, err := ParseTokenAuthorizationHeader(challenge)
+	if err != nil {
+		return "", err
+	}
+
+	// Sanity checks
+	if len(authH.Webid) == 0 || len(authH.Nonce) == 0 {
+		return "", errors.New("Incomplete WebID-Token Authorization header")
+	}
+	if !strings.HasPrefix(authH.Webid, "http") {
+		return "", errors.New("WebID is not a valid HTTP URI: " + authH.Webid)
+	}
+
+	// Decrypt and validate nonce from secure token
+	tValues, err := ValidateSecureToken("WWW-Authenticate", authH.Nonce, req.Server)
+	if err != nil {
+		return "", err
+	}
+	v, err := strconv.ParseInt(tValues["valid"], 10, 64)
+	if err != nil {
+		return "", err
+	}
+	if time.Now().Local().Unix() > v {
+		return "", errors.New("Token expired for " + authH.Webid)
+	}
+	if len(tValues["secret"]) == 0 {
+		return "", errors.New("Missing secret from token (tempered with?)")
+	}
+	if tValues["secret"] != string(req.Server.cookieSalt) {
+		return "", errors.New("Wrong secret value in client token!")
+	}
+
+	// Fetch WebID to get key location
+	g := NewGraph(authH.Webid)
+	err = g.LoadURI(authH.Webid)
+	if err != nil {
+		return "", err
+	}
+
+	// go through each key location store
+	req.debug.Println("Checking for public keys for user", authH.Webid)
+	keyT := g.One(NewResource(authH.Webid), ns.st.Get("tokens"), nil)
+	if keyT == nil {
+		return "", errors.New("No tokens location found in the user's profile")
+	}
+	keyURL := term2C(keyT.Object).String()
+	hash := fmt.Sprintf("%x", sha1.Sum([]byte(authH.Nonce)))
+	request, err := http.NewRequest("HEAD", keyURL+hash, nil)
+	if err != nil {
+		return "", err
+	}
+	response, err := httpClient.Do(request)
+	if err != nil {
+		return "", err
+	}
+	if response.StatusCode < 200 && response.StatusCode >= 400 {
+		return "", errors.New("Could not verify existence of nonce on remote server")
+	}
+	return authH.Webid, nil
+}
+
+// WebIDRSAAuth performs a digest authentication using WebID-RSA
+func WebIDRSAAuth(req *httpRequest, challenge string) (string, error) {
+	if len(challenge) == 0 {
+		return "", errors.New("Empty challenge in WWW-Authenticate header")
+	}
+
+	authH, err := ParseRSAAuthorizationHeader(challenge)
 	if err != nil {
 		return "", err
 	}
@@ -315,7 +466,12 @@ func WebIDRSAAuth(req *httpRequest) (string, error) {
 	return "", err
 }
 
-func WebIDTokenAuth(req *httpRequest, token string) (uri string, err error) {
+func WebIDBearerAuth(req *httpRequest, header string) (uri string, err error) {
+	parts := strings.SplitN(header, " ", 2)
+	if len(parts) < 2 {
+		return "", errors.New("Malformed Authorization header")
+	}
+	token := strings.Replace(parts[1], "\"", "", -1)
 	tValues, err := ValidateSecureToken("Authorization", token, req.Server)
 	if err != nil {
 		return "", err

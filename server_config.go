@@ -43,7 +43,7 @@ type ServerConfig struct {
 	// TokenAge contains the validity duration for recovery tokens (in minutes)
 	TokenAge int64
 
-	// TokenAge contains the validity duration for recovery tokens (in minutes)
+	// AuthProtocol defines what authentication protocol to use by default
 	AuthProtocol string
 
 	// METASuffix sets the default suffix for meta files (e.g. ,meta or .meta)

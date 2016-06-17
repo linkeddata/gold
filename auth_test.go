@@ -32,7 +32,6 @@ func TestParseRSAAuthorizationHeader(t *testing.T) {
 	h := "WebID-RSA source=\"http://server.org/\", webid=\"http://example.org/\", keyurl=\"http://example.org/keys/abc\", nonce=\"string1\", sig=\"string2\""
 	p, err := ParseRSAAuthorizationHeader(h)
 	assert.NoError(t, err)
-	assert.Equal(t, "WebID-RSA", p.Type)
 	assert.Equal(t, "http://server.org/", p.Source)
 	assert.Equal(t, "http://example.org/", p.Webid)
 	assert.Equal(t, "http://example.org/keys/abc", p.KeyURL)
@@ -45,7 +44,6 @@ func TestParseRSAAuthenticateHeader(t *testing.T) {
 
 	p, err := ParseRSAAuthenticateHeader(h)
 	assert.NoError(t, err)
-	assert.Equal(t, "WebID-RSA", p.Type)
 	assert.Equal(t, "string1", p.Nonce)
 	assert.Equal(t, "http://server.org/", p.Source)
 }
@@ -180,7 +178,7 @@ func TestWebIDRSAAuth(t *testing.T) {
 	assert.NoError(t, err)
 	response, err = httpClient.Do(request)
 	assert.NoError(t, err)
-	assert.Contains(t, response.Header.Get("Authorization"), "WebID-Token")
+	assert.Contains(t, response.Header.Get("Authorization"), "WebID-Bearer-Token")
 	token := response.Header.Get("Authorization")
 	assert.Equal(t, 200, response.StatusCode)
 
