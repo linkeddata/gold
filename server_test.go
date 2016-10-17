@@ -455,6 +455,27 @@ func TestLDPPostLDPRNoSlug(t *testing.T) {
 	assert.Equal(t, 200, response.StatusCode)
 }
 
+func TestLDPGetLDPR(t *testing.T) {
+	resource_url := testServer.URL + "/_test/resource.ttl"
+
+	request, err := http.NewRequest("PUT", resource_url, nil)
+	assert.NoError(t, err)
+	response, err := httpClient.Do(request)
+	assert.NoError(t, err)
+
+	request, err = http.NewRequest("GET", resource_url, nil)
+	assert.NoError(t, err)
+	response, err = httpClient.Do(request)
+	assert.NoError(t, err)
+
+	assert.Equal(t, "text/turtle", response.Header.Get("Content-Type"))
+
+	request, err = http.NewRequest("DELETE", resource_url, nil)
+	assert.NoError(t, err)
+	response, err = httpClient.Do(request)
+	assert.NoError(t, err)
+}
+
 func TestLDPGetLDPC(t *testing.T) {
 	request, err := http.NewRequest("HEAD", testServer.URL+"/_test/", nil)
 	assert.NoError(t, err)

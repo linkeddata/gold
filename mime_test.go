@@ -162,3 +162,18 @@ func TestMapPathToExtension(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Contains(t, res, path+"$.htm")
 }
+
+func TestLookUpCtype(t *testing.T) {
+	cases := []struct {
+		in, want string
+	}{
+		{".ttl", "text/turtle"},
+		{".n3", "text/n3"},
+		{".rdf", "application/rdf+xml"},
+		{".jsonld", "application/ld+json"},
+		{".unrecognized_ext", ""},
+	}
+	for _, c := range cases {
+		assert.Equal(t, c.want, LookUpCtype(c.in))
+	}
+}

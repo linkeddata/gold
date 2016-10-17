@@ -585,6 +585,7 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 			}
 		} else {
 			magicType = resource.FileType
+			maybeRDF = resource.MaybeRDF
 			if len(mimeRdfExt[resource.Extension]) > 0 {
 				maybeRDF = true
 			}
@@ -647,11 +648,7 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 
 		if maybeRDF {
 			g.ReadFile(resource.File)
-			if g.Len() == 0 {
-				maybeRDF = false
-			} else {
-				w.Header().Set(HCType, contentType)
-			}
+			w.Header().Set(HCType, contentType)
 		}
 
 		data := ""
