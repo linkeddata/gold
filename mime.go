@@ -107,6 +107,10 @@ func LookupExt(ctype string) string {
 	return ""
 }
 
+func LookUpCtype(ext string) string {
+	return mimeRdfExt[ext]
+}
+
 func AddRDFExtension(ext string) {
 	rdfExtensions = append(rdfExtensions, ext)
 }
@@ -127,7 +131,7 @@ func MimeLookup(path string) (string, string, bool) {
 	if len(ext) > 0 {
 		if IsRdfExtension(ext) {
 			maybeRDF = true
-			mimeType = LookupExt(ext)
+			mimeType = LookUpCtype(ext)
 		} else {
 			mimeType = mime.TypeByExtension(ext)
 			if len(mimeType) > 0 {
