@@ -157,9 +157,7 @@ func main() {
 		tlsL net.Listener
 	)
 
-	tlsConfig.CipherSuites = []uint16{tls.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA, tls.TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA, tls.TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA}
 	tlsConfig.Certificates = make([]tls.Certificate, 1)
-	tlsConfig.MinVersion = tls.VersionTLS10
 	if len(config.TLSCert) == 0 && len(config.TLSKey) == 0 {
 		tlsConfig.Certificates[0], err = tls.X509KeyPair(tlsTestCert, tlsTestKey)
 	} else {
