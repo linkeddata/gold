@@ -187,6 +187,9 @@ func (r *response) respond(status int, a ...interface{}) *response {
 
 // ServeHTTP handles the response
 func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	// add HSTS
+	w.Header().Add("Strict-Transport-Security", "max-age=63072000; includeSubDomains")
+
 	origin := ""
 	origins := req.Header["Origin"] // all CORS requests
 	if len(origins) > 0 {

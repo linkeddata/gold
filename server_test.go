@@ -46,6 +46,14 @@ func init() {
 // 	return errors.New("Don't redirect!")
 // }
 
+func TestHSTS(t *testing.T) {
+	request, err := http.NewRequest("HEAD", testServer.URL+"/", nil)
+	assert.NoError(t, err)
+	response, err := httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.Equal(t, "max-age=63072000; includeSubDomains", response.Header.Get("Strict-Transport-Security"))
+}
+
 func TestMKCOL(t *testing.T) {
 	request, err := http.NewRequest("MKCOL", testServer.URL+"/_test", nil)
 	assert.NoError(t, err)
