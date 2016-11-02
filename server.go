@@ -187,13 +187,6 @@ func (r *response) respond(status int, a ...interface{}) *response {
 
 // ServeHTTP handles the response
 func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	// Try to recover in case of panics
-	defer func() {
-		if r := recover(); r != nil {
-			s.debug.Println("\nRecovered from panic in: ", r)
-		}
-	}()
-
 	// add HSTS
 	w.Header().Add("Strict-Transport-Security", "max-age=63072000; includeSubDomains")
 
@@ -241,6 +234,15 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 	r = new(response)
 	var err error
+
+	// Try to recover in case of panics
+	defer func() {
+		if rec := recover(); rec != nil {
+			s.debug.Println("\nRecovered from panic: ", rec)
+			r.respond(500)
+			return
+		}
+	}()
 
 	s.debug.Println("\n------ New " + req.Method + " request from " + req.RemoteAddr + " ------")
 
