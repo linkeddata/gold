@@ -309,6 +309,7 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 	w.Header().Set("Accept-Patch", "application/json, application/sparql-update")
 	w.Header().Set("Accept-Post", "text/turtle, application/json")
 	w.Header().Set("Allow", strings.Join(methodsAll, ", "))
+	w.Header().Set("Vary", "Origin")
 
 	switch req.Method {
 	case "OPTIONS":
