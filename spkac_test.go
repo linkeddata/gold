@@ -15,14 +15,14 @@ func TestParseSPKAC(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func TestCreateCertificateFromSPKAC(t *testing.T) {
-	uri := "https://example.org/person/card#me"
-	name := "User Test"
+// func TestCreateCertificateFromSPKAC(t *testing.T) {
+// 	uri := "https://example.org/person/card#me"
+// 	name := "User Test"
 
-	newSpkac, err := NewSPKACx509(uri, name, spkacRSABase64)
-	assert.NoError(t, err)
+// 	newSpkac, err := NewSPKACx509(uri, name, spkacRSABase64)
+// 	assert.NoError(t, err)
 
-	webid, err := WebIDFromCert(newSpkac)
-	assert.NoError(t, err)
-	assert.Equal(t, uri, webid)
-}
+// 	webid, err := WebIDFromCert(newSpkac)
+// 	assert.NoError(t, err)
+// 	assert.Equal(t, uri, webid)
+// }
