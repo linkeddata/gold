@@ -7,9 +7,14 @@ package gold
 import (
 	"net/http"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
-var chrome = "application/xml,application/xhtml+xml,text/html;q=0.9,text/plain;q=0.8,image/png,*/*;q=0.5"
+var (
+	chrome = "application/xml,application/xhtml+xml,text/html;q=0.9,text/plain;q=0.8,image/png,*/*;q=0.5"
+	rdflib = "application/rdf+xml;q=0.9, application/xhtml+xml;q=0.3, text/xml;q=0.2, application/xml;q=0.2, text/html;q=0.3, text/plain;q=0.1, text/n3;q=1.0, application/x-turtle;q=1, text/turtle;q=1"
+)
 
 func mockAccept(accept string) (al AcceptList, err error) {
 	req := &http.Request{}
@@ -34,6 +39,20 @@ func TestNegotiatePicturesOfWebPages(t *testing.T) {
 	if contentType != "image/png" {
 		t.Errorf("got %s expected image/png", contentType)
 	}
+}
+
+func TestNegotiateRDF(t *testing.T) {
+	al, err := mockAccept(rdflib)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	contentType, err := al.Negotiate(serializerMimes...)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	assert.Equal(t, "text/turtle", contentType)
 }
 
 func TestNegotiateFirstMatch(t *testing.T) {
