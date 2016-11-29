@@ -797,6 +797,9 @@ func TestPATCHFileNoExist(t *testing.T) {
 	file := "_test/fff"
 	sparqlData := `INSERT DATA { <a> <b> <c> . }`
 
+	_, err := os.Stat(file)
+	assert.True(t, os.IsNotExist(err))
+
 	request, err := http.NewRequest("PATCH", testServer.URL+"/"+file, strings.NewReader(sparqlData))
 	assert.NoError(t, err)
 	request.Header.Add("Content-Type", "application/sparql-update")
@@ -807,6 +810,9 @@ func TestPATCHFileNoExist(t *testing.T) {
 	g := NewGraph(testServer.URL + "/" + file)
 	g.ReadFile(file)
 	assert.Equal(t, 1, g.Len())
+	data, err := g.Serialize(("text/turtle"))
+	assert.NoError(t, err)
+	assert.Equal(t, "@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n\n<a>\n    <b> <c> .\n\n", data)
 
 	// cleanup
 	os.Remove(file)
