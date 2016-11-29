@@ -793,6 +793,25 @@ func TestPATCHFailParse(t *testing.T) {
 	assert.Equal(t, 200, response.StatusCode)
 }
 
+func TestPATCHFileNoExist(t *testing.T) {
+	file := "_test/fff"
+	sparqlData := `INSERT DATA { <a> <b> <c> . }`
+
+	request, err := http.NewRequest("PATCH", testServer.URL+"/"+file, strings.NewReader(sparqlData))
+	assert.NoError(t, err)
+	request.Header.Add("Content-Type", "application/sparql-update")
+	response, err := httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, response.StatusCode)
+
+	g := NewGraph(testServer.URL + "/" + file)
+	g.ReadFile(file)
+	assert.Equal(t, 1, g.Len())
+
+	// cleanup
+	os.Remove(file)
+}
+
 func TestPUTTurtle(t *testing.T) {
 	request, err := http.NewRequest("DELETE", testServer.URL+"/_test/abc", nil)
 	assert.NoError(t, err)

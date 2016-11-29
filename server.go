@@ -744,7 +744,14 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 				}
 			}
 
-			f, err := os.OpenFile(resource.File, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
+			if !resource.Exists {
+				err = os.MkdirAll(_path.Dir(resource.File), 0755)
+				if err != nil {
+					s.debug.Println("PATCH MkdirAll err: " + err.Error())
+					return r.respond(500, err)
+				}
+			}
+			f, err := os.OpenFile(resource.File, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0664)
 			if err != nil {
 				s.debug.Println("PATCH os.OpenFile err: " + err.Error())
 				return r.respond(500, err)
