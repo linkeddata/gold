@@ -12,7 +12,6 @@ import (
 	"strings"
 
 	"github.com/linkeddata/gold"
-	"github.com/solid/solidproxy"
 )
 
 var (
@@ -33,6 +32,8 @@ var (
 
 	metaSuffix = flag.String("metaSuffix", ",meta", "default suffix for meta files")
 	aclSuffix  = flag.String("aclSuffix", ",acl", "default suffix for ACL files")
+
+	proxy = flag.String("proxy", "", "URL of the proxy service used for WebID-TLS delegation")
 
 	tokenT = flag.Int64("tokenAge", 5, "recovery token lifetime (in minutes)")
 
@@ -117,7 +118,7 @@ func main() {
 		config.NoHTTP = *nohttp
 		config.MetaSuffix = *metaSuffix
 		config.ACLSuffix = *aclSuffix
-		config.Agent = *agent
+		config.ProxyTemplate = *proxy
 		if len(*emailName) > 0 && len(*emailAddr) > 0 && len(*emailUser) > 0 &&
 			len(*emailPass) > 0 && len(*emailServ) > 0 && len(*emailPort) > 0 {
 			ep, _ := strconv.Atoi(*emailPort)
@@ -134,16 +135,6 @@ func main() {
 		}
 	}
 	_, httpsPort, _ = net.SplitHostPort(config.ListenHTTPS)
-
-	if len(config.Agent) > 0 {
-		proxyAgent, err := solidproxy.NewAgentLocal(config.Agent)
-		if err != nil {
-			log.Println("Error creating new agent:", err.Error())
-			return
-		}
-		gold.SetAgentService(proxyAgent)
-		gold.SetProxyService(solidproxy.NewProxy(proxyAgent, true))
-	}
 
 	handler := gold.NewServer(config)
 

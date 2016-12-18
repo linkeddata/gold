@@ -255,23 +255,17 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 		return r.respond(resp.Status, resp.Body)
 	}
 
-	// serve Agent's WebID profile
-	if AgentPath != "" && strings.HasPrefix(req.URL.Path, "/"+AgentPath) {
-		if len(agentService.WebID) > 0 {
-			agentService.Log = s.debug
-			agentService.Handler(w, req.Request)
-			return
-		}
-	}
-
 	// Proxy requests
 	if ProxyPath != "" && strings.HasPrefix(req.URL.Path, "/"+ProxyPath) {
-		if proxyService.HttpClient == nil {
-			return
+		uri, err := url.Parse(s.Config.ProxyTemplate + req.FormValue("uri"))
+		if err != nil {
+			s.debug.Println(req.RequestURI, err.Error())
 		}
-		proxyService.Log = s.debug
+		req.URL = uri
+		req.Host = uri.Host
+		req.RequestURI = uri.RequestURI()
 		req.Header.Set("User", user)
-		proxyService.Handler(w, req.Request)
+		proxy.ServeHTTP(w, req.Request)
 		return
 	}
 
