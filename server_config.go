@@ -64,6 +64,9 @@ type ServerConfig struct {
 	// DiskLimit is the maximum total disk (in bytes) to be allocated to a given user
 	DiskLimit int
 
+	// Agent is the WebID of the agent used for WebID-TLS delegation (and proxy)
+	Agent string
+
 	// SMTPConfig holds the settings for the remote SMTP user/server
 	SMTPConfig EmailConfig
 }
@@ -75,10 +78,10 @@ func NewServerConfig() *ServerConfig {
 		TokenAge:   5,
 		MetaSuffix: ".meta",
 		ACLSuffix:  ".acl",
-		DataApp:   "tabulator",
+		DataApp:    "tabulator",
 		DirIndex:   []string{"index.html", "index.htm"},
-		DirApp:    "http://linkeddata.github.io/warp/#list/",
-		SignUpApp: "https://solid.github.io/solid-signup/?domain=",
+		DirApp:     "http://linkeddata.github.io/warp/#list/",
+		SignUpApp:  "https://solid.github.io/solid-signup/?domain=",
 		DiskLimit:  100000000, // 100MB
 		DataRoot:   serverDefaultRoot(),
 	}

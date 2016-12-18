@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/linkeddata/gold"
+	"github.com/solid/solidproxy"
 )
 
 var (
@@ -34,6 +35,8 @@ var (
 	aclSuffix  = flag.String("aclSuffix", ",acl", "default suffix for ACL files")
 
 	tokenT = flag.Int64("tokenAge", 5, "recovery token lifetime (in minutes)")
+
+	agent = flag.String("agent", "", "WebID of the agent used for delegated authentication")
 
 	emailName     = flag.String("emailName", "", "remote SMTP server account name")
 	emailAddr     = flag.String("emailAddr", "", "remote SMTP server email address")
@@ -64,6 +67,13 @@ func redir(w http.ResponseWriter, req *http.Request) {
 }
 
 func main() {
+	// Try to recover in case of panics
+	defer func() {
+		if rec := recover(); rec != nil {
+			log.Println("\nRecovered from panic: ", rec)
+		}
+	}()
+
 	serverRoot, err := os.Getwd()
 	if err != nil {
 		println("[Server] Error starting server:", err)
@@ -107,6 +117,7 @@ func main() {
 		config.NoHTTP = *nohttp
 		config.MetaSuffix = *metaSuffix
 		config.ACLSuffix = *aclSuffix
+		config.Agent = *agent
 		if len(*emailName) > 0 && len(*emailAddr) > 0 && len(*emailUser) > 0 &&
 			len(*emailPass) > 0 && len(*emailServ) > 0 && len(*emailPort) > 0 {
 			ep, _ := strconv.Atoi(*emailPort)
@@ -123,6 +134,16 @@ func main() {
 		}
 	}
 	_, httpsPort, _ = net.SplitHostPort(config.ListenHTTPS)
+
+	if len(config.Agent) > 0 {
+		proxyAgent, err := solidproxy.NewAgentLocal(config.Agent)
+		if err != nil {
+			log.Println("Error creating new agent:", err.Error())
+			return
+		}
+		gold.SetAgentService(proxyAgent)
+		gold.SetProxyService(solidproxy.NewProxy(proxyAgent, true))
+	}
 
 	handler := gold.NewServer(config)
 

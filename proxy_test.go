@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestProxy(t *testing.T) {
+func TestProxyNoAuth(t *testing.T) {
 	request, err := http.NewRequest("GET", testServer.URL+"/"+ProxyPath+"?uri="+testServer.URL+"/_test/", nil)
 	assert.NoError(t, err)
 	request.Header.Add("Origin", "example.org")

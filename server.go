@@ -16,7 +16,6 @@ import (
 	"strings"
 
 	"github.com/gorilla/securecookie"
-	// "github.com/presbrey/magicmime"
 	"golang.org/x/net/webdav"
 )
 
@@ -27,6 +26,8 @@ const (
 	SystemPrefix = ",system"
 	// ProxyPath provides CORS proxy (empty to disable)
 	ProxyPath = ",proxy"
+	// AgentPath is the path to the agent's WebID profile
+	AgentPath = ",agent"
 	// RDFExtension is the default extension for RDF documents (i.e. turtle for now)
 	RDFExtension = ".ttl"
 )
@@ -200,17 +201,6 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 	}
 
-	if ProxyPath != "" && strings.HasPrefix(req.URL.Path, "/"+ProxyPath) {
-		uri, err := url.Parse(req.FormValue("uri"))
-		if err != nil {
-			s.debug.Println(req.RequestURI, err.Error())
-		}
-		req.URL = uri
-		req.Host = uri.Host
-		req.RequestURI = uri.RequestURI()
-		proxy.ServeHTTP(w, req)
-		return
-	}
 	if websocketUpgrade(req) {
 		websocketServe(w, req)
 		return
@@ -234,15 +224,6 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 	r = new(response)
 	var err error
-
-	// Try to recover in case of panics
-	defer func() {
-		if rec := recover(); rec != nil {
-			s.debug.Println("\nRecovered from panic: ", rec)
-			r.respond(500)
-			return
-		}
-	}()
 
 	s.debug.Println("\n------ New " + req.Method + " request from " + req.RemoteAddr + " ------")
 
@@ -272,6 +253,26 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 			return
 		}
 		return r.respond(resp.Status, resp.Body)
+	}
+
+	// serve Agent's WebID profile
+	if AgentPath != "" && strings.HasPrefix(req.URL.Path, "/"+AgentPath) {
+		if len(agentService.WebID) > 0 {
+			agentService.Log = s.debug
+			agentService.Handler(w, req.Request)
+			return
+		}
+	}
+
+	// Proxy requests
+	if ProxyPath != "" && strings.HasPrefix(req.URL.Path, "/"+ProxyPath) {
+		if proxyService.HttpClient == nil {
+			return
+		}
+		proxyService.Log = s.debug
+		req.Header.Set("User", user)
+		proxyService.Handler(w, req.Request)
+		return
 	}
 
 	resource, _ := req.pathInfo(req.BaseURI())

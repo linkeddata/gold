@@ -948,13 +948,43 @@ func TestACLDefaultForNew(t *testing.T) {
 }
 
 func TestACLWebIDDelegation(t *testing.T) {
-	request, err := http.NewRequest("POST", user1, strings.NewReader("<"+user1+"> <http://www.w3.org/ns/auth/acl#delegates> <"+user2+"> ."))
+	// add delegation
+	sparqlData := `INSERT DATA { <` + user1 + `> <http://www.w3.org/ns/auth/acl#delegates> <` + user2 + `> . }`
+	request, err := http.NewRequest("PATCH", user1, strings.NewReader(sparqlData))
 	assert.NoError(t, err)
-	request.Header.Add("Content-Type", "text/turtle")
+	request.Header.Add("Content-Type", "application/sparql-update")
 	response, err := user1h.Do(request)
 	assert.NoError(t, err)
 	response.Body.Close()
 	assert.Equal(t, 200, response.StatusCode)
+
+	request, err = http.NewRequest("HEAD", testServer.URL+aclDir+"abcd", nil)
+	assert.NoError(t, err)
+	response, err = user1h.Do(request)
+	assert.NoError(t, err)
+	response.Body.Close()
+	assert.Equal(t, 200, response.StatusCode)
+
+	acl := ParseLinkHeader(response.Header.Get("Link")).MatchRel("acl")
+
+	body := "<#Owner>" +
+		"	<http://www.w3.org/ns/auth/acl#accessTo> <" + aclDir + "abcd>, <" + acl + ">;" +
+		"	<http://www.w3.org/ns/auth/acl#agent> <" + user1 + ">;" +
+		"	<http://www.w3.org/ns/auth/acl#mode> <http://www.w3.org/ns/auth/acl#Read>, <http://www.w3.org/ns/auth/acl#Write> ."
+	request, err = http.NewRequest("PUT", acl, strings.NewReader(body))
+	assert.NoError(t, err)
+	request.Header.Add("Content-Type", "text/turtle")
+	response, err = user1h.Do(request)
+	assert.NoError(t, err)
+	response.Body.Close()
+	assert.Equal(t, 201, response.StatusCode)
+
+	request, err = http.NewRequest("GET", testServer.URL+aclDir+"abcd", nil)
+	assert.NoError(t, err)
+	response, err = user2h.Do(request)
+	assert.NoError(t, err)
+	response.Body.Close()
+	assert.Equal(t, 403, response.StatusCode)
 
 	request, err = http.NewRequest("POST", testServer.URL+aclDir+"abcd", strings.NewReader("<d> <e> <f> ."))
 	assert.NoError(t, err)

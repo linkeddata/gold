@@ -1,20 +1,26 @@
 package gold
 
 import (
-	"net/http"
-
-	"github.com/elazarl/goproxy"
+	"github.com/solid/solidproxy"
 )
 
 var (
-	proxy = goproxy.NewProxyHttpServer()
+	proxyService *solidproxy.Proxy
+	agentService *solidproxy.Agent
 )
 
 func init() {
-	proxy.OnResponse().DoFunc(func(r *http.Response, ctx *goproxy.ProxyCtx) *http.Response {
-		r.Header.Set("Access-Control-Allow-Credentials", "true")
-		r.Header.Set("Access-Control-Expose-Headers", "User, Triples, Location, Link, Vary, Last-Modified, Content-Length")
-		r.Header.Set("Access-Control-Max-Age", "60")
-		return r
-	})
+	// init with an empty agent (public)
+	agentService = &solidproxy.Agent{}
+	proxyService = solidproxy.NewProxy(agentService, true)
+}
+
+func SetProxyService(proxy *solidproxy.Proxy) {
+	proxyService = proxy
+}
+
+func SetAgentService(agent *solidproxy.Agent) {
+	agentService = agent
+	// reinit the proxy with the new agent
+	proxyService = solidproxy.NewProxy(agent, true)
 }
