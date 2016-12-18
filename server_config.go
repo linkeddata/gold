@@ -58,6 +58,9 @@ type ServerConfig struct {
 	// SignUpApp points to the app used for creating new accounts
 	SignUpApp string
 
+	// ProxyTemplate is the URL of the service that handles WebID-TLS delegation
+	ProxyTemplate string
+
 	// DirIndex contains the default index file name
 	DirIndex []string
 
@@ -75,10 +78,10 @@ func NewServerConfig() *ServerConfig {
 		TokenAge:   5,
 		MetaSuffix: ".meta",
 		ACLSuffix:  ".acl",
-		DataApp:   "tabulator",
+		DataApp:    "tabulator",
 		DirIndex:   []string{"index.html", "index.htm"},
-		DirApp:    "http://linkeddata.github.io/warp/#list/",
-		SignUpApp: "https://solid.github.io/solid-signup/?domain=",
+		DirApp:     "http://linkeddata.github.io/warp/#list/",
+		SignUpApp:  "https://solid.github.io/solid-signup/?domain=",
 		DiskLimit:  100000000, // 100MB
 		DataRoot:   serverDefaultRoot(),
 	}

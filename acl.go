@@ -19,13 +19,6 @@ type WAC struct {
 
 // NewWAC creates a new WAC object
 func NewWAC(req *httpRequest, srv *Server, w http.ResponseWriter, user string, key string) *WAC {
-	if len(req.Header.Get("On-Behalf-Of")) > 0 {
-		delegator := debrack(req.Header.Get("On-Behalf-Of"))
-		if verifyDelegator(delegator, user) {
-			srv.debug.Println("Request User ID (delegation):", user)
-			user = delegator
-		}
-	}
 	return &WAC{req: req, srv: srv, w: w, user: user, key: key}
 }
 

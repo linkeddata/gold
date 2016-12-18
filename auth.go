@@ -45,6 +45,13 @@ func (req *httpRequest) authn(w http.ResponseWriter) string {
 	}
 	if len(user) > 0 {
 		req.Server.debug.Println("WebID-TLS auth OK for User: " + user)
+		if len(req.Header.Get("On-Behalf-Of")) > 0 {
+			delegator := debrack(req.Header.Get("On-Behalf-Of"))
+			if verifyDelegator(delegator, user) {
+				req.Server.debug.Println("Request User ID (delegation):", user)
+				user = delegator
+			}
+		}
 		req.Server.userCookieSet(w, user)
 		return user
 	}

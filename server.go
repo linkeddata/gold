@@ -200,17 +200,6 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 	}
 
-	if ProxyPath != "" && strings.HasPrefix(req.URL.Path, "/"+ProxyPath) {
-		uri, err := url.Parse(req.FormValue("uri"))
-		if err != nil {
-			s.debug.Println(req.RequestURI, err.Error())
-		}
-		req.URL = uri
-		req.Host = uri.Host
-		req.RequestURI = uri.RequestURI()
-		proxy.ServeHTTP(w, req)
-		return
-	}
 	if websocketUpgrade(req) {
 		websocketServe(w, req)
 		return
@@ -272,6 +261,19 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 			return
 		}
 		return r.respond(resp.Status, resp.Body)
+	}
+
+	if ProxyPath != "" && strings.HasPrefix(req.URL.Path, "/"+ProxyPath) {
+		uri, err := url.Parse(s.Config.ProxyTemplate + req.FormValue("uri"))
+		if err != nil {
+			s.debug.Println(req.RequestURI, err.Error())
+		}
+		req.URL = uri
+		req.Host = uri.Host
+		req.RequestURI = uri.RequestURI()
+		req.Header.Set("User", user)
+		proxy.ServeHTTP(w, req.Request)
+		return
 	}
 
 	resource, _ := req.pathInfo(req.BaseURI())
