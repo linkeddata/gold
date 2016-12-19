@@ -256,7 +256,7 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 	}
 
 	// Proxy requests
-	if ProxyPath != "" && strings.HasPrefix(req.URL.Path, "/"+ProxyPath) {
+	if ProxyPath != "" && strings.HasSuffix(req.URL.Path, ProxyPath) {
 		uri, err := url.Parse(s.Config.ProxyTemplate + req.FormValue("uri"))
 		if err != nil {
 			s.debug.Println(req.RequestURI, err.Error())
