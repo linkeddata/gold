@@ -34,6 +34,9 @@ type ServerConfig struct {
 	// NoHTTP allows to enable or disable redirects from HTTP to HTTPS
 	NoHTTP bool
 
+	// HSTS enables or disables strict security transport
+	HSTS bool
+
 	// Debug (display or hide stdout logging)
 	Debug bool
 
@@ -79,6 +82,7 @@ func NewServerConfig() *ServerConfig {
 	return &ServerConfig{
 		CookieAge:  8736, // hours (1 year)
 		TokenAge:   5,
+		HSTS:       true,
 		MetaSuffix: ".meta",
 		ACLSuffix:  ".acl",
 		DataApp:    "tabulator",

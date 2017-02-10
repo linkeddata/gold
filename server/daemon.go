@@ -21,6 +21,7 @@ var (
 	httpsA   = flag.String("https", ":443", "HTTPS listener address")
 	insecure = flag.Bool("insecure", false, "provide insecure/plain HTTP access (only)")
 	nohttp   = flag.Bool("nohttp", false, "disable HTTP redirects to HTTPS?")
+	hsts     = flag.Bool("enabbleHSTS", true, "enable strict transport security (HSTS)?")
 
 	cookieT = flag.Int64("cookieAge", 24, "lifetime for cookies (in hours)")
 	debug   = flag.Bool("debug", false, "output extra logging?")
@@ -116,6 +117,7 @@ func main() {
 		config.Vhosts = *vhosts
 		config.Insecure = *insecure
 		config.NoHTTP = *nohttp
+		config.HSTS = *hsts
 		config.MetaSuffix = *metaSuffix
 		config.ACLSuffix = *aclSuffix
 		config.ProxyTemplate = *proxy
