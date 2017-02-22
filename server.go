@@ -633,7 +633,7 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 		}
 
 		if req.Method == "HEAD" {
-			w.Header().Set(HCType, magicType)
+			w.Header().Set(HCType, contentType)
 			return r.respond(status)
 		}
 

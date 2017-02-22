@@ -873,6 +873,7 @@ func TestHEAD(t *testing.T) {
 	response.Body.Close()
 	assert.Empty(t, string(body))
 	assert.NotEmpty(t, response.Header.Get("Content-Length"))
+	assert.Equal(t, response.Header.Get("Content-Type"), "text/turtle")
 }
 
 func TestGetUnsupportedMediaType(t *testing.T) {
