@@ -26,6 +26,8 @@ const (
 	SystemPrefix = ",system"
 	// ProxyPath provides CORS proxy (empty to disable)
 	ProxyPath = ",proxy"
+	// QueryPath provides link-following support for twinql
+	QueryPath = ",query"
 	// AgentPath is the path to the agent's WebID profile
 	AgentPath = ",agent"
 	// RDFExtension is the default extension for RDF documents (i.e. turtle for now)
@@ -262,6 +264,21 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 		uri, err := url.Parse(s.Config.ProxyTemplate + req.FormValue("uri"))
 		if err != nil {
 			s.debug.Println(req.RequestURI, err.Error())
+		}
+		req.URL = uri
+		req.Host = uri.Host
+		req.RequestURI = uri.RequestURI()
+		req.Header.Set("User", user)
+		proxy.ServeHTTP(w, req.Request)
+		return
+	}
+
+	// Query requests
+	if QueryPath != "" && strings.HasSuffix(req.URL.Path, QueryPath) && len(s.Config.QueryTemplate) > 0 {
+		uri, err := url.Parse(s.Config.QueryTemplate)
+		if err != nil {
+			s.debug.Println(req.RequestURI, err.Error())
+			return
 		}
 		req.URL = uri
 		req.Host = uri.Host

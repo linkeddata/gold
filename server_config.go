@@ -64,6 +64,9 @@ type ServerConfig struct {
 	// ProxyTemplate is the URL of the service that handles WebID-TLS delegation
 	ProxyTemplate string
 
+	// QueryTemplate is the URL of the service that handles query request using twinql
+	QueryTemplate string
+
 	// DirIndex contains the default index file name
 	DirIndex []string
 
