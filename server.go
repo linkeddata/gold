@@ -225,6 +225,19 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
+// Proxy requests
+func ProxyReq(w http.ResponseWriter, req *httpRequest, reqUrl string) error {
+	uri, err := url.Parse(reqUrl)
+	if err != nil {
+		return err
+	}
+	req.URL = uri
+	req.Host = uri.Host
+	req.RequestURI = uri.RequestURI()
+	proxy.ServeHTTP(w, req.Request)
+	return nil
+}
+
 func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 	r = new(response)
 	var err error
@@ -261,30 +274,21 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 
 	// Proxy requests
 	if ProxyPath != "" && strings.HasSuffix(req.URL.Path, ProxyPath) {
-		uri, err := url.Parse(s.Config.ProxyTemplate + req.FormValue("uri"))
-		if err != nil {
-			s.debug.Println(req.RequestURI, err.Error())
-		}
-		req.URL = uri
-		req.Host = uri.Host
-		req.RequestURI = uri.RequestURI()
 		req.Header.Set("User", user)
-		proxy.ServeHTTP(w, req.Request)
+		err = ProxyReq(w, req, s.Config.ProxyTemplate+req.FormValue("uri"))
+		if err != nil {
+			s.debug.Println("Proxy error:", err.Error())
+		}
 		return
 	}
 
 	// Query requests
 	if QueryPath != "" && strings.HasSuffix(req.URL.Path, QueryPath) && len(s.Config.QueryTemplate) > 0 {
-		uri, err := url.Parse(s.Config.QueryTemplate)
-		if err != nil {
-			s.debug.Println(req.RequestURI, err.Error())
-			return
-		}
-		req.URL = uri
-		req.Host = uri.Host
-		req.RequestURI = uri.RequestURI()
 		req.Header.Set("User", user)
-		proxy.ServeHTTP(w, req.Request)
+		err = ProxyReq(w, req, s.Config.QueryTemplate)
+		if err != nil {
+			s.debug.Println("Query error:", err.Error())
+		}
 		return
 	}
 
