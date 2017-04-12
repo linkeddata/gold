@@ -283,7 +283,7 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 	}
 
 	// Query requests
-	if req.Method == "POST" && QueryPath != "" && strings.HasPrefix(req.URL.Path, QueryPath) && len(s.Config.QueryTemplate) > 0 {
+	if req.Method == "POST" && QueryPath != "" && strings.Contains(req.URL.Path, QueryPath) && len(s.Config.QueryTemplate) > 0 {
 		req.Header.Set("User", user)
 		err = ProxyReq(w, req, s.Config.QueryTemplate)
 		if err != nil {
