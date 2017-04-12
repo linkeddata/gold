@@ -22,3 +22,13 @@ func TestProxyNoAuth(t *testing.T) {
 	response.Body.Close()
 	assert.Contains(t, string(body), "<http://www.w3.org/ns/ldp#BasicContainer>")
 }
+
+func TestProxyQueryOPTION(t *testing.T) {
+	request, err := http.NewRequest("OPTIONS", testServer.URL+"/"+QueryPath, nil)
+	assert.NoError(t, err)
+	request.Header.Add("Origin", "example.org")
+	response, err := httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, response.StatusCode)
+	assert.Equal(t, "example.org", response.Header.Get("Access-Control-Allow-Origin"))
+}

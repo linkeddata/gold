@@ -284,6 +284,9 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 
 	// Query requests
 	if QueryPath != "" && strings.HasSuffix(req.URL.Path, QueryPath) && len(s.Config.QueryTemplate) > 0 {
+		if req.Method == "OPTIONS" {
+			return
+		}
 		req.Header.Set("User", user)
 		err = ProxyReq(w, req, s.Config.QueryTemplate)
 		if err != nil {
