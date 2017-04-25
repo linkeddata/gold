@@ -76,6 +76,9 @@ type ServerConfig struct {
 	// Agent is the WebID of the agent used for WebID-TLS delegation (and proxy)
 	Agent string
 
+	// Salt is the value used for hashing passwords
+	Salt string
+
 	// SMTPConfig holds the settings for the remote SMTP user/server
 	SMTPConfig EmailConfig
 }

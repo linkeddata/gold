@@ -38,6 +38,8 @@ var (
 
 	tokenT = flag.Int64("tokenAge", 5, "recovery token lifetime (in minutes)")
 
+	salt = flag.String("salt", "", "used for storing hashed user passwords")
+
 	agent = flag.String("agent", "", "WebID of the agent used for delegated authentication")
 
 	emailName     = flag.String("emailName", "", "remote SMTP server account name")
@@ -110,6 +112,7 @@ func main() {
 		config.ListenHTTPS = *httpsA
 		config.TLSCert = *tlsCert
 		config.TLSKey = *tlsKey
+		config.Salt = *salt
 		config.CookieAge = *cookieT
 		config.TokenAge = *tokenT
 		config.Debug = *debug
@@ -120,6 +123,7 @@ func main() {
 		config.HSTS = *hsts
 		config.MetaSuffix = *metaSuffix
 		config.ACLSuffix = *aclSuffix
+		config.Agent = *agent
 		config.ProxyTemplate = *proxy
 		if len(*emailName) > 0 && len(*emailAddr) > 0 && len(*emailUser) > 0 &&
 			len(*emailPass) > 0 && len(*emailServ) > 0 && len(*emailPort) > 0 {

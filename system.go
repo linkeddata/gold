@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net"
 	"net/http"
 	"os"
@@ -34,11 +35,12 @@ type accountResponse struct {
 }
 
 type statusResponse struct {
-	Method   string          `json:"method"`
-	Status   string          `json:"status"`
-	FormURL  string          `json:"formURL"`
-	LoginURL string          `json:"loginURL"`
-	Response accountResponse `json:"response"`
+	Method    string          `json:"method"`
+	Status    string          `json:"status"`
+	FormURL   string          `json:"formURL"`
+	LoginURL  string          `json:"loginURL"`
+	LogoutURL string          `json:"logoutURL"`
+	Response  accountResponse `json:"response"`
 }
 
 type accountInformation struct {
@@ -48,19 +50,104 @@ type accountInformation struct {
 
 // HandleSystem is a router for system specific APIs
 func HandleSystem(w http.ResponseWriter, req *httpRequest, s *Server) SystemReturn {
-	if strings.Contains(req.BaseURI(), "accountStatus") {
+	if strings.HasSuffix(req.Request.URL.Path, "accountStatus") {
 		// unsupported yet when server is running on one host
 		return accountStatus(w, req, s)
-	} else if strings.Contains(req.Request.URL.Path, "newAccount") {
+	} else if strings.HasSuffix(req.Request.URL.Path, "newAccount") {
 		return newAccount(w, req, s)
-	} else if strings.Contains(req.Request.URL.Path, "newCert") {
+	} else if strings.HasSuffix(req.Request.URL.Path, "newCert") {
 		return newCert(w, req, s)
-	} else if strings.Contains(req.Request.URL.Path, "accountInfo") {
+	} else if strings.HasSuffix(req.Request.URL.Path, "login") {
+		return passwordAuth(w, req, s)
+	} else if strings.HasSuffix(req.Request.URL.Path, "logout") {
+		return logOut(w, req, s)
+	} else if strings.HasSuffix(req.Request.URL.Path, "accountInfo") {
 		return accountInfo(w, req, s)
-	} else if strings.Contains(req.Request.URL.Path, "accountRecovery") {
+	} else if strings.HasSuffix(req.Request.URL.Path, "accountRecovery") {
 		return accountRecovery(w, req, s)
 	}
 	return SystemReturn{Status: 200}
+}
+
+func logOut(w http.ResponseWriter, req *httpRequest, s *Server) SystemReturn {
+	s.userCookieDelete(w)
+	return SystemReturn{Status: 200, Body: "You have been signed out!"}
+}
+
+func passwordAuth(w http.ResponseWriter, req *httpRequest, s *Server) SystemReturn {
+	var passL string
+
+	if req.Method == "GET" {
+		return SystemReturn{Status: 200, Body: Apps["login"]}
+	}
+
+	webid := req.FormValue("webid")
+	passF := req.FormValue("password")
+	if len(webid) == 0 && len(passF) == 0 {
+		return SystemReturn{Status: 409, Body: "You must supply a valid WebID and password."}
+	}
+
+	redirTo := req.FormValue("redirect")
+	origin := req.Header.Get("Origin")
+
+	resource, err := req.pathInfo(req.BaseURI())
+	if err != nil {
+		s.debug.Println("PathInfo error: " + err.Error())
+		return SystemReturn{Status: 500, Body: err.Error()}
+	}
+	// try to fetch hashed password from root ,acl
+	resource, _ = req.pathInfo(resource.Base)
+	kb := NewGraph(resource.AclURI)
+	kb.ReadFile(resource.AclFile)
+	s.debug.Println("Looking for password in", resource.AclFile)
+	// find the policy containing root acl
+	for _, m := range kb.All(nil, ns.acl.Get("mode"), ns.acl.Get("Control")) {
+		p := kb.One(m.Subject, ns.acl.Get("password"), nil)
+		log.Printf("%+v\n", p)
+		if p != nil && kb.One(m.Subject, ns.acl.Get("agent"), NewResource(webid)) != nil {
+			passL = unquote(p.Object.String())
+			break
+		}
+	}
+	// exit if no pass
+	if len(passL) == 0 {
+		s.debug.Println("Access denied! Could not find a password for WebID: " + webid)
+		return SystemReturn{Status: 403, Body: "Access denied! Could not find a password for WebID: " + webid}
+	}
+
+	// check if passwords match
+	passF = saltedPassword(s.Config.Salt, passF)
+	s.debug.Println("Form:", passF, "Local:", passL)
+	if passF != passL {
+		s.debug.Println("Access denied! Bad WebID or password.")
+		return SystemReturn{Status: 403, Body: "Access denied! Bad WebID or password."}
+	}
+
+	// auth OK
+	// also set cookie now
+	err = s.userCookieSet(w, webid)
+	if err != nil {
+		s.debug.Println("Error setting new cookie: " + err.Error())
+		return SystemReturn{Status: 500, Body: err.Error()}
+	}
+
+	// handle redirect
+	if len(redirTo) > 0 {
+		values := map[string]string{
+			"webid":  webid,
+			"origin": origin,
+		}
+		t := time.Duration(s.Config.TokenAge) * time.Minute
+		token, err := NewSecureToken("Authentication", values, t, s)
+		if err != nil {
+			s.debug.Println("Could not generate auth token for " + webid + ", err: " + err.Error())
+			return SystemReturn{Status: 500, Body: "Could not generate auth token for " + webid + ", err: " + err.Error()}
+		}
+		redirTo += "?key=" + token
+		http.Redirect(w, req.Request, redirTo, 301)
+	}
+
+	return SystemReturn{Status: 200, Body: "Authentication successful!"}
 }
 
 func accountRecovery(w http.ResponseWriter, req *httpRequest, s *Server) SystemReturn {
@@ -173,13 +260,14 @@ func newAccount(w http.ResponseWriter, req *httpRequest, s *Server) SystemReturn
 
 	webidURL := accountBase + "profile/card"
 	webidURI := webidURL + "#me"
-	resource, _ = req.pathInfo(webidURL)
+	resource, _ = req.pathInfo(accountBase)
 
 	account := webidAccount{
 		Root:     resource.Root,
 		BaseURI:  resource.Base,
 		Document: resource.File,
 		WebID:    webidURI,
+		Agent:    s.Config.Agent,
 		PrefURI:  accountBase + "Preferences/prefs.ttl",
 		Email:    req.FormValue("email"),
 		Name:     req.FormValue("name"),
@@ -191,10 +279,12 @@ func newAccount(w http.ResponseWriter, req *httpRequest, s *Server) SystemReturn
 	if err != nil {
 		s.debug.Println("Stat error: " + err.Error())
 	}
-	if stat != nil && !stat.IsDir() {
+	if stat != nil && stat.IsDir() {
 		s.debug.Println("Found " + resource.File)
 		return SystemReturn{Status: 406, Body: "An account with the same name already exists."}
 	}
+
+	resource, _ = req.pathInfo(webidURL)
 
 	// create account space
 	err = os.MkdirAll(_path.Dir(resource.File), 0755)
@@ -274,6 +364,7 @@ func newAccount(w http.ResponseWriter, req *httpRequest, s *Server) SystemReturn
 	g.AddTriple(aclTerm, ns.acl.Get("accessTo"), NewResource(resource.URI))
 	g.AddTriple(aclTerm, ns.acl.Get("accessTo"), NewResource(resource.AclURI))
 	g.AddTriple(aclTerm, ns.acl.Get("agent"), NewResource(webidURI))
+	g.AddTriple(aclTerm, ns.acl.Get("password"), NewLiteral(saltedPassword(s.Config.Salt, req.FormValue("password"))))
 	if len(req.FormValue("email")) > 0 {
 		g.AddTriple(aclTerm, ns.acl.Get("agent"), NewResource("mailto:"+req.FormValue("email")))
 	}
@@ -464,10 +555,11 @@ func accountStatus(w http.ResponseWriter, req *httpRequest, s *Server) SystemRet
 	}
 
 	res := statusResponse{
-		Method:   "accountStatus",
-		Status:   status,
-		FormURL:  resource.Obj.Scheme + "://" + req.Host + "/" + SystemPrefix + "/newAccount",
-		LoginURL: accURL,
+		Method:    "accountStatus",
+		Status:    status,
+		FormURL:   resource.Obj.Scheme + "://" + req.Host + "/" + SystemPrefix + "/newAccount",
+		LoginURL:  accURL + SystemPrefix + "/login",
+		LogoutURL: accURL + SystemPrefix + "/logout",
 		Response: accountResponse{
 			AccountURL: accURL,
 			Available:  isAvailable,

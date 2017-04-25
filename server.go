@@ -262,7 +262,7 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 	acl := NewWAC(req, s, w, user, rKey)
 
 	// Intercept API requests
-	if strings.HasPrefix(req.Request.URL.Path, "/"+SystemPrefix) && req.Method != "OPTIONS" {
+	if strings.Contains(req.Request.URL.Path, "/"+SystemPrefix) && req.Method != "OPTIONS" {
 		resp := HandleSystem(w, req, s)
 		if resp.Bytes != nil && len(resp.Bytes) > 0 {
 			// copy raw bytes

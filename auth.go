@@ -1,6 +1,7 @@
 package gold
 
 import (
+	"crypto/sha256"
 	"errors"
 	"fmt"
 	"net/http"
@@ -192,4 +193,10 @@ func ValidateSecureToken(tokenType string, token string, s *Server) (map[string]
 	}
 
 	return values, nil
+}
+
+func saltedPassword(salt, pass string) string {
+	s := sha256.Sum256([]byte(salt + pass))
+	toString := fmt.Sprintf("%x", s)
+	return toString
 }

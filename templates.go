@@ -26,6 +26,17 @@ document.addEventListener('DOMContentLoaded', function() {
 </div>
 </body>
 </html>`,
+		"login": `<!DOCTYPE html>
+<html id="docHTML">
+<body>
+    <form method="POST" action="/` + SystemPrefix + `/login">
+    <h2>Login</h2>
+    WebID: <input type="text" name="webid"><br>
+    Password: <input type="password" name="password">
+    <input type="submit" value="Login">
+    </form>
+</body>
+</html>`,
 		"newCert": `<!DOCTYPE html>
 <html id="docHTML">
 <body>
