@@ -165,3 +165,44 @@ func LoginTemplate(redir string) string {
 
 	return template
 }
+
+func UnauthTemplate(redirTo string) string {
+	template := `<!DOCTYPE html>
+<html id="docHTML">
+<head>
+</head>
+<body>
+    <h1>401 - Unauthorized! You need to authenticate to access this resource.</h1>
+    <form method="POST" action="/` + SystemPrefix + `/login?redirect=` + redirTo + `">
+    <h2>Login</h2>
+    WebID:
+    <br>
+    <input type="text" name="webid">
+    <br>
+    Password:
+    <br>
+    <input type="password" name="password">
+    <br>
+    <input type="submit" value="Login">
+    </form>
+    <p><a href="/` + SystemPrefix + `/accountRecovery">Forgot your password?</a></p>
+    <br>
+    <p>Do you need a WebID? You can sign up for one at <a href="https://databox.me/" target="_blank">databox.me</a>.</p>
+</body>
+</html>`
+
+	return template
+}
+
+func LogoutTemplate(webid string) string {
+	template := `<!DOCTYPE html>
+<html id="docHTML">
+<head>
+</head>
+<body>
+    <h1>You are logged in as ` + webid + `.</h1>
+    <h2><a href="/` + SystemPrefix + `/logout">Click here to logout</a></h2>
+</body>
+</html>`
+	return template
+}

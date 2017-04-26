@@ -35,6 +35,7 @@ var (
 	aclSuffix  = flag.String("aclSuffix", ",acl", "default suffix for ACL files")
 
 	proxy = flag.String("proxy", "", "URL of the proxy service used for WebID-TLS delegation")
+	local = flag.Bool("proxyLocal", true, "set to false to disable proxying of resource from local network")
 
 	tokenT = flag.Int64("tokenAge", 5, "recovery token lifetime (in minutes)")
 
@@ -125,6 +126,7 @@ func main() {
 		config.ACLSuffix = *aclSuffix
 		config.Agent = *agent
 		config.ProxyTemplate = *proxy
+		config.ProxyLocal = *local
 		if len(*emailName) > 0 && len(*emailAddr) > 0 && len(*emailUser) > 0 &&
 			len(*emailPass) > 0 && len(*emailServ) > 0 && len(*emailPort) > 0 {
 			ep, _ := strconv.Atoi(*emailPort)

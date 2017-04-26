@@ -78,6 +78,25 @@ func passwordAuth(w http.ResponseWriter, req *httpRequest, s *Server) SystemRetu
 	redirTo := req.FormValue("redirect")
 	origin := req.Header.Get("Origin")
 
+	// if cookie is set, just redirect
+	if len(req.User) > 0 {
+		values := map[string]string{
+			"webid":  req.User,
+			"origin": origin,
+		}
+		// refresh cookie
+		err := s.userCookieSet(w, req.User)
+		if err != nil {
+			s.debug.Println("Error setting new cookie: " + err.Error())
+			return SystemReturn{Status: 500, Body: err.Error()}
+		}
+		// redirect
+		if len(redirTo) > 0 {
+			loginRedirect(w, req, s, values, redirTo)
+		}
+		return SystemReturn{Status: 200, Body: LogoutTemplate(req.User)}
+	}
+
 	webid := req.FormValue("webid")
 	passF := req.FormValue("password")
 
@@ -134,19 +153,34 @@ func passwordAuth(w http.ResponseWriter, req *httpRequest, s *Server) SystemRetu
 			"webid":  webid,
 			"origin": origin,
 		}
+		loginRedirect(w, req, s, values, redirTo)
 
-		// age times the duration of 1 month
-		t := time.Duration(s.Config.TokenAge) * time.Hour * 5040
-		token, err := NewSecureToken("Authentication", values, t, s)
-		if err != nil {
-			s.debug.Println("Could not generate auth token for " + webid + ", err: " + err.Error())
-			return SystemReturn{Status: 500, Body: "Could not generate auth token for " + webid + ", err: " + err.Error()}
-		}
-		redirTo += "?key=" + token
-		http.Redirect(w, req.Request, redirTo, 301)
+		// // age times the duration of 1 month
+		// t := time.Duration(s.Config.TokenAge) * time.Hour * 5040
+		// token, err := NewSecureToken("Authentication", values, t, s)
+		// if err != nil {
+		// 	s.debug.Println("Could not generate auth token for " + webid + ", err: " + err.Error())
+		// 	return SystemReturn{Status: 500, Body: "Could not generate auth token for " + webid + ", err: " + err.Error()}
+		// }
+		// redirTo += "?key=" + token
+		// http.Redirect(w, req.Request, redirTo, 301)
 	}
 
-	return SystemReturn{Status: 200, Body: "Authentication successful!"}
+	http.Redirect(w, req.Request, req.RequestURI, 301)
+	return SystemReturn{Status: 200}
+}
+
+func loginRedirect(w http.ResponseWriter, req *httpRequest, s *Server, values map[string]string, redirTo string) SystemReturn {
+	// age times the duration of 1 month
+	t := time.Duration(s.Config.TokenAge) * time.Hour * 5040
+	token, err := NewSecureToken("Authorization", values, t, s)
+	if err != nil {
+		s.debug.Println("Could not generate authorization token for " + values["webid"] + ", err: " + err.Error())
+		return SystemReturn{Status: 500, Body: "Could not generate auth token for " + values["webid"] + ", err: " + err.Error()}
+	}
+	redirTo += "?key=" + token
+	http.Redirect(w, req.Request, redirTo, 301)
+	return SystemReturn{Status: 200}
 }
 
 func accountRecovery(w http.ResponseWriter, req *httpRequest, s *Server) SystemReturn {
@@ -204,7 +238,7 @@ func sendRecoveryToken(w http.ResponseWriter, req *httpRequest, s *Server) Syste
 	link := resource.Base + "/" + SystemPrefix + "/accountRecovery?token=" + token
 	to := []string{email}
 	go s.sendRecoveryMail(resource.Obj.Host, IP, to, link)
-	return SystemReturn{Status: 200, Body: "You should receive an email shortly, with further instructions."}
+	return SystemReturn{Status: 200, Body: "You should receive an email shortly with further instructions."}
 }
 
 func validateRecoveryToken(w http.ResponseWriter, req *httpRequest, s *Server) SystemReturn {
@@ -224,7 +258,8 @@ func validateRecoveryToken(w http.ResponseWriter, req *httpRequest, s *Server) S
 		return SystemReturn{Status: 500, Body: err.Error()}
 	}
 	// also set cookie now
-	err = s.userCookieSet(w, value["webid"])
+	webid := value["webid"]
+	err = s.userCookieSet(w, webid)
 	if err != nil {
 		s.debug.Println("Error setting new cookie: " + err.Error())
 		return SystemReturn{Status: 500, Body: err.Error()}
@@ -244,30 +279,36 @@ func validateRecoveryToken(w http.ResponseWriter, req *httpRequest, s *Server) S
 
 		g := NewGraph(resource.AclURI)
 		g.ReadFile(resource.AclFile)
-		// remove old password
-		passT := g.One(nil, ns.acl.Get("password"), nil)
-		if passT != nil {
-			g.Remove(passT)
-		}
-		// add new password
-		g.AddTriple(NewResource(resource.AclURI), ns.acl.Get("password"),
-			NewLiteral(saltedPassword(s.Config.Salt, pass)))
+		// find the policy containing root acl
+		for _, m := range g.All(nil, ns.acl.Get("mode"), ns.acl.Get("Control")) {
+			p := g.One(m.Subject, ns.acl.Get("agent"), NewResource(webid))
+			if p != nil {
+				passT := g.One(nil, ns.acl.Get("password"), nil)
+				// remove old password
+				if passT != nil {
+					g.Remove(passT)
+				}
+			}
+			// add new password
+			g.AddTriple(m.Subject, ns.acl.Get("password"), NewLiteral(saltedPassword(s.Config.Salt, pass)))
 
-		// write account acl to disk
-		// open account acl file
-		f, err := os.OpenFile(resource.AclFile, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
-		if err != nil {
-			s.debug.Println("Could not open file to save new password. Error: " + err.Error())
-			return SystemReturn{Status: 500, Body: err.Error()}
+			// write account acl to disk
+			// open account acl file
+			f, err := os.OpenFile(resource.AclFile, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
+			if err != nil {
+				s.debug.Println("Could not open file to save new password. Error: " + err.Error())
+				return SystemReturn{Status: 500, Body: err.Error()}
+			}
+			defer f.Close()
+			err = g.WriteFile(f, "text/turtle")
+			if err != nil {
+				s.debug.Println("Could not save account acl file with new password. Error: " + err.Error())
+				return SystemReturn{Status: 500, Body: err.Error()}
+			}
+			// All set
+			return SystemReturn{Status: 200, Body: "Password saved!"}
+			break
 		}
-		defer f.Close()
-		err = g.WriteFile(f, "text/turtle")
-		if err != nil {
-			s.debug.Println("Could not save account acl file with new password. Error: " + err.Error())
-			return SystemReturn{Status: 500, Body: err.Error()}
-		}
-		// All set
-		return SystemReturn{Status: 200, Body: "Password saved!"}
 	}
 
 	return SystemReturn{Status: 200, Body: NewPassTemplate(token, "")}

@@ -64,6 +64,9 @@ type ServerConfig struct {
 	// ProxyTemplate is the URL of the service that handles WebID-TLS delegation
 	ProxyTemplate string
 
+	// ProxyLocal enables/disables proxying of resources on localhost
+	ProxyLocal bool
+
 	// QueryTemplate is the URL of the service that handles query request using twinql
 	QueryTemplate string
 
@@ -97,6 +100,7 @@ func NewServerConfig() *ServerConfig {
 		SignUpApp:  "https://solid.github.io/solid-signup/?domain=",
 		DiskLimit:  100000000, // 100MB
 		DataRoot:   serverDefaultRoot(),
+		ProxyLocal: true,
 	}
 }
 

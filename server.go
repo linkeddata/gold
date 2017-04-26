@@ -3,6 +3,7 @@ package gold
 import (
 	"bufio"
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -65,6 +66,7 @@ type httpRequest struct {
 	*Server
 	AcceptType  string
 	ContentType string
+	User        string
 }
 
 func (req httpRequest) BaseURI() string {
@@ -215,7 +217,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	defer func() {
 		req.Body.Close()
 	}()
-	r := s.handle(w, &httpRequest{req, s, "", ""})
+	r := s.handle(w, &httpRequest{req, s, "", "", ""})
 	for key := range r.headers {
 		w.Header().Set(key, r.headers.Get(key))
 	}
@@ -227,15 +229,46 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
+// Twinql Query
+func TwinqlQuery(w http.ResponseWriter, req *httpRequest, s *Server) *response {
+	r := new(response)
+	token := req.FormValue("key")
+	values, err := GetValuesFromToken("Authorization", token, req, s)
+	if err == nil && len(values["webid"]) > 0 {
+		req.User = values["webid"]
+		s.debug.Println("Got user from auth token:", req.User)
+		err = IsTokenDateValid(values["valid"])
+		if err != nil {
+			return r.respond(403, "Access denied for "+req.User+". Authorization token has expired.")
+		}
+	}
+	err = ProxyReq(w, req, s, s.Config.QueryTemplate)
+	if err != nil {
+		s.debug.Println("Query error:", err.Error())
+	}
+	return r
+}
+
 // Proxy requests
-func ProxyReq(w http.ResponseWriter, req *httpRequest, reqUrl string) error {
+func ProxyReq(w http.ResponseWriter, req *httpRequest, s *Server, reqUrl string) error {
 	uri, err := url.Parse(reqUrl)
 	if err != nil {
 		return err
 	}
+	host := uri.Host
+	if !s.Config.ProxyLocal {
+		if strings.HasPrefix(host, "10.") ||
+			strings.HasPrefix(host, "172.16.") ||
+			strings.HasPrefix(host, "192.168.") ||
+			strings.HasPrefix(host, "localhost") {
+			return errors.New("Proxying requests to the local network is not allowed.")
+		}
+	}
+
 	req.URL = uri
-	req.Host = uri.Host
+	req.Host = host
 	req.RequestURI = uri.RequestURI()
+	req.Header.Set("User", req.User)
 	proxy.ServeHTTP(w, req.Request)
 	return nil
 }
@@ -260,6 +293,7 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 
 	// Authentication
 	user := req.authn(w)
+	req.User = user
 	w.Header().Set("User", user)
 	acl := NewWAC(req, s, w, user, rKey)
 
@@ -276,8 +310,7 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 
 	// Proxy requests
 	if ProxyPath != "" && strings.HasSuffix(req.URL.Path, ProxyPath) {
-		req.Header.Set("User", user)
-		err = ProxyReq(w, req, s.Config.ProxyTemplate+req.FormValue("uri"))
+		err = ProxyReq(w, req, s, s.Config.ProxyTemplate+req.FormValue("uri"))
 		if err != nil {
 			s.debug.Println("Proxy error:", err.Error())
 		}
@@ -286,22 +319,23 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 
 	// Query requests
 	if req.Method == "POST" && QueryPath != "" && strings.Contains(req.URL.Path, QueryPath) && len(s.Config.QueryTemplate) > 0 {
-		token := req.FormValue("key")
-		values, err := GetValuesFromToken("Authentication", token, req, s)
-		if err == nil && len(values["webid"]) > 0 {
-			user = values["webid"]
-			s.debug.Println("Got user from auth token:", user)
-			err = IsTokenDateValid(values["valid"])
-			if err != nil {
-				return r.respond(403, "Access denied for "+user+". Authorization token has expired.")
-			}
-		}
-		req.Header.Set("User", user)
-		err = ProxyReq(w, req, s.Config.QueryTemplate)
-		if err != nil {
-			s.debug.Println("Query error:", err.Error())
-		}
-		return
+		// token := req.FormValue("key")
+		// values, err := GetValuesFromToken("Authorization", token, req, s)
+		// if err == nil && len(values["webid"]) > 0 {
+		// 	user = values["webid"]
+		// 	s.debug.Println("Got user from auth token:", user)
+		// 	err = IsTokenDateValid(values["valid"])
+		// 	if err != nil {
+		// 		return r.respond(403, "Access denied for "+user+". Authorization token has expired.")
+		// 	}
+		// }
+		// req.Header.Set("User", user)
+		// err = ProxyReq(w, req, s.Config.QueryTemplate)
+		return TwinqlQuery(w, req, s)
+		// if err != nil {
+		// 	s.debug.Println("Query error:", err.Error())
+		// }
+		// return
 	}
 
 	resource, _ := req.pathInfo(req.BaseURI())
