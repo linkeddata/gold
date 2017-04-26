@@ -154,16 +154,6 @@ func passwordAuth(w http.ResponseWriter, req *httpRequest, s *Server) SystemRetu
 			"origin": origin,
 		}
 		loginRedirect(w, req, s, values, redirTo)
-
-		// // age times the duration of 1 month
-		// t := time.Duration(s.Config.TokenAge) * time.Hour * 5040
-		// token, err := NewSecureToken("Authentication", values, t, s)
-		// if err != nil {
-		// 	s.debug.Println("Could not generate auth token for " + webid + ", err: " + err.Error())
-		// 	return SystemReturn{Status: 500, Body: "Could not generate auth token for " + webid + ", err: " + err.Error()}
-		// }
-		// redirTo += "?key=" + token
-		// http.Redirect(w, req.Request, redirTo, 301)
 	}
 
 	http.Redirect(w, req.Request, req.RequestURI, 301)
@@ -178,7 +168,7 @@ func loginRedirect(w http.ResponseWriter, req *httpRequest, s *Server, values ma
 		s.debug.Println("Could not generate authorization token for " + values["webid"] + ", err: " + err.Error())
 		return SystemReturn{Status: 500, Body: "Could not generate auth token for " + values["webid"] + ", err: " + err.Error()}
 	}
-	redirTo += "?key=" + token
+	redirTo += "?authorization=" + token
 	http.Redirect(w, req.Request, redirTo, 301)
 	return SystemReturn{Status: 200}
 }
