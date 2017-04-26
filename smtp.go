@@ -10,9 +10,12 @@ import (
 )
 
 type EmailStruct struct {
-	To      string
-	Subject string
-	Body    string
+	To       string
+	ToName   string
+	From     string
+	FromName string
+	Subject  string
+	Body     string
 }
 
 // EmailConfig holds configuration values for remote SMTP servers
@@ -42,7 +45,10 @@ func NewEmailStruct() *EmailStruct {
 func (s *Server) sendWelcomeMail(params map[string]string) {
 	email := NewEmailStruct()
 	email.To = params["{{.To}}"]
-	email.Subject = "Welcome to " + params["{{.Host}}"]
+	email.ToName = params["{{.Name}}"]
+	email.From = "notifications@" + params["{{.Host}}"]
+	email.FromName = "Notifications Service"
+	email.Subject = "Welcome to " + params["{{.Host}}"] + "!"
 	email.Body = parseMailTemplate("welcomeMail", params)
 
 	s.sendMail(email)
@@ -51,6 +57,9 @@ func (s *Server) sendWelcomeMail(params map[string]string) {
 func (s *Server) sendRecoveryMail(params map[string]string) {
 	email := NewEmailStruct()
 	email.To = params["{{.To}}"]
+	email.ToName = params["{{.Name}}"]
+	email.From = "recovery@" + params["{{.Host}}"]
+	email.FromName = "Account Recovery"
 	email.Subject = "Recovery instructions for your account on " + params["{{.Host}}"]
 	email.Body = parseMailTemplate("accountRecovery", params)
 
@@ -71,8 +80,8 @@ func (s *Server) sendMail(email *EmailStruct) {
 	)
 
 	// Setup headers
-	src := mail.Address{Name: "", Address: smtpCfg.Addr}
-	dst := mail.Address{Name: "", Address: email.To}
+	src := mail.Address{Name: email.FromName, Address: email.From}
+	dst := mail.Address{Name: email.ToName, Address: email.To}
 	headers := make(map[string]string)
 	headers["From"] = src.String()
 	headers["To"] = dst.String()
@@ -91,7 +100,7 @@ func (s *Server) sendMail(email *EmailStruct) {
 		var err error
 		// force upgrade to full SSL/TLS connection
 		if smtpCfg.ForceSSL {
-			err = s.sendSecureRecoveryMail(src, dst, []byte(message), smtpCfg)
+			err = s.sendSecureMail(src, dst, []byte(message), smtpCfg)
 		} else {
 			err = smtp.SendMail(smtpServer, auth, smtpCfg.Addr, []string{email.To}, []byte(message))
 		}
@@ -105,7 +114,7 @@ func (s *Server) sendMail(email *EmailStruct) {
 	}
 }
 
-func (s *Server) sendSecureRecoveryMail(from mail.Address, to mail.Address, msg []byte, cfg *EmailConfig) (err error) {
+func (s *Server) sendSecureMail(from mail.Address, to mail.Address, msg []byte, cfg *EmailConfig) (err error) {
 	// Connect to the SMTP Server
 	serverName := cfg.Host + ":" + strconv.Itoa(cfg.Port)
 	auth := smtp.PlainAuth("", cfg.User, cfg.Pass, cfg.Host)

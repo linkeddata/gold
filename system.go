@@ -478,7 +478,6 @@ func newAccount(w http.ResponseWriter, req *httpRequest, s *Server) SystemReturn
 		// Setup message
 		params := make(map[string]string)
 		params["{{.To}}"] = req.FormValue("email")
-		params["{{.From}}"] = s.Config.SMTPConfig.Name
 		params["{{.Name}}"] = account.Name
 		params["{{.Host}}"] = resource.Obj.Host
 		params["{{.Account}}"] = account.BaseURI
