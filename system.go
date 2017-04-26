@@ -340,10 +340,10 @@ func newAccount(w http.ResponseWriter, req *httpRequest, s *Server) SystemReturn
 		Img:      req.FormValue("img"),
 	}
 	if len(s.Config.ProxyTemplate) > 0 {
-		account.ProxyURI = s.Config.ProxyTemplate
+		account.ProxyURI = accountBase + ",proxy?uri="
 	}
 	if len(s.Config.QueryTemplate) > 0 {
-		account.QueryURI = s.Config.QueryTemplate
+		account.QueryURI = accountBase + ",query"
 	}
 
 	s.debug.Println("Checking if account profile <" + resource.File + "> exists...")
