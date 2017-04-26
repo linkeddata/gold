@@ -24,6 +24,8 @@ const (
 	HCType = "Content-Type"
 	// SystemPrefix is the generic name for the system-reserved namespace (e.g. APIs)
 	SystemPrefix = ",system"
+	// LoginEndpoint is the link to the login page
+	LoginEndpoint = SystemPrefix + "/login"
 	// ProxyPath provides CORS proxy (empty to disable)
 	ProxyPath = ",proxy"
 	// QueryPath provides link-following support for twinql
@@ -284,6 +286,16 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 
 	// Query requests
 	if req.Method == "POST" && QueryPath != "" && strings.Contains(req.URL.Path, QueryPath) && len(s.Config.QueryTemplate) > 0 {
+		token := req.FormValue("key")
+		values, err := GetValuesFromToken("Authentication", token, req, s)
+		if err == nil && len(values["webid"]) > 0 {
+			user = values["webid"]
+			s.debug.Println("Got user from auth token:", user)
+			err = IsTokenDateValid(values["valid"])
+			if err != nil {
+				return r.respond(403, "Access denied for "+user+". Authorization token has expired.")
+			}
+		}
 		req.Header.Set("User", user)
 		err = ProxyReq(w, req, s.Config.QueryTemplate)
 		if err != nil {

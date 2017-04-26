@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -171,6 +172,11 @@ func ParseDigestAuthorizationHeader(header string) (*DigestAuthorization, error)
 	return &auth, nil
 }
 
+func NewTokenValues() map[string]string {
+	t := make(map[string]string)
+	return t
+}
+
 // NewSecureToken generates a signed token to be used during account recovery
 func NewSecureToken(tokenType string, values map[string]string, duration time.Duration, s *Server) (string, error) {
 	valid := time.Now().Add(duration).Unix()
@@ -193,6 +199,29 @@ func ValidateSecureToken(tokenType string, token string, s *Server) (map[string]
 	}
 
 	return values, nil
+}
+
+func GetValuesFromToken(tokenType string, token string, req *httpRequest, s *Server) (map[string]string, error) {
+	values := NewTokenValues()
+	err := s.cookie.Decode(tokenType, token, &values)
+	if err != nil {
+		s.debug.Println("Decoding err: " + err.Error())
+		return values, err
+	}
+	return values, nil
+}
+
+func IsTokenDateValid(valid string) error {
+	v, err := strconv.ParseInt(valid, 10, 64)
+	if err != nil {
+		return err
+	}
+
+	if time.Now().Local().Unix() > v {
+		return errors.New("Token has expired!")
+	}
+
+	return nil
 }
 
 func saltedPassword(salt, pass string) string {

@@ -12,7 +12,6 @@ import (
 	"os"
 	_path "path"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"time"
 )
@@ -76,20 +75,19 @@ func logOut(w http.ResponseWriter, req *httpRequest, s *Server) SystemReturn {
 
 func passwordAuth(w http.ResponseWriter, req *httpRequest, s *Server) SystemReturn {
 	var passL string
-
-	if req.Method == "GET" {
-		return SystemReturn{Status: 200, Body: Apps["login"]}
-	}
-
-	webid := req.FormValue("webid")
-	passF := req.FormValue("password")
-	if len(webid) == 0 && len(passF) == 0 {
-		return SystemReturn{Status: 409, Body: "You must supply a valid WebID and password."}
-	}
-
 	redirTo := req.FormValue("redirect")
 	origin := req.Header.Get("Origin")
 
+	webid := req.FormValue("webid")
+	passF := req.FormValue("password")
+
+	if req.Method == "GET" {
+		return SystemReturn{Status: 200, Body: LoginTemplate(redirTo)}
+	}
+
+	if len(webid) == 0 && len(passF) == 0 {
+		return SystemReturn{Status: 409, Body: "You must supply a valid WebID and password."}
+	}
 	resource, err := req.pathInfo(req.BaseURI())
 	if err != nil {
 		s.debug.Println("PathInfo error: " + err.Error())
@@ -117,7 +115,6 @@ func passwordAuth(w http.ResponseWriter, req *httpRequest, s *Server) SystemRetu
 
 	// check if passwords match
 	passF = saltedPassword(s.Config.Salt, passF)
-	s.debug.Println("Form:", passF, "Local:", passL)
 	if passF != passL {
 		s.debug.Println("Access denied! Bad WebID or password.")
 		return SystemReturn{Status: 403, Body: "Access denied! Bad WebID or password."}
@@ -137,7 +134,9 @@ func passwordAuth(w http.ResponseWriter, req *httpRequest, s *Server) SystemRetu
 			"webid":  webid,
 			"origin": origin,
 		}
-		t := time.Duration(s.Config.TokenAge) * time.Minute
+
+		// age times the duration of 1 month
+		t := time.Duration(s.Config.TokenAge) * time.Hour * 5040
 		token, err := NewSecureToken("Authentication", values, t, s)
 		if err != nil {
 			s.debug.Println("Could not generate auth token for " + webid + ", err: " + err.Error())
@@ -154,6 +153,7 @@ func accountRecovery(w http.ResponseWriter, req *httpRequest, s *Server) SystemR
 	if len(req.FormValue("webid")) > 0 && strings.HasPrefix(req.FormValue("webid"), "http") {
 		return sendRecoveryToken(w, req, s)
 	} else if len(req.FormValue("token")) > 0 {
+		// validate or issue new password
 		return validateRecoveryToken(w, req, s)
 	}
 	// return default app with form
@@ -216,26 +216,61 @@ func validateRecoveryToken(w http.ResponseWriter, req *httpRequest, s *Server) S
 		return SystemReturn{Status: 500, Body: err.Error()}
 	}
 
-	if len(value["valid"]) > 0 {
-		v, err := strconv.ParseInt(value["valid"], 10, 64)
-		if err != nil {
-			s.debug.Println("Int parsing err: " + err.Error())
-			return SystemReturn{Status: 500, Body: err.Error()}
-		}
-
-		if time.Now().Local().Unix() > v {
-			s.debug.Println("Token expired!")
-			return SystemReturn{Status: 498, Body: "Token expired!"}
-		}
-		// also set cookie now
-		err = s.userCookieSet(w, value["webid"])
-		if err != nil {
-			s.debug.Println("Error setting new cookie: " + err.Error())
-			return SystemReturn{Status: 500, Body: err.Error()}
-		}
-		return SystemReturn{Status: 200, Body: Apps["newCert"]}
+	if len(value["valid"]) == 0 {
+		return SystemReturn{Status: 499, Body: "Missing validity date for token."}
 	}
-	return SystemReturn{Status: 499, Body: "Missing validity date for token."}
+	err = IsTokenDateValid(value["valid"])
+	if err != nil {
+		return SystemReturn{Status: 500, Body: err.Error()}
+	}
+	// also set cookie now
+	err = s.userCookieSet(w, value["webid"])
+	if err != nil {
+		s.debug.Println("Error setting new cookie: " + err.Error())
+		return SystemReturn{Status: 500, Body: err.Error()}
+	}
+
+	pass := req.FormValue("password")
+	verif := req.FormValue("verifypass")
+	if len(pass) > 0 && len(verif) > 0 {
+		if pass != verif {
+			// passwords don't match,
+			return SystemReturn{Status: 200, Body: NewPassTemplate(token, "Passwords do not match!")}
+		}
+		// save new password
+		resource, _ := req.pathInfo(req.BaseURI())
+		accountBase := resource.Base + "/"
+		resource, _ = req.pathInfo(accountBase)
+
+		g := NewGraph(resource.AclURI)
+		g.ReadFile(resource.AclFile)
+		// remove old password
+		passT := g.One(nil, ns.acl.Get("password"), nil)
+		if passT != nil {
+			g.Remove(passT)
+		}
+		// add new password
+		g.AddTriple(NewResource(resource.AclURI), ns.acl.Get("password"),
+			NewLiteral(saltedPassword(s.Config.Salt, pass)))
+
+		// write account acl to disk
+		// open account acl file
+		f, err := os.OpenFile(resource.AclFile, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
+		if err != nil {
+			s.debug.Println("Could not open file to save new password. Error: " + err.Error())
+			return SystemReturn{Status: 500, Body: err.Error()}
+		}
+		defer f.Close()
+		err = g.WriteFile(f, "text/turtle")
+		if err != nil {
+			s.debug.Println("Could not save account acl file with new password. Error: " + err.Error())
+			return SystemReturn{Status: 500, Body: err.Error()}
+		}
+		// All set
+		return SystemReturn{Status: 200, Body: "Password saved!"}
+	}
+
+	return SystemReturn{Status: 200, Body: NewPassTemplate(token, "")}
 }
 
 func newAccount(w http.ResponseWriter, req *httpRequest, s *Server) SystemReturn {

@@ -26,17 +26,6 @@ document.addEventListener('DOMContentLoaded', function() {
 </div>
 </body>
 </html>`,
-		"login": `<!DOCTYPE html>
-<html id="docHTML">
-<body>
-    <form method="POST" action="/` + SystemPrefix + `/login">
-    <h2>Login</h2>
-    WebID: <input type="text" name="webid"><br>
-    Password: <input type="password" name="password">
-    <input type="submit" value="Login">
-    </form>
-</body>
-</html>`,
 		"newCert": `<!DOCTYPE html>
 <html id="docHTML">
 <body>
@@ -52,8 +41,10 @@ document.addEventListener('DOMContentLoaded', function() {
 		"accountRecovery": `<!DOCTYPE html>
 <html id="docHTML">
 <body>
+    <h2>Recover access to your account</h2>
     <form method="POST">
     What is your WebID?
+    <br>
     <input type="text" name="webid">
     <input type="submit" value="Recover account">
     </form>
@@ -64,9 +55,22 @@ document.addEventListener('DOMContentLoaded', function() {
 <head>
 </head>
 <body>
-    <h1>401 - oh noes, you need to authenticate!</h1>
-    <h2>Do you need a WebID? You can sign up for one at <a href="https://databox.me/" target="_blank">databox.me</a>.</h2>
-    <h2>Also, please visit the <a href="/` + SystemPrefix + `/accountRecovery">recovery page</a> in case you have lost access to your credentials.</h2>
+    <h1>401 - Unauthorized! You need to authenticate to access this resource.</h1>
+    <form method="POST" action="/` + SystemPrefix + `/login">
+    <h2>Login</h2>
+    WebID:
+    <br>
+    <input type="text" name="webid">
+    <br>
+    Password:
+    <br>
+    <input type="password" name="password">
+    <br>
+    <input type="submit" value="Login">
+    </form>
+    <p><a href="/` + SystemPrefix + `/accountRecovery">Forgot your password?</a></p>
+    <br>
+    <p>Do you need a WebID? You can sign up for one at <a href="https://databox.me/" target="_blank">databox.me</a>.</p>
 </body>
 </html>`,
 		"403": `<!DOCTYPE html>
@@ -114,3 +118,50 @@ document.addEventListener('DOMContentLoaded', function() {
 `,
 	}
 )
+
+func NewPassTemplate(token string, err string) string {
+	template := `<!DOCTYPE html>
+<html id="docHTML">
+<body>
+    <form method="POST" action="/` + SystemPrefix + `/accountRecovery?token=` + token + `">
+    <h2>Please provide a new password</h2>
+    <p style="color: red;">` + err + `</p>
+    Password:
+    <br>
+    <input type="password" name="password">
+    <br>
+    Password (type again to verify):
+    <br>
+    <input type="password" name="verifypass">
+    <br>
+    <input type="submit" value="Submit">
+    </form>
+</body>
+</html>`
+	return template
+}
+
+func LoginTemplate(redir string) string {
+	template := `<!DOCTYPE html>
+<html id="docHTML">
+<body>
+    <form method="POST" action="/` + SystemPrefix + `/login?redirect=` + redir + `">
+    <h2>Login</h2>
+    WebID:
+    <br>
+    <input type="text" name="webid">
+    <br>
+    Password:
+    <br>
+    <input type="password" name="password">
+    <br>
+    <input type="submit" value="Login">
+    </form>
+    <p><a href="/` + SystemPrefix + `/accountRecovery">Forgot your password?</a></p>
+    <br>
+    <p>Do you need a WebID? You can sign up for one at <a href="https://databox.me/" target="_blank">databox.me</a>.</p>
+</body>
+</html>`
+
+	return template
+}
