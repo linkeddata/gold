@@ -226,8 +226,14 @@ func sendRecoveryToken(w http.ResponseWriter, req *httpRequest, s *Server) Syste
 	// create recovery URL
 	IP, _, _ := net.SplitHostPort(req.Request.RemoteAddr)
 	link := resource.Base + "/" + SystemPrefix + "/accountRecovery?token=" + token
-	to := []string{email}
-	go s.sendRecoveryMail(resource.Obj.Host, IP, to, link)
+	// Setup message
+	params := make(map[string]string)
+	params["{{.To}}"] = email
+	params["{{.IP}}"] = IP
+	params["{{.Host}}"] = resource.Obj.Host
+	params["{{.From}}"] = s.Config.SMTPConfig.Name
+	params["{{.Link}}"] = link
+	go s.sendRecoveryMail(params)
 	return SystemReturn{Status: 200, Body: "You should receive an email shortly with further instructions."}
 }
 
@@ -466,6 +472,19 @@ func newAccount(w http.ResponseWriter, req *httpRequest, s *Server) SystemReturn
 		return SystemReturn{Status: 500, Body: err.Error()}
 	}
 	w.Header().Set("User", webidURI)
+
+	// Send welcome email
+	if len(req.FormValue("email")) > 0 {
+		// Setup message
+		params := make(map[string]string)
+		params["{{.To}}"] = req.FormValue("email")
+		params["{{.From}}"] = s.Config.SMTPConfig.Name
+		params["{{.Name}}"] = account.Name
+		params["{{.Host}}"] = resource.Obj.Host
+		params["{{.Account}}"] = account.BaseURI
+		params["{{.WebID}}"] = account.WebID
+		go s.sendWelcomeMail(params)
+	}
 
 	// Generate cert
 	spkac := req.FormValue("spkac")

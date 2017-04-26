@@ -9,6 +9,12 @@ import (
 	"strings"
 )
 
+type EmailStruct struct {
+	To      string
+	Subject string
+	Body    string
+}
+
 // EmailConfig holds configuration values for remote SMTP servers
 type EmailConfig struct {
 	// Name of the remote SMTP server account, i.e. Server admin
@@ -29,12 +35,33 @@ type EmailConfig struct {
 	Insecure bool
 }
 
+func NewEmailStruct() *EmailStruct {
+	return &EmailStruct{}
+}
+
+func (s *Server) sendWelcomeMail(params map[string]string) {
+	email := NewEmailStruct()
+	email.To = params["{{.To}}"]
+	email.Subject = "Welcome to " + params["{{.Host}}"]
+	email.Body = parseMailTemplate("welcomeMail", params)
+
+	s.sendMail(email)
+}
+
+func (s *Server) sendRecoveryMail(params map[string]string) {
+	email := NewEmailStruct()
+	email.To = params["{{.To}}"]
+	email.Subject = "Recovery instructions for your account on " + params["{{.Host}}"]
+	email.Body = parseMailTemplate("accountRecovery", params)
+
+	s.sendMail(email)
+}
+
 // should be run in a go routine
-func (s *Server) sendRecoveryMail(goldHost string, IP string, to []string, link string) {
+func (s *Server) sendMail(email *EmailStruct) {
 	if &s.Config.SMTPConfig == nil {
 		s.debug.Println("Missing smtp server configuration")
 	}
-	subject := "Recovery instructions for your account on " + goldHost
 	smtpCfg := &s.Config.SMTPConfig
 
 	auth := smtp.PlainAuth("",
@@ -45,25 +72,19 @@ func (s *Server) sendRecoveryMail(goldHost string, IP string, to []string, link 
 
 	// Setup headers
 	src := mail.Address{Name: "", Address: smtpCfg.Addr}
-	dst := mail.Address{Name: "", Address: to[0]}
+	dst := mail.Address{Name: "", Address: email.To}
 	headers := make(map[string]string)
 	headers["From"] = src.String()
 	headers["To"] = dst.String()
-	headers["Subject"] = subject
+	headers["Subject"] = email.Subject
 	headers["MIME-Version"] = "1.0"
 	headers["Content-Type"] = "text/html; charset=\"utf-8\""
-	// Setup message
-	vals := make(map[string]string)
-	vals["{{.IP}}"] = IP
-	vals["{{.From}}"] = smtpCfg.Name
-	vals["{{.Link}}"] = link
-	body := parseMailTemplate("accountRecovery", vals)
 
 	message := ""
 	for k, v := range headers {
 		message += fmt.Sprintf("%s: %s\r\n", k, v)
 	}
-	message += "\r\n" + body
+	message += "\r\n" + email.Body
 
 	if len(smtpCfg.Host) > 0 && smtpCfg.Port > 0 && auth != nil {
 		smtpServer := smtpCfg.Host + ":" + strconv.Itoa(smtpCfg.Port)
@@ -72,12 +93,12 @@ func (s *Server) sendRecoveryMail(goldHost string, IP string, to []string, link 
 		if smtpCfg.ForceSSL {
 			err = s.sendSecureRecoveryMail(src, dst, []byte(message), smtpCfg)
 		} else {
-			err = smtp.SendMail(smtpServer, auth, smtpCfg.Addr, to, []byte(message))
+			err = smtp.SendMail(smtpServer, auth, smtpCfg.Addr, []string{email.To}, []byte(message))
 		}
 		if err != nil {
-			s.debug.Println("Error sending recovery email to " + to[0] + ": " + err.Error())
+			s.debug.Println("Error sending recovery email to " + email.To + ": " + err.Error())
 		} else {
-			s.debug.Println("Successfully sent recovery email to " + to[0])
+			s.debug.Println("Successfully sent recovery email to " + email.To)
 		}
 	} else {
 		s.debug.Println("Missing smtp server and/or port")
