@@ -31,6 +31,8 @@ type webidAccount struct {
 	Name     string
 	Email    string
 	Agent    string
+	ProxyURI string
+	QueryURI string
 	Img      string
 }
 
@@ -367,6 +369,14 @@ func NewWebIDProfile(account webidAccount) *Graph {
 	g.AddTriple(userTerm, ns.space.Get("preferencesFile"), NewResource(account.PrefURI))
 	g.AddTriple(userTerm, ns.st.Get("inbox"), NewResource(account.BaseURI+"/Inbox/"))
 	g.AddTriple(userTerm, ns.st.Get("timeline"), NewResource(account.BaseURI+"/Timeline/"))
+
+	// add proxy and query endpoints
+	if len(account.ProxyURI) > 0 {
+		g.AddTriple(userTerm, ns.st.Get("proxyTemplate"), NewResource(account.ProxyURI))
+	}
+	if len(account.QueryURI) > 0 {
+		g.AddTriple(userTerm, ns.st.Get("queryEndpoint"), NewResource(account.QueryURI))
+	}
 
 	return g
 }
