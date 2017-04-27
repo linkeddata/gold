@@ -256,7 +256,7 @@ func ProxyReq(w http.ResponseWriter, req *httpRequest, s *Server, reqUrl string)
 		}
 	}
 	if len(req.FormValue("key")) > 0 {
-		token, err := base64decode(req.FormValue("key"))
+		token, err := decodeQuery(req.FormValue("key"))
 		if err != nil {
 			s.debug.Println(err.Error())
 		}

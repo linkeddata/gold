@@ -2,10 +2,10 @@ package gold
 
 import (
 	"crypto/sha256"
-	"encoding/base64"
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -186,7 +186,7 @@ func ParseBearerAuthorizationHeader(header string) (string, error) {
 	if parts[0] != "Bearer" {
 		return "", errors.New("Not a Bearer header. Got: " + parts[0])
 	}
-	return base64decode(parts[1])
+	return decodeQuery(parts[1])
 }
 
 func NewTokenValues() map[string]string {
@@ -266,14 +266,10 @@ func saltedPassword(salt, pass string) string {
 	return toString
 }
 
-func base64encode(src string) string {
-	return base64.StdEncoding.EncodeToString([]byte(src))
+func encodeQuery(s string) string {
+	return url.QueryEscape(s)
 }
 
-func base64decode(src string) (string, error) {
-	dec, err := base64.StdEncoding.DecodeString(src)
-	if err != nil {
-		return "", err
-	}
-	return string(dec), nil
+func decodeQuery(s string) (string, error) {
+	return url.QueryUnescape(s)
 }

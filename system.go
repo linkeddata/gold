@@ -167,7 +167,7 @@ func loginRedirect(w http.ResponseWriter, req *httpRequest, s *Server, values ma
 		return SystemReturn{Status: 500, Body: "Could not generate auth token for " + values["webid"] + ", err: " + err.Error()}
 	}
 	s.debug.Println("Generated new token for", values["webid"], "->", key)
-	redirTo += "?key=" + base64encode(key)
+	redirTo += "?key=" + encodeQuery(key)
 	http.Redirect(w, req.Request, redirTo, 301)
 	return SystemReturn{Status: 200}
 }
@@ -224,7 +224,7 @@ func sendRecoveryToken(w http.ResponseWriter, req *httpRequest, s *Server) Syste
 	}
 	// create recovery URL
 	IP, _, _ := net.SplitHostPort(req.Request.RemoteAddr)
-	link := resource.Base + "/" + SystemPrefix + "/accountRecovery?token=" + token
+	link := resource.Base + "/" + SystemPrefix + "/recovery?token=" + encodeQuery(token)
 	// Setup message
 	params := make(map[string]string)
 	params["{{.To}}"] = email
@@ -237,9 +237,13 @@ func sendRecoveryToken(w http.ResponseWriter, req *httpRequest, s *Server) Syste
 }
 
 func validateRecoveryToken(w http.ResponseWriter, req *httpRequest, s *Server) SystemReturn {
-	token := req.FormValue("token")
+	token, err := decodeQuery(req.FormValue("token"))
+	if err != nil {
+		s.debug.Println("Decode query err: " + err.Error())
+		return SystemReturn{Status: 500, Body: err.Error()}
+	}
 	value := make(map[string]string)
-	err := s.cookie.Decode("Recovery", token, &value)
+	err = s.cookie.Decode("Recovery", token, &value)
 	if err != nil {
 		s.debug.Println("Decoding err: " + err.Error())
 		return SystemReturn{Status: 500, Body: err.Error()}
