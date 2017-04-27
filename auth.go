@@ -219,7 +219,12 @@ func ValidateSecureToken(tokenType string, token string, s *Server) (map[string]
 
 func GetValuesFromToken(tokenType string, token string, req *httpRequest, s *Server) (map[string]string, error) {
 	values := NewTokenValues()
-	err := s.cookie.Decode(tokenType, token, &values)
+	token, err := decodeQuery(token)
+	if err != nil {
+		s.debug.Println("Token URL decoding error for type: " + tokenType + " : " + err.Error())
+		return values, err
+	}
+	err = s.cookie.Decode(tokenType, token, &values)
 	if err != nil {
 		s.debug.Println("Token decoding error for type: " + tokenType + " : " + err.Error())
 		return values, err
