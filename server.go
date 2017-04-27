@@ -398,11 +398,8 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 		w.Header().Add("Link", brack("http://www.w3.org/ns/ldp#Resource")+"; rel=\"type\"")
 
 		// set API Link headers
-		//@@TODO create the vocabulary before enabling links
-		// w.Header().Add("Link", brack(resource.Base+"/"+SystemPrefix+"/newCert")+"; rel=\"http://example.org/services#newCert\"")
-		// w.Header().Add("Link", brack(resource.Base+"/"+SystemPrefix+"/accountRecovery")+"; rel=\"http://example.org/services#accountRecovery\"")
-		// w.Header().Add("Link", brack(resource.Base+"/"+SystemPrefix+"/newAccount")+"; rel=\"http://example.org/services#newAccount\"")
-		// w.Header().Add("Link", brack(resource.Base+"/"+SystemPrefix+"/accountInfo")+"; rel=\"http://example.org/services#accountInfo\"")
+		w.Header().Add("Link", brack(resource.Base+"/"+SystemPrefix+"/login")+"; rel=\"https://solid.github.io/vocab/solid-terms.ttl#loginEndpoint\"")
+		w.Header().Add("Link", brack(resource.Base+"/"+SystemPrefix+"/logout")+"; rel=\"https://solid.github.io/vocab/solid-terms.ttl#logoutEndpoint\"")
 
 		return r.respond(200)
 
