@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net"
 	"net/http"
 	"os"
@@ -76,7 +75,7 @@ func logOut(w http.ResponseWriter, req *httpRequest, s *Server) SystemReturn {
 func passwordAuth(w http.ResponseWriter, req *httpRequest, s *Server) SystemReturn {
 	var passL string
 	redirTo := req.FormValue("redirect")
-	origin := req.Header.Get("Origin")
+	origin := req.FormValue("origin")
 
 	// if cookie is set, just redirect
 	if len(req.User) > 0 {
@@ -101,7 +100,7 @@ func passwordAuth(w http.ResponseWriter, req *httpRequest, s *Server) SystemRetu
 	passF := req.FormValue("password")
 
 	if req.Method == "GET" {
-		return SystemReturn{Status: 200, Body: LoginTemplate(redirTo)}
+		return SystemReturn{Status: 200, Body: LoginTemplate(redirTo, origin)}
 	}
 
 	if len(webid) == 0 && len(passF) == 0 {
@@ -120,7 +119,6 @@ func passwordAuth(w http.ResponseWriter, req *httpRequest, s *Server) SystemRetu
 	// find the policy containing root acl
 	for _, m := range kb.All(nil, ns.acl.Get("mode"), ns.acl.Get("Control")) {
 		p := kb.One(m.Subject, ns.acl.Get("password"), nil)
-		log.Printf("%+v\n", p)
 		if p != nil && kb.One(m.Subject, ns.acl.Get("agent"), NewResource(webid)) != nil {
 			passL = unquote(p.Object.String())
 			break

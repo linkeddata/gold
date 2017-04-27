@@ -142,11 +142,11 @@ func NewPassTemplate(token string, err string) string {
 	return template
 }
 
-func LoginTemplate(redir string) string {
+func LoginTemplate(redir, origin string) string {
 	template := `<!DOCTYPE html>
 <html id="docHTML">
 <body>
-    <form method="POST" action="/` + SystemPrefix + `/login?redirect=` + redir + `">
+    <form method="POST" action="/` + SystemPrefix + `/login?redirect=` + redir + `&origin=` + origin + `">
     <h2>Login</h2>
     WebID:
     <br>
@@ -167,7 +167,7 @@ func LoginTemplate(redir string) string {
 	return template
 }
 
-func UnauthTemplate(redirTo string) string {
+func UnauthorizedTemplate(redirTo string) string {
 	template := `<!DOCTYPE html>
 <html id="docHTML">
 <head>

@@ -232,17 +232,8 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 // Twinql Query
 func TwinqlQuery(w http.ResponseWriter, req *httpRequest, s *Server) *response {
 	r := new(response)
-	token := req.FormValue("key")
-	values, err := GetValuesFromToken("Authorization", token, req, s)
-	if err == nil && len(values["webid"]) > 0 {
-		req.User = values["webid"]
-		s.debug.Println("Got user from auth token:", req.User)
-		err = IsTokenDateValid(values["valid"])
-		if err != nil {
-			return r.respond(403, "Access denied for "+req.User+". Authorization token has expired.")
-		}
-	}
-	err = ProxyReq(w, req, s, s.Config.QueryTemplate)
+
+	err := ProxyReq(w, req, s, s.Config.QueryTemplate)
 	if err != nil {
 		s.debug.Println("Query error:", err.Error())
 	}
@@ -263,6 +254,24 @@ func ProxyReq(w http.ResponseWriter, req *httpRequest, s *Server, reqUrl string)
 			strings.HasPrefix(host, "localhost") {
 			return errors.New("Proxying requests to the local network is not allowed.")
 		}
+	}
+
+	token := req.FormValue("key")
+	values, err := GetValuesFromToken("Authorization", token, req, s)
+	if err == nil && len(values["webid"]) > 0 {
+		s.debug.Println("Found WebID in auth token:", req.User)
+		req.User = values["webid"]
+		err = IsTokenDateValid(values["valid"])
+		if err != nil {
+			s.debug.Println("Cannot authorize user: " + req.User + ". Authorization token has expired.")
+			req.User = ""
+		}
+		origin := req.Header.Get("Origin")
+		if len(origin) > 0 && origin != values["origin"] {
+			s.debug.Println("Cannot authorize user: " + req.User + ". Origin: " + origin + " does not match the origin in the token: " + values["origin"])
+			req.User = ""
+		}
+
 	}
 
 	req.URL = uri
