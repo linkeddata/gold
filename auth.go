@@ -226,7 +226,7 @@ func GetValuesFromToken(tokenType string, token string, req *httpRequest, s *Ser
 	}
 	err = s.cookie.Decode(tokenType, token, &values)
 	if err != nil {
-		s.debug.Println("Token decoding error for type: " + tokenType + " : " + err.Error())
+		s.debug.Println("Token decoding error for type: " + tokenType + " \nToken: " + token + "\n" + err.Error())
 		return values, err
 	}
 	return values, nil
