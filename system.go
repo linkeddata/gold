@@ -49,20 +49,20 @@ type accountInformation struct {
 
 // HandleSystem is a router for system specific APIs
 func HandleSystem(w http.ResponseWriter, req *httpRequest, s *Server) SystemReturn {
-	if strings.HasSuffix(req.Request.URL.Path, "accountStatus") {
+	if strings.HasSuffix(req.Request.URL.Path, "status") {
 		// unsupported yet when server is running on one host
 		return accountStatus(w, req, s)
-	} else if strings.HasSuffix(req.Request.URL.Path, "newAccount") {
+	} else if strings.HasSuffix(req.Request.URL.Path, "new") {
 		return newAccount(w, req, s)
-	} else if strings.HasSuffix(req.Request.URL.Path, "newCert") {
+	} else if strings.HasSuffix(req.Request.URL.Path, "cert") {
 		return newCert(w, req, s)
 	} else if strings.HasSuffix(req.Request.URL.Path, "login") {
 		return passwordAuth(w, req, s)
 	} else if strings.HasSuffix(req.Request.URL.Path, "logout") {
 		return logOut(w, req, s)
-	} else if strings.HasSuffix(req.Request.URL.Path, "accountInfo") {
+	} else if strings.HasSuffix(req.Request.URL.Path, "info") {
 		return accountInfo(w, req, s)
-	} else if strings.HasSuffix(req.Request.URL.Path, "accountRecovery") {
+	} else if strings.HasSuffix(req.Request.URL.Path, "recovery") {
 		return accountRecovery(w, req, s)
 	}
 	return SystemReturn{Status: 200}
@@ -163,12 +163,12 @@ func passwordAuth(w http.ResponseWriter, req *httpRequest, s *Server) SystemRetu
 func loginRedirect(w http.ResponseWriter, req *httpRequest, s *Server, values map[string]string, redirTo string) SystemReturn {
 	// age times the duration of 1 month
 	t := time.Duration(s.Config.TokenAge) * time.Hour * 5040
-	token, err := NewSecureToken("Authorization", values, t, s)
+	key, err := NewSecureToken("Authorization", values, t, s)
 	if err != nil {
 		s.debug.Println("Could not generate authorization token for " + values["webid"] + ", err: " + err.Error())
 		return SystemReturn{Status: 500, Body: "Could not generate auth token for " + values["webid"] + ", err: " + err.Error()}
 	}
-	redirTo += "?authorization=" + token
+	redirTo += "?key=" + key
 	http.Redirect(w, req.Request, redirTo, 301)
 	return SystemReturn{Status: 200}
 }
@@ -442,7 +442,9 @@ func newAccount(w http.ResponseWriter, req *httpRequest, s *Server) SystemReturn
 	g.AddTriple(aclTerm, ns.acl.Get("accessTo"), NewResource(resource.URI))
 	g.AddTriple(aclTerm, ns.acl.Get("accessTo"), NewResource(resource.AclURI))
 	g.AddTriple(aclTerm, ns.acl.Get("agent"), NewResource(webidURI))
-	g.AddTriple(aclTerm, ns.acl.Get("password"), NewLiteral(saltedPassword(s.Config.Salt, req.FormValue("password"))))
+	if len(req.FormValue("password")) > 0 {
+		g.AddTriple(aclTerm, ns.acl.Get("password"), NewLiteral(saltedPassword(s.Config.Salt, req.FormValue("password"))))
+	}
 	if len(req.FormValue("email")) > 0 {
 		g.AddTriple(aclTerm, ns.acl.Get("agent"), NewResource("mailto:"+req.FormValue("email")))
 	}
@@ -645,9 +647,9 @@ func accountStatus(w http.ResponseWriter, req *httpRequest, s *Server) SystemRet
 	}
 
 	res := statusResponse{
-		Method:    "accountStatus",
+		Method:    "status",
 		Status:    status,
-		FormURL:   resource.Obj.Scheme + "://" + req.Host + "/" + SystemPrefix + "/newAccount",
+		FormURL:   resource.Obj.Scheme + "://" + req.Host + "/" + SystemPrefix + "/new",
 		LoginURL:  accURL + SystemPrefix + "/login",
 		LogoutURL: accURL + SystemPrefix + "/logout",
 		Response: accountResponse{

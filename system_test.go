@@ -63,7 +63,7 @@ func TestNewAccountWithoutVhosts(t *testing.T) {
 		"password": {"zomg"},
 		"email":    {"test@user.org"},
 	}
-	request, err := http.NewRequest("POST", ts.URL+"/"+SystemPrefix+"/newAccount", bytes.NewBufferString(form.Encode()))
+	request, err := http.NewRequest("POST", ts.URL+"/"+SystemPrefix+"/new", bytes.NewBufferString(form.Encode()))
 	assert.NoError(t, err)
 	request.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 	request.Header.Add("Content-Length", strconv.Itoa(len(form.Encode())))
@@ -118,7 +118,7 @@ func TestNewAccountWithVhosts(t *testing.T) {
 		"password": {"zomg"},
 		"email":    {"user@example.org"},
 	}
-	request, err := http.NewRequest("POST", ts.URL+"/"+SystemPrefix+"/newAccount", bytes.NewBufferString(form.Encode()))
+	request, err := http.NewRequest("POST", ts.URL+"/"+SystemPrefix+"/new", bytes.NewBufferString(form.Encode()))
 	assert.NoError(t, err)
 	request.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 	request.Header.Add("Content-Length", strconv.Itoa(len(form.Encode())))
@@ -264,7 +264,7 @@ func TestNewAccountWithoutSPKAC(t *testing.T) {
 		"password": {"zomg"},
 		"email":    {"test@user.org"},
 	}
-	request, err := http.NewRequest("POST", testServer1.URL+"/"+SystemPrefix+"/newAccount", bytes.NewBufferString(form.Encode()))
+	request, err := http.NewRequest("POST", testServer1.URL+"/"+SystemPrefix+"/new", bytes.NewBufferString(form.Encode()))
 	assert.NoError(t, err)
 	request.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 	request.Header.Add("Content-Length", strconv.Itoa(len(form.Encode())))
@@ -278,7 +278,7 @@ func TestNewAccountWithoutSPKAC(t *testing.T) {
 	assert.Equal(t, "https://user."+strings.TrimLeft(testServer1.URL, "https://")+"/profile/card#me", response.Header.Get("User"))
 	assert.NotEmpty(t, response.Cookies())
 
-	request, err = http.NewRequest("POST", testServer1.URL+"/"+SystemPrefix+"/newAccount", bytes.NewBufferString(form.Encode()))
+	request, err = http.NewRequest("POST", testServer1.URL+"/"+SystemPrefix+"/new", bytes.NewBufferString(form.Encode()))
 	assert.NoError(t, err)
 	request.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 	request.Header.Add("Content-Length", strconv.Itoa(len(form.Encode())))
@@ -295,7 +295,7 @@ func TestNewAccountWithoutSPKAC(t *testing.T) {
 }
 
 func TestAccountRecoveryForm(t *testing.T) {
-	request, err := http.NewRequest("POST", testServer.URL+"/"+SystemPrefix+"/accountRecovery", nil)
+	request, err := http.NewRequest("POST", testServer.URL+"/"+SystemPrefix+"/recovery", nil)
 	assert.NoError(t, err)
 	response, err := httpClient.Do(request)
 	assert.NoError(t, err)
@@ -310,7 +310,7 @@ func TestAccountRecovery(t *testing.T) {
 	form := url.Values{
 		"webid": {webid},
 	}
-	request, err := http.NewRequest("POST", testServer.URL+"/"+SystemPrefix+"/accountRecovery", bytes.NewBufferString(form.Encode()))
+	request, err := http.NewRequest("POST", testServer.URL+"/"+SystemPrefix+"/recovery", bytes.NewBufferString(form.Encode()))
 	assert.NoError(t, err)
 	request.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 	request.Header.Add("Content-Length", strconv.Itoa(len(form.Encode())))
@@ -333,7 +333,7 @@ func TestAccountRecovery(t *testing.T) {
 		"email":    {"test@localhost"},
 		"img":      {"https://img.org/"},
 	}
-	request, err = http.NewRequest("POST", testServer1.URL+"/"+SystemPrefix+"/newAccount", bytes.NewBufferString(form.Encode()))
+	request, err = http.NewRequest("POST", testServer1.URL+"/"+SystemPrefix+"/new", bytes.NewBufferString(form.Encode()))
 	assert.NoError(t, err)
 	request.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 	request.Header.Add("Content-Length", strconv.Itoa(len(form.Encode())))
@@ -349,7 +349,7 @@ func TestAccountRecovery(t *testing.T) {
 	form = url.Values{
 		"webid": {webid},
 	}
-	request, err = http.NewRequest("POST", testServer1.URL+"/"+SystemPrefix+"/accountRecovery", bytes.NewBufferString(form.Encode()))
+	request, err = http.NewRequest("POST", testServer1.URL+"/"+SystemPrefix+"/recovery", bytes.NewBufferString(form.Encode()))
 	assert.NoError(t, err)
 	request.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 	request.Header.Add("Content-Length", strconv.Itoa(len(form.Encode())))
@@ -369,7 +369,7 @@ func TestAccountRecovery(t *testing.T) {
 	form = url.Values{
 		"token": {token},
 	}
-	request, err = http.NewRequest("POST", testServer1.URL+"/"+SystemPrefix+"/accountRecovery", bytes.NewBufferString(form.Encode()))
+	request, err = http.NewRequest("POST", testServer1.URL+"/"+SystemPrefix+"/recovery", bytes.NewBufferString(form.Encode()))
 	assert.NoError(t, err)
 	request.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 	request.Header.Add("Content-Length", strconv.Itoa(len(form.Encode())))
@@ -413,7 +413,7 @@ func TestAccountRecoverySecureSMTP(t *testing.T) {
 		"email":    {"test@localhost"},
 		"img":      {"https://img.org/"},
 	}
-	request, err := http.NewRequest("POST", testServer1.URL+"/"+SystemPrefix+"/newAccount", bytes.NewBufferString(form.Encode()))
+	request, err := http.NewRequest("POST", testServer1.URL+"/"+SystemPrefix+"/new", bytes.NewBufferString(form.Encode()))
 	assert.NoError(t, err)
 	request.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 	request.Header.Add("Content-Length", strconv.Itoa(len(form.Encode())))
@@ -430,7 +430,7 @@ func TestAccountRecoverySecureSMTP(t *testing.T) {
 		"webid": {webid},
 	}
 	// @@@TODO test
-	request, err = http.NewRequest("POST", testServer1.URL+"/"+SystemPrefix+"/accountRecovery", bytes.NewBufferString(form.Encode()))
+	request, err = http.NewRequest("POST", testServer1.URL+"/"+SystemPrefix+"/recovery", bytes.NewBufferString(form.Encode()))
 	assert.NoError(t, err)
 	request.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 	request.Header.Add("Content-Length", strconv.Itoa(len(form.Encode())))
@@ -450,7 +450,7 @@ func TestAccountRecoverySecureSMTP(t *testing.T) {
 	form = url.Values{
 		"token": {token},
 	}
-	request, err = http.NewRequest("POST", testServer1.URL+"/"+SystemPrefix+"/accountRecovery", bytes.NewBufferString(form.Encode()))
+	request, err = http.NewRequest("POST", testServer1.URL+"/"+SystemPrefix+"/recovery", bytes.NewBufferString(form.Encode()))
 	assert.NoError(t, err)
 	request.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 	request.Header.Add("Content-Length", strconv.Itoa(len(form.Encode())))
@@ -474,19 +474,19 @@ func TestAccountStatusWithoutVhosts(t *testing.T) {
 	testServer1.StartTLS()
 
 	ar := accountRequest{
-		Method:      "accountStatus",
+		Method:      "status",
 		AccountName: "user",
 	}
 	jsonData, err := json.Marshal(ar)
 	assert.NoError(t, err)
 
-	request, err := http.NewRequest("POST", testServer1.URL+"/"+SystemPrefix+"/accountStatus", bytes.NewReader(jsonData))
+	request, err := http.NewRequest("POST", testServer1.URL+"/"+SystemPrefix+"/status", bytes.NewReader(jsonData))
 	assert.NoError(t, err)
 	response, err := user1h.Do(request)
 	assert.NoError(t, err)
 	body, _ := ioutil.ReadAll(response.Body)
 	response.Body.Close()
-	assert.Equal(t, `{"method":"accountStatus","status":"success","formURL":"`+testServer1.URL+`/`+SystemPrefix+`/newAccount","loginURL":"`+testServer1.URL+`/user/`+SystemPrefix+`/login","logoutURL":"`+testServer1.URL+`/user/`+SystemPrefix+`/logout","response":{"accountURL":"`+testServer1.URL+`/user/","available":true}}`, string(body))
+	assert.Equal(t, `{"method":"status","status":"success","formURL":"`+testServer1.URL+`/`+SystemPrefix+`/new","loginURL":"`+testServer1.URL+`/user/`+SystemPrefix+`/login","logoutURL":"`+testServer1.URL+`/user/`+SystemPrefix+`/logout","response":{"accountURL":"`+testServer1.URL+`/user/","available":true}}`, string(body))
 	assert.Equal(t, 200, response.StatusCode)
 
 	// delete user
@@ -503,19 +503,19 @@ func TestAccountStatusWithVhosts(t *testing.T) {
 	testServer1.StartTLS()
 
 	ar := accountRequest{
-		Method:      "accountStatus",
+		Method:      "status",
 		AccountName: "user",
 	}
 	jsonData, err := json.Marshal(ar)
 	assert.NoError(t, err)
 
-	request, err := http.NewRequest("POST", testServer1.URL+"/"+SystemPrefix+"/accountStatus", bytes.NewReader(jsonData))
+	request, err := http.NewRequest("POST", testServer1.URL+"/"+SystemPrefix+"/status", bytes.NewReader(jsonData))
 	assert.NoError(t, err)
 	response, err := httpClient.Do(request)
 	assert.NoError(t, err)
 	body, _ := ioutil.ReadAll(response.Body)
 	response.Body.Close()
-	assert.Equal(t, `{"method":"accountStatus","status":"success","formURL":"`+testServer1.URL+`/`+SystemPrefix+`/newAccount","loginURL":"https://user.`+strings.TrimLeft(testServer1.URL, "https://")+`/`+SystemPrefix+`/login","logoutURL":"https://user.`+strings.TrimLeft(testServer1.URL, "https://")+`/`+SystemPrefix+`/logout","response":{"accountURL":"https://user.`+strings.TrimLeft(testServer1.URL, "https://")+`/","available":true}}`, string(body))
+	assert.Equal(t, `{"method":"status","status":"success","formURL":"`+testServer1.URL+`/`+SystemPrefix+`/new","loginURL":"https://user.`+strings.TrimLeft(testServer1.URL, "https://")+`/`+SystemPrefix+`/login","logoutURL":"https://user.`+strings.TrimLeft(testServer1.URL, "https://")+`/`+SystemPrefix+`/logout","response":{"accountURL":"https://user.`+strings.TrimLeft(testServer1.URL, "https://")+`/","available":true}}`, string(body))
 	assert.Equal(t, 200, response.StatusCode)
 }
 
@@ -532,7 +532,7 @@ func TestAccountInfo(t *testing.T) {
 	testServer1.TLS.NextProtos = []string{"http/1.1"}
 	testServer1.StartTLS()
 
-	request, err := http.NewRequest("GET", testServer1.URL+"/"+SystemPrefix+"/accountInfo", nil)
+	request, err := http.NewRequest("GET", testServer1.URL+"/"+SystemPrefix+"/info", nil)
 	assert.NoError(t, err)
 	response, err := httpClient.Do(request)
 	assert.NoError(t, err)
