@@ -13,6 +13,13 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestBase64EncodeDecode(t *testing.T) {
+	str := "test"
+	dec, err := base64decode(base64encode(str))
+	assert.NoError(t, err)
+	assert.Equal(t, str, dec)
+}
+
 func TestNewSecureToken(t *testing.T) {
 	tokenValues := map[string]string{
 		"secret": string(handler.cookieSalt),

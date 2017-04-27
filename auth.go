@@ -2,6 +2,7 @@ package gold
 
 import (
 	"crypto/sha256"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"net/http"
@@ -181,12 +182,11 @@ func ParseBearerAuthorizationHeader(header string) (string, error) {
 	if parts[0] != "Bearer" {
 		return "", errors.New("Not a Bearer header. Got: " + parts[0])
 	}
-	return parts[1], nil
+	return base64decode(parts[1])
 }
 
 func NewTokenValues() map[string]string {
-	t := make(map[string]string)
-	return t
+	return make(map[string]string)
 }
 
 // NewSecureToken generates a signed token to be used during account recovery
@@ -236,8 +236,40 @@ func IsTokenDateValid(valid string) error {
 	return nil
 }
 
+func GetAuthzFromToken(token string, req *httpRequest, s *Server) (string, error) {
+	values, err := GetValuesFromToken("Authorization", token, req, s)
+	if err != nil {
+		return "", err
+	}
+	if len(values["webid"]) == 0 && len(values["valid"]) == 0 &&
+		len(values["origin"]) == 0 {
+		return "", errors.New("Malformed token is missing required values")
+	}
+	err = IsTokenDateValid(values["valid"])
+	if err != nil {
+		return "", err
+	}
+	origin := req.Header.Get("Origin")
+	if len(origin) > 0 && origin != values["origin"] {
+		return "", errors.New("Cannot authorize user: " + req.User + ". Origin: " + origin + " does not match the origin in the token: " + values["origin"])
+	}
+	return values["webid"], nil
+}
+
 func saltedPassword(salt, pass string) string {
 	s := sha256.Sum256([]byte(salt + pass))
 	toString := fmt.Sprintf("%x", s)
 	return toString
+}
+
+func base64encode(src string) string {
+	return base64.StdEncoding.EncodeToString([]byte(src))
+}
+
+func base64decode(src string) (string, error) {
+	dec, err := base64.StdEncoding.DecodeString(src)
+	if err != nil {
+		return "", err
+	}
+	return string(dec), nil
 }
