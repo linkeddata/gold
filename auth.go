@@ -172,6 +172,18 @@ func ParseDigestAuthorizationHeader(header string) (*DigestAuthorization, error)
 	return &auth, nil
 }
 
+func ParseBearerAuthorizationHeader(header string) (string, error) {
+	if len(header) == 0 {
+		return "", errors.New("Cannot parse Authorization header: no header present")
+	}
+
+	parts := strings.SplitN(header, " ", 2)
+	if parts[0] != "Bearer" {
+		return "", errors.New("Not a Bearer header. Got: " + parts[0])
+	}
+	return parts[1], nil
+}
+
 func NewTokenValues() map[string]string {
 	t := make(map[string]string)
 	return t
@@ -205,7 +217,7 @@ func GetValuesFromToken(tokenType string, token string, req *httpRequest, s *Ser
 	values := NewTokenValues()
 	err := s.cookie.Decode(tokenType, token, &values)
 	if err != nil {
-		s.debug.Println("Decoding err: " + err.Error())
+		s.debug.Println("Token decoding error for type: " + tokenType + " : " + err.Error())
 		return values, err
 	}
 	return values, nil

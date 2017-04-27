@@ -255,23 +255,23 @@ func ProxyReq(w http.ResponseWriter, req *httpRequest, s *Server, reqUrl string)
 			return errors.New("Proxying requests to the local network is not allowed.")
 		}
 	}
-
-	token := req.FormValue("key")
-	values, err := GetValuesFromToken("Authorization", token, req, s)
-	if err == nil && len(values["webid"]) > 0 {
-		s.debug.Println("Found WebID in auth token:", req.User)
-		req.User = values["webid"]
-		err = IsTokenDateValid(values["valid"])
-		if err != nil {
-			s.debug.Println("Cannot authorize user: " + req.User + ". Authorization token has expired.")
-			req.User = ""
+	token, err := ParseBearerAuthorizationHeader(req.Header.Get("Authorization"))
+	if err == nil && len(token) > 0 {
+		values, err := GetValuesFromToken("Authorization", token, req, s)
+		if err == nil && len(values["webid"]) > 0 {
+			err = IsTokenDateValid(values["valid"])
+			if err != nil {
+				s.debug.Println("Cannot authorize user: " + req.User + ". Authorization token has expired.")
+				req.User = ""
+			}
+			origin := req.Header.Get("Origin")
+			if len(origin) > 0 && origin != values["origin"] {
+				s.debug.Println("Cannot authorize user: " + req.User + ". Origin: " + origin + " does not match the origin in the token: " + values["origin"])
+				req.User = ""
+			}
+			s.debug.Println("Setting user WebID from auth token to:", req.User)
+			req.User = values["webid"]
 		}
-		origin := req.Header.Get("Origin")
-		if len(origin) > 0 && origin != values["origin"] {
-			s.debug.Println("Cannot authorize user: " + req.User + ". Origin: " + origin + " does not match the origin in the token: " + values["origin"])
-			req.User = ""
-		}
-
 	}
 
 	req.URL = uri
