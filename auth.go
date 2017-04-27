@@ -154,6 +154,10 @@ func ParseDigestAuthorizationHeader(header string) (*DigestAuthorization, error)
 	opts := make(map[string]string)
 	parts := strings.SplitN(header, " ", 2)
 	opts["type"] = parts[0]
+	if opts["type"] == "Bearer" {
+		return &auth, errors.New("Not a Digest authorization header. Got " + opts["type"])
+	}
+
 	parts = strings.Split(parts[1], ",")
 
 	for _, part := range parts {
