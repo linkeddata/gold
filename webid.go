@@ -365,6 +365,9 @@ func NewWebIDProfile(account webidAccount) *Graph {
 	if len(account.Img) > 0 {
 		g.AddTriple(userTerm, ns.foaf.Get("img"), NewResource(account.Img))
 	}
+	if len(account.Agent) > 0 {
+		g.AddTriple(userTerm, ns.acl.Get("delegates"), NewResource(account.Agent))
+	}
 	g.AddTriple(userTerm, ns.space.Get("storage"), NewResource(account.BaseURI+"/"))
 	g.AddTriple(userTerm, ns.space.Get("preferencesFile"), NewResource(account.PrefURI))
 	g.AddTriple(userTerm, ns.st.Get("inbox"), NewResource(account.BaseURI+"/Inbox/"))
