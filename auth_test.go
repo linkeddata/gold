@@ -13,6 +13,13 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestUrlEncodeDecode(t *testing.T) {
+	str := "test#me="
+	dec, err := decodeQuery(encodeQuery(str))
+	assert.NoError(t, err)
+	assert.Equal(t, str, dec)
+}
+
 func TestNewSecureToken(t *testing.T) {
 	tokenValues := map[string]string{
 		"secret": string(handler.cookieSalt),
@@ -21,6 +28,20 @@ func TestNewSecureToken(t *testing.T) {
 	token, err := NewSecureToken("WWW-Authenticate", tokenValues, validity, handler)
 	assert.NoError(t, err)
 	assert.Equal(t, 184, len(token))
+}
+
+func TestParseBearerAuthorizationHeader(t *testing.T) {
+	decoded := "MTQ5MzMyMDM2NHx1YVUxT21EYUkxSXZKZ29VdC03NjFibDkzZGx1WEtyUEVpM21XUnVUSGh2LUQtN0ZUTTV0REVPcjNSWEIwUm1Ob2FHMm83LVkxd3d5UGZiYTZUb0pUSmRoZFBwM1BCVWxJN1drbjFMaTZ2bHloc3FtbVJnSkxfN2MzNkQ3eGFpS3FPS2JTOGdCN3NlZnNmb2lncG13ZUdDaUtWLTBmQ3BCMEhDNmVMRUNaWDdzSjlfVXxU5vqaGdhcpGEl9-qrIs-GBl2HJCXwC85bCDr_zrmbjA=="
+	encoded := "MTQ5MzMyMDM2NHx1YVUxT21EYUkxSXZKZ29VdC03NjFibDkzZGx1WEtyUEVpM21XUnVUSGh2LUQtN0ZUTTV0REVPcjNSWEIwUm1Ob2FHMm83LVkxd3d5UGZiYTZUb0pUSmRoZFBwM1BCVWxJN1drbjFMaTZ2bHloc3FtbVJnSkxfN2MzNkQ3eGFpS3FPS2JTOGdCN3NlZnNmb2lncG13ZUdDaUtWLTBmQ3BCMEhDNmVMRUNaWDdzSjlfVXxU5vqaGdhcpGEl9-qrIs-GBl2HJCXwC85bCDr_zrmbjA%3D%3D"
+	assert.Equal(t, encoded, encodeQuery(decoded))
+	dec, err := decodeQuery(encoded)
+	assert.NoError(t, err)
+	assert.Equal(t, decoded, dec)
+
+	h := "Bearer " + encoded
+	dec, err = ParseBearerAuthorizationHeader(h)
+	assert.NoError(t, err)
+	assert.Equal(t, decoded, dec)
 }
 
 func TestParseDigestAuthorizationHeader(t *testing.T) {

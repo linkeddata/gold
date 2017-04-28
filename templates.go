@@ -41,8 +41,10 @@ document.addEventListener('DOMContentLoaded', function() {
 		"accountRecovery": `<!DOCTYPE html>
 <html id="docHTML">
 <body>
+    <h2>Recover access to your account</h2>
     <form method="POST">
     What is your WebID?
+    <br>
     <input type="text" name="webid">
     <input type="submit" value="Recover account">
     </form>
@@ -53,9 +55,22 @@ document.addEventListener('DOMContentLoaded', function() {
 <head>
 </head>
 <body>
-    <h1>401 - oh noes, you need to authenticate!</h1>
-    <h2>Do you need a WebID? You can sign up for one at <a href="https://databox.me/" target="_blank">databox.me</a>.</h2>
-    <h2>Also, please visit the <a href="/` + SystemPrefix + `/accountRecovery">recovery page</a> in case you have lost access to your credentials.</h2>
+    <h1>401 - Unauthorized! You need to authenticate to access this resource.</h1>
+    <form method="POST" action="/` + SystemPrefix + `/login">
+    <h2>Login</h2>
+    WebID:
+    <br>
+    <input type="text" name="webid">
+    <br>
+    Password:
+    <br>
+    <input type="password" name="password">
+    <br>
+    <input type="submit" value="Login">
+    </form>
+    <p><a href="/` + SystemPrefix + `/accountRecovery">Forgot your password?</a></p>
+    <br>
+    <p>Do you need a WebID? You can sign up for one at <a href="https://databox.me/" target="_blank">databox.me</a>.</p>
 </body>
 </html>`,
 		"403": `<!DOCTYPE html>
@@ -86,20 +101,109 @@ document.addEventListener('DOMContentLoaded', function() {
 
 <p>This email was generated automatically. No one will respond if you reply to it.</p>
 
-<p>Sincerely,<br>
-{{.From}}</p>
+<p>Sincerely,
+<p>{{.Host}} team</p>
 `,
-		"welcomeMail": `<p>Hello {{.Name}},</p>
-<p>It looks like you have successfully created your WebID and Solid account on {{.Host}}. Congratulations!</p>
+		"welcomeMail": `<p>Hi there {{.Name}}!</p>
+<br>
+<p>It looks like you have successfully created your Solid account on {{.Host}}. Congratulations!</p>
 
-<p>Here are some useful things you can do right away:</p>
-<p>* you can start browsing your files here: {{.AccountURI}}.</p>
-<p>* you can manage your personal profile information here: {{.ProfileEditor}}</p>
+<p>Your WebID (identifier) is: {{.WebID}}.</p>
 
-<p>We would like to kindly remind you that we will not use your email address for any other purpose than allowing you to authenticate and/or recover your account credentials.</p>
+<p>You can start browsing your files here: {{.Account}}.</p>
+
+<p>We would like to reassure you that we will not use your email address for any other purpose than allowing you to authenticate and/or recover your account credentials.</p>
 
 <p>Best,</p>
 <p>{{.Host}} team</p>
 `,
 	}
 )
+
+func NewPassTemplate(token string, err string) string {
+	template := `<!DOCTYPE html>
+<html id="docHTML">
+<body>
+    <form method="POST" action="/` + SystemPrefix + `/recovery?token=` + token + `">
+    <h2>Please provide a new password</h2>
+    <p style="color: red;">` + err + `</p>
+    Password:
+    <br>
+    <input type="password" name="password">
+    <br>
+    Password (type again to verify):
+    <br>
+    <input type="password" name="verifypass">
+    <br>
+    <input type="submit" value="Submit">
+    </form>
+</body>
+</html>`
+	return template
+}
+
+func LoginTemplate(redir, origin string) string {
+	template := `<!DOCTYPE html>
+<html id="docHTML">
+<body>
+    <form method="POST" action="/` + SystemPrefix + `/login?redirect=` + redir + `&origin=` + origin + `">
+    <h2>Login</h2>
+    WebID:
+    <br>
+    <input type="text" name="webid">
+    <br>
+    Password:
+    <br>
+    <input type="password" name="password">
+    <br>
+    <input type="submit" value="Login">
+    </form>
+    <p><a href="/` + SystemPrefix + `/accountRecovery">Forgot your password?</a></p>
+    <br>
+    <p>Do you need a WebID? You can sign up for one at <a href="https://databox.me/" target="_blank">databox.me</a>.</p>
+</body>
+</html>`
+
+	return template
+}
+
+func UnauthorizedTemplate(redirTo string) string {
+	template := `<!DOCTYPE html>
+<html id="docHTML">
+<head>
+</head>
+<body>
+    <h1>401 - Unauthorized! You need to authenticate to access this resource.</h1>
+    <form method="POST" action="/` + SystemPrefix + `/login?redirect=` + redirTo + `">
+    <h2>Login</h2>
+    WebID:
+    <br>
+    <input type="text" name="webid">
+    <br>
+    Password:
+    <br>
+    <input type="password" name="password">
+    <br>
+    <input type="submit" value="Login">
+    </form>
+    <p><a href="/` + SystemPrefix + `/accountRecovery">Forgot your password?</a></p>
+    <br>
+    <p>Do you need a WebID? You can sign up for one at <a href="https://databox.me/" target="_blank">databox.me</a>.</p>
+</body>
+</html>`
+
+	return template
+}
+
+func LogoutTemplate(webid string) string {
+	template := `<!DOCTYPE html>
+<html id="docHTML">
+<head>
+</head>
+<body>
+    <h1>You are logged in as ` + webid + `.</h1>
+    <h2><a href="/` + SystemPrefix + `/logout">Click here to logout</a></h2>
+</body>
+</html>`
+	return template
+}

@@ -11,7 +11,6 @@ import (
 	"os"
 	_path "path"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"time"
 )
@@ -34,11 +33,12 @@ type accountResponse struct {
 }
 
 type statusResponse struct {
-	Method   string          `json:"method"`
-	Status   string          `json:"status"`
-	FormURL  string          `json:"formURL"`
-	LoginURL string          `json:"loginURL"`
-	Response accountResponse `json:"response"`
+	Method    string          `json:"method"`
+	Status    string          `json:"status"`
+	FormURL   string          `json:"formURL"`
+	LoginURL  string          `json:"loginURL"`
+	LogoutURL string          `json:"logoutURL"`
+	Response  accountResponse `json:"response"`
 }
 
 type accountInformation struct {
@@ -48,18 +48,127 @@ type accountInformation struct {
 
 // HandleSystem is a router for system specific APIs
 func HandleSystem(w http.ResponseWriter, req *httpRequest, s *Server) SystemReturn {
-	if strings.Contains(req.BaseURI(), "accountStatus") {
+	if strings.HasSuffix(req.Request.URL.Path, "status") {
 		// unsupported yet when server is running on one host
 		return accountStatus(w, req, s)
-	} else if strings.Contains(req.Request.URL.Path, "newAccount") {
+	} else if strings.HasSuffix(req.Request.URL.Path, "new") {
 		return newAccount(w, req, s)
-	} else if strings.Contains(req.Request.URL.Path, "newCert") {
+	} else if strings.HasSuffix(req.Request.URL.Path, "cert") {
 		return newCert(w, req, s)
-	} else if strings.Contains(req.Request.URL.Path, "accountInfo") {
+	} else if strings.HasSuffix(req.Request.URL.Path, "login") {
+		return passwordAuth(w, req, s)
+	} else if strings.HasSuffix(req.Request.URL.Path, "logout") {
+		return logOut(w, req, s)
+	} else if strings.HasSuffix(req.Request.URL.Path, "info") {
 		return accountInfo(w, req, s)
-	} else if strings.Contains(req.Request.URL.Path, "accountRecovery") {
+	} else if strings.HasSuffix(req.Request.URL.Path, "recovery") {
 		return accountRecovery(w, req, s)
 	}
+	return SystemReturn{Status: 200}
+}
+
+func logOut(w http.ResponseWriter, req *httpRequest, s *Server) SystemReturn {
+	s.userCookieDelete(w)
+	return SystemReturn{Status: 200, Body: "You have been signed out!"}
+}
+
+func passwordAuth(w http.ResponseWriter, req *httpRequest, s *Server) SystemReturn {
+	var passL string
+	redirTo := req.FormValue("redirect")
+	origin := req.FormValue("origin")
+
+	// if cookie is set, just redirect
+	if len(req.User) > 0 {
+		values := map[string]string{
+			"webid":  req.User,
+			"origin": origin,
+		}
+		// refresh cookie
+		err := s.userCookieSet(w, req.User)
+		if err != nil {
+			s.debug.Println("Error setting new cookie: " + err.Error())
+			return SystemReturn{Status: 500, Body: err.Error()}
+		}
+		// redirect
+		if len(redirTo) > 0 {
+			loginRedirect(w, req, s, values, redirTo)
+		}
+		return SystemReturn{Status: 200, Body: LogoutTemplate(req.User)}
+	}
+
+	webid := req.FormValue("webid")
+	passF := req.FormValue("password")
+
+	if req.Method == "GET" {
+		return SystemReturn{Status: 200, Body: LoginTemplate(redirTo, origin)}
+	}
+
+	if len(webid) == 0 && len(passF) == 0 {
+		return SystemReturn{Status: 409, Body: "You must supply a valid WebID and password."}
+	}
+	resource, err := req.pathInfo(req.BaseURI())
+	if err != nil {
+		s.debug.Println("PathInfo error: " + err.Error())
+		return SystemReturn{Status: 500, Body: err.Error()}
+	}
+	// try to fetch hashed password from root ,acl
+	resource, _ = req.pathInfo(resource.Base)
+	kb := NewGraph(resource.AclURI)
+	kb.ReadFile(resource.AclFile)
+	s.debug.Println("Looking for password in", resource.AclFile)
+	// find the policy containing root acl
+	for _, m := range kb.All(nil, ns.acl.Get("mode"), ns.acl.Get("Control")) {
+		p := kb.One(m.Subject, ns.acl.Get("password"), nil)
+		if p != nil && kb.One(m.Subject, ns.acl.Get("agent"), NewResource(webid)) != nil {
+			passL = unquote(p.Object.String())
+			break
+		}
+	}
+	// exit if no pass
+	if len(passL) == 0 {
+		s.debug.Println("Access denied! Could not find a password for WebID: " + webid)
+		return SystemReturn{Status: 403, Body: "Access denied! Could not find a password for WebID: " + webid}
+	}
+
+	// check if passwords match
+	passF = saltedPassword(s.Config.Salt, passF)
+	if passF != passL {
+		s.debug.Println("Access denied! Bad WebID or password.")
+		return SystemReturn{Status: 403, Body: "Access denied! Bad WebID or password."}
+	}
+
+	// auth OK
+	// also set cookie now
+	err = s.userCookieSet(w, webid)
+	if err != nil {
+		s.debug.Println("Error setting new cookie: " + err.Error())
+		return SystemReturn{Status: 500, Body: err.Error()}
+	}
+
+	// handle redirect
+	if len(redirTo) > 0 {
+		values := map[string]string{
+			"webid":  webid,
+			"origin": origin,
+		}
+		loginRedirect(w, req, s, values, redirTo)
+	}
+
+	http.Redirect(w, req.Request, req.RequestURI, 301)
+	return SystemReturn{Status: 200}
+}
+
+func loginRedirect(w http.ResponseWriter, req *httpRequest, s *Server, values map[string]string, redirTo string) SystemReturn {
+	// age times the duration of 1 month
+	t := time.Duration(s.Config.TokenAge) * time.Hour * 5040
+	key, err := NewSecureToken("Authorization", values, t, s)
+	if err != nil {
+		s.debug.Println("Could not generate authorization token for " + values["webid"] + ", err: " + err.Error())
+		return SystemReturn{Status: 500, Body: "Could not generate auth token for " + values["webid"] + ", err: " + err.Error()}
+	}
+	s.debug.Println("Generated new token for", values["webid"], "->", key)
+	redirTo += "?webid=" + encodeQuery(values["webid"]) + "&key=" + encodeQuery(key)
+	http.Redirect(w, req.Request, redirTo, 301)
 	return SystemReturn{Status: 200}
 }
 
@@ -67,6 +176,7 @@ func accountRecovery(w http.ResponseWriter, req *httpRequest, s *Server) SystemR
 	if len(req.FormValue("webid")) > 0 && strings.HasPrefix(req.FormValue("webid"), "http") {
 		return sendRecoveryToken(w, req, s)
 	} else if len(req.FormValue("token")) > 0 {
+		// validate or issue new password
 		return validateRecoveryToken(w, req, s)
 	}
 	// return default app with form
@@ -114,41 +224,93 @@ func sendRecoveryToken(w http.ResponseWriter, req *httpRequest, s *Server) Syste
 	}
 	// create recovery URL
 	IP, _, _ := net.SplitHostPort(req.Request.RemoteAddr)
-	link := resource.Base + "/" + SystemPrefix + "/accountRecovery?token=" + token
-	to := []string{email}
-	go s.sendRecoveryMail(resource.Obj.Host, IP, to, link)
-	return SystemReturn{Status: 200, Body: "You should receive an email shortly, with further instructions."}
+	link := resource.Base + "/" + SystemPrefix + "/recovery?token=" + encodeQuery(token)
+	// Setup message
+	params := make(map[string]string)
+	params["{{.To}}"] = email
+	params["{{.IP}}"] = IP
+	params["{{.Host}}"] = resource.Obj.Host
+	params["{{.From}}"] = s.Config.SMTPConfig.Name
+	params["{{.Link}}"] = link
+	go s.sendRecoveryMail(params)
+	return SystemReturn{Status: 200, Body: "You should receive an email shortly with further instructions."}
 }
 
 func validateRecoveryToken(w http.ResponseWriter, req *httpRequest, s *Server) SystemReturn {
-	token := req.FormValue("token")
+	token, err := decodeQuery(req.FormValue("token"))
+	if err != nil {
+		s.debug.Println("Decode query err: " + err.Error())
+		return SystemReturn{Status: 500, Body: err.Error()}
+	}
 	value := make(map[string]string)
-	err := s.cookie.Decode("Recovery", token, &value)
+	err = s.cookie.Decode("Recovery", token, &value)
 	if err != nil {
 		s.debug.Println("Decoding err: " + err.Error())
 		return SystemReturn{Status: 500, Body: err.Error()}
 	}
 
-	if len(value["valid"]) > 0 {
-		v, err := strconv.ParseInt(value["valid"], 10, 64)
-		if err != nil {
-			s.debug.Println("Int parsing err: " + err.Error())
-			return SystemReturn{Status: 500, Body: err.Error()}
-		}
-
-		if time.Now().Local().Unix() > v {
-			s.debug.Println("Token expired!")
-			return SystemReturn{Status: 498, Body: "Token expired!"}
-		}
-		// also set cookie now
-		err = s.userCookieSet(w, value["webid"])
-		if err != nil {
-			s.debug.Println("Error setting new cookie: " + err.Error())
-			return SystemReturn{Status: 500, Body: err.Error()}
-		}
-		return SystemReturn{Status: 200, Body: Apps["newCert"]}
+	if len(value["valid"]) == 0 {
+		return SystemReturn{Status: 499, Body: "Missing validity date for token."}
 	}
-	return SystemReturn{Status: 499, Body: "Missing validity date for token."}
+	err = IsTokenDateValid(value["valid"])
+	if err != nil {
+		return SystemReturn{Status: 500, Body: err.Error()}
+	}
+	// also set cookie now
+	webid := value["webid"]
+	err = s.userCookieSet(w, webid)
+	if err != nil {
+		s.debug.Println("Error setting new cookie: " + err.Error())
+		return SystemReturn{Status: 500, Body: err.Error()}
+	}
+
+	pass := req.FormValue("password")
+	verif := req.FormValue("verifypass")
+	if len(pass) > 0 && len(verif) > 0 {
+		if pass != verif {
+			// passwords don't match,
+			return SystemReturn{Status: 200, Body: NewPassTemplate(token, "Passwords do not match!")}
+		}
+		// save new password
+		resource, _ := req.pathInfo(req.BaseURI())
+		accountBase := resource.Base + "/"
+		resource, _ = req.pathInfo(accountBase)
+
+		g := NewGraph(resource.AclURI)
+		g.ReadFile(resource.AclFile)
+		// find the policy containing root acl
+		for _, m := range g.All(nil, ns.acl.Get("mode"), ns.acl.Get("Control")) {
+			p := g.One(m.Subject, ns.acl.Get("agent"), NewResource(webid))
+			if p != nil {
+				passT := g.One(nil, ns.acl.Get("password"), nil)
+				// remove old password
+				if passT != nil {
+					g.Remove(passT)
+				}
+			}
+			// add new password
+			g.AddTriple(m.Subject, ns.acl.Get("password"), NewLiteral(saltedPassword(s.Config.Salt, pass)))
+
+			// write account acl to disk
+			// open account acl file
+			f, err := os.OpenFile(resource.AclFile, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
+			if err != nil {
+				s.debug.Println("Could not open file to save new password. Error: " + err.Error())
+				return SystemReturn{Status: 500, Body: err.Error()}
+			}
+			defer f.Close()
+			err = g.WriteFile(f, "text/turtle")
+			if err != nil {
+				s.debug.Println("Could not save account acl file with new password. Error: " + err.Error())
+				return SystemReturn{Status: 500, Body: err.Error()}
+			}
+			// All set
+			return SystemReturn{Status: 200, Body: "Password saved!"}
+			break
+		}
+	}
+
+	return SystemReturn{Status: 200, Body: NewPassTemplate(token, "")}
 }
 
 func newAccount(w http.ResponseWriter, req *httpRequest, s *Server) SystemReturn {
@@ -173,17 +335,24 @@ func newAccount(w http.ResponseWriter, req *httpRequest, s *Server) SystemReturn
 
 	webidURL := accountBase + "profile/card"
 	webidURI := webidURL + "#me"
-	resource, _ = req.pathInfo(webidURL)
+	resource, _ = req.pathInfo(accountBase)
 
 	account := webidAccount{
 		Root:     resource.Root,
 		BaseURI:  resource.Base,
 		Document: resource.File,
 		WebID:    webidURI,
+		Agent:    s.Config.Agent,
 		PrefURI:  accountBase + "Preferences/prefs.ttl",
 		Email:    req.FormValue("email"),
 		Name:     req.FormValue("name"),
 		Img:      req.FormValue("img"),
+	}
+	if len(s.Config.ProxyTemplate) > 0 {
+		account.ProxyURI = accountBase + ",proxy?uri="
+	}
+	if len(s.Config.QueryTemplate) > 0 {
+		account.QueryURI = accountBase + ",query"
 	}
 
 	s.debug.Println("Checking if account profile <" + resource.File + "> exists...")
@@ -191,10 +360,12 @@ func newAccount(w http.ResponseWriter, req *httpRequest, s *Server) SystemReturn
 	if err != nil {
 		s.debug.Println("Stat error: " + err.Error())
 	}
-	if stat != nil && !stat.IsDir() {
+	if stat != nil && stat.IsDir() {
 		s.debug.Println("Found " + resource.File)
 		return SystemReturn{Status: 406, Body: "An account with the same name already exists."}
 	}
+
+	resource, _ = req.pathInfo(webidURL)
 
 	// create account space
 	err = os.MkdirAll(_path.Dir(resource.File), 0755)
@@ -274,6 +445,9 @@ func newAccount(w http.ResponseWriter, req *httpRequest, s *Server) SystemReturn
 	g.AddTriple(aclTerm, ns.acl.Get("accessTo"), NewResource(resource.URI))
 	g.AddTriple(aclTerm, ns.acl.Get("accessTo"), NewResource(resource.AclURI))
 	g.AddTriple(aclTerm, ns.acl.Get("agent"), NewResource(webidURI))
+	if len(req.FormValue("password")) > 0 {
+		g.AddTriple(aclTerm, ns.acl.Get("password"), NewLiteral(saltedPassword(s.Config.Salt, req.FormValue("password"))))
+	}
 	if len(req.FormValue("email")) > 0 {
 		g.AddTriple(aclTerm, ns.acl.Get("agent"), NewResource("mailto:"+req.FormValue("email")))
 	}
@@ -303,6 +477,18 @@ func newAccount(w http.ResponseWriter, req *httpRequest, s *Server) SystemReturn
 		return SystemReturn{Status: 500, Body: err.Error()}
 	}
 	w.Header().Set("User", webidURI)
+
+	// Send welcome email
+	if len(req.FormValue("email")) > 0 {
+		// Setup message
+		params := make(map[string]string)
+		params["{{.To}}"] = req.FormValue("email")
+		params["{{.Name}}"] = account.Name
+		params["{{.Host}}"] = resource.Obj.Host
+		params["{{.Account}}"] = account.BaseURI
+		params["{{.WebID}}"] = account.WebID
+		go s.sendWelcomeMail(params)
+	}
 
 	// Generate cert
 	spkac := req.FormValue("spkac")
@@ -464,10 +650,11 @@ func accountStatus(w http.ResponseWriter, req *httpRequest, s *Server) SystemRet
 	}
 
 	res := statusResponse{
-		Method:   "accountStatus",
-		Status:   status,
-		FormURL:  resource.Obj.Scheme + "://" + req.Host + "/" + SystemPrefix + "/newAccount",
-		LoginURL: accURL,
+		Method:    "status",
+		Status:    status,
+		FormURL:   resource.Obj.Scheme + "://" + req.Host + "/" + SystemPrefix + "/new",
+		LoginURL:  accURL + SystemPrefix + "/login",
+		LogoutURL: accURL + SystemPrefix + "/logout",
 		Response: accountResponse{
 			AccountURL: accURL,
 			Available:  isAvailable,

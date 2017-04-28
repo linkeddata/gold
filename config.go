@@ -64,6 +64,9 @@ type ServerConfig struct {
 	// ProxyTemplate is the URL of the service that handles WebID-TLS delegation
 	ProxyTemplate string
 
+	// ProxyLocal enables/disables proxying of resources on localhost
+	ProxyLocal bool
+
 	// QueryTemplate is the URL of the service that handles query request using twinql
 	QueryTemplate string
 
@@ -75,6 +78,9 @@ type ServerConfig struct {
 
 	// Agent is the WebID of the agent used for WebID-TLS delegation (and proxy)
 	Agent string
+
+	// Salt is the value used for hashing passwords
+	Salt string
 
 	// SMTPConfig holds the settings for the remote SMTP user/server
 	SMTPConfig EmailConfig
@@ -94,6 +100,7 @@ func NewServerConfig() *ServerConfig {
 		SignUpApp:  "https://solid.github.io/solid-signup/?domain=",
 		DiskLimit:  100000000, // 100MB
 		DataRoot:   serverDefaultRoot(),
+		ProxyLocal: true,
 	}
 }
 

@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	_path "path"
 	"strconv"
 	"strings"
 	"sync"
@@ -29,6 +30,9 @@ type webidAccount struct {
 	PrefURI  string
 	Name     string
 	Email    string
+	Agent    string
+	ProxyURI string
+	QueryURI string
 	Img      string
 }
 
@@ -45,14 +49,9 @@ var (
 	notAfter  = time.Date(2049, 12, 31, 23, 59, 59, 0, time.UTC)
 
 	workspaces = []workspace{
-		{Name: "Public", Label: "Public workspace", Type: "PublicWorkspace"},
-		{Name: "Private", Label: "Private workspace", Type: "PrivateWorkspace"},
-		{Name: "Work", Label: "Work workspace", Type: ""},
-		{Name: "Shared", Label: "Shared workspace", Type: "SharedWorkspace"},
 		{Name: "Preferences", Label: "Preferences workspace", Type: ""},
 		{Name: "Applications", Label: "Applications workspace", Type: "PreferencesWorkspace"},
 		{Name: "Inbox", Label: "Inbox", Type: ""},
-		{Name: "Timeline", Label: "Timeline", Type: ""},
 	}
 
 	// cache
@@ -366,10 +365,21 @@ func NewWebIDProfile(account webidAccount) *Graph {
 	if len(account.Img) > 0 {
 		g.AddTriple(userTerm, ns.foaf.Get("img"), NewResource(account.Img))
 	}
+	if len(account.Agent) > 0 {
+		g.AddTriple(userTerm, ns.acl.Get("delegates"), NewResource(account.Agent))
+	}
 	g.AddTriple(userTerm, ns.space.Get("storage"), NewResource(account.BaseURI+"/"))
 	g.AddTriple(userTerm, ns.space.Get("preferencesFile"), NewResource(account.PrefURI))
 	g.AddTriple(userTerm, ns.st.Get("inbox"), NewResource(account.BaseURI+"/Inbox/"))
 	g.AddTriple(userTerm, ns.st.Get("timeline"), NewResource(account.BaseURI+"/Timeline/"))
+
+	// add proxy and query endpoints
+	if len(account.ProxyURI) > 0 {
+		g.AddTriple(userTerm, ns.st.Get("proxyTemplate"), NewResource(account.ProxyURI))
+	}
+	if len(account.QueryURI) > 0 {
+		g.AddTriple(userTerm, ns.st.Get("queryEndpoint"), NewResource(account.QueryURI))
+	}
 
 	return g
 }
@@ -472,6 +482,10 @@ func (req *httpRequest) AddWorkspaces(account webidAccount, g *Graph) error {
 	}
 
 	resource, _ := req.pathInfo(account.PrefURI)
+	err := os.MkdirAll(_path.Dir(resource.File), 0755)
+	if err != nil {
+		return err
+	}
 	// open account acl file
 	f, err := os.OpenFile(resource.File, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
 	if err != nil {
