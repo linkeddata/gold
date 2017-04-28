@@ -167,7 +167,7 @@ func loginRedirect(w http.ResponseWriter, req *httpRequest, s *Server, values ma
 		return SystemReturn{Status: 500, Body: "Could not generate auth token for " + values["webid"] + ", err: " + err.Error()}
 	}
 	s.debug.Println("Generated new token for", values["webid"], "->", key)
-	redirTo += "?key=" + encodeQuery(key)
+	redirTo += "?webid=" + encodeQuery(values["webid"]) + "&key=" + encodeQuery(key)
 	http.Redirect(w, req.Request, redirTo, 301)
 	return SystemReturn{Status: 200}
 }

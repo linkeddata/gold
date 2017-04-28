@@ -263,8 +263,9 @@ func ProxyReq(w http.ResponseWriter, req *httpRequest, s *Server, reqUrl string)
 		user, err := GetAuthzFromToken(token, req, s)
 		if err != nil {
 			s.debug.Println(err.Error())
+		} else {
+			s.debug.Println("Authorization valid for user", user)
 		}
-		s.debug.Println("Authorization valid for user", user)
 		req.User = user
 	}
 
@@ -276,8 +277,9 @@ func ProxyReq(w http.ResponseWriter, req *httpRequest, s *Server, reqUrl string)
 		user, err := GetAuthzFromToken(token, req, s)
 		if err != nil {
 			s.debug.Println(err.Error())
+		} else {
+			s.debug.Println("Authorization valid for user", user)
 		}
-		s.debug.Println("Authorization valid for user", user)
 		req.User = user
 	}
 
