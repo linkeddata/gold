@@ -124,7 +124,7 @@ func NewPassTemplate(token string, err string) string {
 	template := `<!DOCTYPE html>
 <html id="docHTML">
 <body>
-    <form method="POST" action="/` + SystemPrefix + `/accountRecovery?token=` + token + `">
+    <form method="POST" action="/` + SystemPrefix + `/recovery?token=` + token + `">
     <h2>Please provide a new password</h2>
     <p style="color: red;">` + err + `</p>
     Password:
