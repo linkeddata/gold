@@ -29,10 +29,10 @@ document.addEventListener('DOMContentLoaded', function() {
 		"newCert": `<!DOCTYPE html>
 <html id="docHTML">
 <body>
-    <form method="POST" action="/` + SystemPrefix + `/newCert">
+    <form method="POST" action="/` + SystemPrefix + `/cert">
     <h2>Issue new certificate</h2>
     Name: <input type="text" name="name">
-    WebID: <input type="text" name="webid">
+    WebID: <input type="text" name="webid" autocorrect="off">
     <keygen id="spkacWebID" name="spkac" challenge="randomchars" keytype="rsa" hidden></keygen>
     <input type="submit" value="Issue">
     </form>
@@ -45,7 +45,7 @@ document.addEventListener('DOMContentLoaded', function() {
     <form method="POST">
     What is your WebID?
     <br>
-    <input type="text" name="webid">
+    <input type="text" name="webid" autocorrect="off">
     <input type="submit" value="Recover account">
     </form>
 </body>
@@ -60,7 +60,7 @@ document.addEventListener('DOMContentLoaded', function() {
     <h2>Login</h2>
     WebID:
     <br>
-    <input type="text" name="webid">
+    <input type="text" name="webid" autocorrect="off">
     <br>
     Password:
     <br>
@@ -68,7 +68,7 @@ document.addEventListener('DOMContentLoaded', function() {
     <br>
     <input type="submit" value="Login">
     </form>
-    <p><a href="/` + SystemPrefix + `/accountRecovery">Forgot your password?</a></p>
+    <p><a href="/` + SystemPrefix + `/recovery">Forgot your password?</a></p>
     <br>
     <p>Do you need a WebID? You can sign up for one at <a href="https://databox.me/" target="_blank">databox.me</a>.</p>
 </body>
@@ -150,7 +150,7 @@ func LoginTemplate(redir, origin string) string {
     <h2>Login</h2>
     WebID:
     <br>
-    <input type="text" name="webid">
+    <input type="text" name="webid" autocorrect="off">
     <br>
     Password:
     <br>
@@ -158,7 +158,7 @@ func LoginTemplate(redir, origin string) string {
     <br>
     <input type="submit" value="Login">
     </form>
-    <p><a href="/` + SystemPrefix + `/accountRecovery">Forgot your password?</a></p>
+    <p><a href="/` + SystemPrefix + `/recovery">Forgot your password?</a></p>
     <br>
     <p>Do you need a WebID? You can sign up for one at <a href="https://databox.me/" target="_blank">databox.me</a>.</p>
 </body>
@@ -178,7 +178,7 @@ func UnauthorizedTemplate(redirTo string) string {
     <h2>Login</h2>
     WebID:
     <br>
-    <input type="text" name="webid">
+    <input type="text" name="webid" autocorrect="off">
     <br>
     Password:
     <br>
@@ -186,7 +186,7 @@ func UnauthorizedTemplate(redirTo string) string {
     <br>
     <input type="submit" value="Login">
     </form>
-    <p><a href="/` + SystemPrefix + `/accountRecovery">Forgot your password?</a></p>
+    <p><a href="/` + SystemPrefix + `/recovery">Forgot your password?</a></p>
     <br>
     <p>Do you need a WebID? You can sign up for one at <a href="https://databox.me/" target="_blank">databox.me</a>.</p>
 </body>

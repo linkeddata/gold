@@ -402,6 +402,8 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 		// set API Link headers
 		w.Header().Add("Link", brack(resource.Base+"/"+SystemPrefix+"/login")+"; rel=\"https://solid.github.io/vocab/solid-terms.ttl#loginEndpoint\"")
 		w.Header().Add("Link", brack(resource.Base+"/"+SystemPrefix+"/logout")+"; rel=\"https://solid.github.io/vocab/solid-terms.ttl#logoutEndpoint\"")
+		w.Header().Add("Link", brack(resource.Base+"/,query")+"; rel=\"https://solid.github.io/vocab/solid-terms.ttl#twinqlEndpoint\"")
+		w.Header().Add("Link", brack(resource.Base+"/,proxy?uri=")+"; rel=\"https://solid.github.io/vocab/solid-terms.ttl#proxyEndpoint\"")
 
 		return r.respond(200)
 
