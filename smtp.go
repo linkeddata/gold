@@ -3,7 +3,6 @@ package gold
 import (
 	"crypto/tls"
 	"fmt"
-	"log"
 	"net/mail"
 	"net/smtp"
 	"strconv"
@@ -95,7 +94,6 @@ func (s *Server) sendMail(email *EmailStruct) {
 		message += fmt.Sprintf("%s: %s\r\n", k, v)
 	}
 	message += "\r\n" + email.Body
-	log.Printf("%+v\n", message)
 
 	if len(smtpCfg.Host) > 0 && smtpCfg.Port > 0 && auth != nil {
 		smtpServer := smtpCfg.Host + ":" + strconv.Itoa(smtpCfg.Port)
