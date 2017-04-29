@@ -230,7 +230,7 @@ func sendRecoveryToken(w http.ResponseWriter, req *httpRequest, s *Server) Syste
 	params["{{.To}}"] = email
 	params["{{.IP}}"] = IP
 	params["{{.Host}}"] = resource.Obj.Host
-	params["{{.From}}"] = s.Config.SMTPConfig.Name
+	params["{{.From}}"] = s.Config.SMTPConfig.Addr
 	params["{{.Link}}"] = link
 	go s.sendRecoveryMail(params)
 	return SystemReturn{Status: 200, Body: "You should receive an email shortly with further instructions."}
@@ -483,6 +483,7 @@ func newAccount(w http.ResponseWriter, req *httpRequest, s *Server) SystemReturn
 		// Setup message
 		params := make(map[string]string)
 		params["{{.To}}"] = req.FormValue("email")
+		params["{{.From}}"] = s.Config.SMTPConfig.Addr
 		params["{{.Name}}"] = account.Name
 		params["{{.Host}}"] = resource.Obj.Host
 		params["{{.Account}}"] = account.BaseURI

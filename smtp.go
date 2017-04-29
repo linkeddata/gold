@@ -3,6 +3,7 @@ package gold
 import (
 	"crypto/tls"
 	"fmt"
+	"log"
 	"net/mail"
 	"net/smtp"
 	"strconv"
@@ -46,7 +47,7 @@ func (s *Server) sendWelcomeMail(params map[string]string) {
 	email := NewEmailStruct()
 	email.To = params["{{.To}}"]
 	email.ToName = params["{{.Name}}"]
-	email.From = "notifications@" + params["{{.Host}}"]
+	email.From = params["{{.From}}"]
 	email.FromName = "Notifications Service"
 	email.Subject = "Welcome to " + params["{{.Host}}"] + "!"
 	email.Body = parseMailTemplate("welcomeMail", params)
@@ -58,7 +59,7 @@ func (s *Server) sendRecoveryMail(params map[string]string) {
 	email := NewEmailStruct()
 	email.To = params["{{.To}}"]
 	email.ToName = params["{{.Name}}"]
-	email.From = "recovery@" + params["{{.Host}}"]
+	email.From = params["{{.From}}"]
 	email.FromName = "Account Recovery"
 	email.Subject = "Recovery instructions for your account on " + params["{{.Host}}"]
 	email.Body = parseMailTemplate("accountRecovery", params)
@@ -94,6 +95,7 @@ func (s *Server) sendMail(email *EmailStruct) {
 		message += fmt.Sprintf("%s: %s\r\n", k, v)
 	}
 	message += "\r\n" + email.Body
+	log.Printf("%+v\n", message)
 
 	if len(smtpCfg.Host) > 0 && smtpCfg.Port > 0 && auth != nil {
 		smtpServer := smtpCfg.Host + ":" + strconv.Itoa(smtpCfg.Port)
