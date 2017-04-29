@@ -492,6 +492,7 @@ func newAccount(w http.ResponseWriter, req *httpRequest, s *Server) SystemReturn
 	}
 
 	// Generate cert
+	// TODO to be deprecated soon
 	spkac := req.FormValue("spkac")
 
 	if len(spkac) > 0 {
