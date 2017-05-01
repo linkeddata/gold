@@ -30,6 +30,7 @@ var (
 	tlsCert = flag.String("tlsCertFile", "", "TLS certificate eg. cert.pem")
 	tlsKey  = flag.String("tlsKeyFile", "", "TLS certificate eg. key.pem")
 	vhosts  = flag.Bool("vhosts", false, "run in virtual hosts mode?")
+	bolt    = flag.String("boltPath", "", "path to the location of the Bolt db file (uses /tmp/bold.db by default)")
 
 	metaSuffix = flag.String("metaSuffix", ",meta", "default suffix for meta files")
 	aclSuffix  = flag.String("aclSuffix", ",acl", "default suffix for ACL files")
@@ -118,6 +119,7 @@ func main() {
 		config.TokenAge = *tokenT
 		config.Debug = *debug
 		config.DataRoot = serverRoot
+		config.BoltPath = *bolt
 		config.Vhosts = *vhosts
 		config.Insecure = *insecure
 		config.NoHTTP = *nohttp
@@ -145,6 +147,13 @@ func main() {
 	_, httpsPort, _ = net.SplitHostPort(config.ListenHTTPS)
 
 	handler := gold.NewServer(config)
+
+	// Start Bolt
+	err = handler.StartBolt()
+	if err != nil {
+		log.Fatalln(err)
+	}
+	defer handler.BoltDB.Close()
 
 	if os.Getenv("FCGI_ROLE") != "" {
 		err = fcgi.Serve(nil, handler)

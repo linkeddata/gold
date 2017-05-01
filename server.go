@@ -16,6 +16,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/boltdb/bolt"
 	"github.com/gorilla/securecookie"
 	"golang.org/x/net/webdav"
 )
@@ -59,6 +60,18 @@ type errorString struct {
 
 func (e *errorString) Error() string {
 	return e.s
+}
+
+// Server object contains http handler, root where the data is found and whether it uses vhosts or not
+type Server struct {
+	http.Handler
+
+	Config     *ServerConfig
+	cookie     *securecookie.SecureCookie
+	cookieSalt []byte
+	debug      *log.Logger
+	webdav     *webdav.Handler
+	BoltDB     *bolt.DB
 }
 
 type httpRequest struct {
@@ -143,17 +156,6 @@ func handleStatusText(status int, err error) string {
 	default: // 501
 		return "HTTP 501 - Not implemented\n\n" + err.Error()
 	}
-}
-
-// Server object contains http handler, root where the data is found and whether it uses vhosts or not
-type Server struct {
-	http.Handler
-
-	Config     *ServerConfig
-	cookie     *securecookie.SecureCookie
-	cookieSalt []byte
-	debug      *log.Logger
-	webdav     *webdav.Handler
 }
 
 // NewServer is used to create a new Server instance
@@ -260,7 +262,7 @@ func ProxyReq(w http.ResponseWriter, req *httpRequest, s *Server, reqUrl string)
 		if err != nil {
 			s.debug.Println(err.Error())
 		}
-		user, err := GetAuthzFromToken(token, req, s)
+		user, err := GetAuthzFromToken(token, req)
 		if err != nil {
 			s.debug.Println(err.Error())
 		} else {
@@ -274,7 +276,7 @@ func ProxyReq(w http.ResponseWriter, req *httpRequest, s *Server, reqUrl string)
 		if err != nil {
 			s.debug.Println(err.Error())
 		}
-		user, err := GetAuthzFromToken(token, req, s)
+		user, err := GetAuthzFromToken(token, req)
 		if err != nil {
 			s.debug.Println(err.Error())
 		} else {

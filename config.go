@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"path/filepath"
 	"strings"
 )
 
@@ -82,6 +83,9 @@ type ServerConfig struct {
 	// Salt is the value used for hashing passwords
 	Salt string
 
+	// BoltPath points to the location of the Bolt db on the filesystem
+	BoltPath string
+
 	// SMTPConfig holds the settings for the remote SMTP user/server
 	SMTPConfig EmailConfig
 }
@@ -100,6 +104,7 @@ func NewServerConfig() *ServerConfig {
 		SignUpApp:  "https://solid.github.io/solid-signup/?domain=",
 		DiskLimit:  100000000, // 100MB
 		DataRoot:   serverDefaultRoot(),
+		BoltPath:   filepath.Join(os.TempDir(), "bolt.db"),
 		ProxyLocal: true,
 	}
 }

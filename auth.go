@@ -245,8 +245,9 @@ func IsTokenDateValid(valid string) error {
 	return nil
 }
 
-func GetAuthzFromToken(token string, req *httpRequest, s *Server) (string, error) {
-	values, err := GetValuesFromToken("Authorization", token, req, s)
+func GetAuthzFromToken(token string, req *httpRequest) (string, error) {
+	// values, err := GetValuesFromToken("Authorization", token, req, s)
+	values, err := req.Server.getPersistedToken("Authorization", req.Host, token)
 	if err != nil {
 		return "", err
 	}
