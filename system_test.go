@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"crypto/tls"
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -294,6 +293,27 @@ func TestNewAccountWithoutSPKAC(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+// func TestAccountInfo(t *testing.T) {
+// 	err := handler2.StartBolt()
+// 	assert.NoError(t, err)
+// 	defer handler2.BoltDB.Close()
+
+// 	testServer1 := httptest.NewUnstartedServer(handler2)
+// 	testServer1.TLS = new(tls.Config)
+// 	testServer1.TLS.ClientAuth = tls.RequestClientCert
+// 	testServer1.TLS.NextProtos = []string{"http/1.1"}
+// 	testServer1.StartTLS()
+
+// 	request, err := http.NewRequest("GET", testServer1.URL+"/"+SystemPrefix+"/info", nil)
+// 	assert.NoError(t, err)
+// 	response, err := httpClient.Do(request)
+// 	assert.NoError(t, err)
+// 	body, _ := ioutil.ReadAll(response.Body)
+// 	response.Body.Close()
+// 	assert.Equal(t, 200, response.StatusCode)
+// 	assert.NotEmpty(t, body)
+// }
+
 func TestAccountRecoveryForm(t *testing.T) {
 	request, err := http.NewRequest("POST", testServer.URL+"/"+SystemPrefix+"/recovery", nil)
 	assert.NoError(t, err)
@@ -318,6 +338,10 @@ func TestAccountRecovery(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, 403, response.StatusCode)
 	assert.Empty(t, response.Cookies())
+
+	err = handler1.StartBolt()
+	assert.NoError(t, err)
+	defer handler1.BoltDB.Close()
 
 	testServer1 := httptest.NewUnstartedServer(handler1)
 	testServer1.TLS = new(tls.Config)
@@ -378,6 +402,24 @@ func TestAccountRecovery(t *testing.T) {
 	assert.Equal(t, 200, response.StatusCode)
 	assert.NotEmpty(t, response.Cookies())
 	assert.Equal(t, "Session", response.Cookies()[0].Name)
+
+	cookie := response.Header.Get("Set-Cookie")
+	assert.NotNil(t, cookie)
+
+	// Server info without credentials
+	request, err = http.NewRequest("GET", testServer1.URL+"/"+SystemPrefix+"/info", nil)
+	assert.NoError(t, err)
+	response, err = httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.Equal(t, 401, response.StatusCode)
+
+	// Server info without credentials
+	request, err = http.NewRequest("GET", testServer1.URL+"/"+SystemPrefix+"/info", nil)
+	assert.NoError(t, err)
+	request.Header.Add("Cookie", cookie)
+	response, err = httpClient.Do(request)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, response.StatusCode)
 
 	// delete user
 	err = os.RemoveAll("_test/")
@@ -517,38 +559,4 @@ func TestAccountStatusWithVhosts(t *testing.T) {
 	response.Body.Close()
 	assert.Equal(t, `{"method":"status","status":"success","formURL":"`+testServer1.URL+`/`+SystemPrefix+`/new","loginURL":"https://user.`+strings.TrimLeft(testServer1.URL, "https://")+`/`+SystemPrefix+`/login","logoutURL":"https://user.`+strings.TrimLeft(testServer1.URL, "https://")+`/`+SystemPrefix+`/logout","response":{"accountURL":"https://user.`+strings.TrimLeft(testServer1.URL, "https://")+`/","available":true}}`, string(body))
 	assert.Equal(t, 200, response.StatusCode)
-}
-
-func TestAccountInfo(t *testing.T) {
-	err := os.MkdirAll("_test/user", 0755)
-	assert.NoError(t, err)
-
-	sizeLocal, err := DiskUsage("_test/")
-	assert.NoError(t, err)
-
-	testServer1 := httptest.NewUnstartedServer(handler2)
-	testServer1.TLS = new(tls.Config)
-	testServer1.TLS.ClientAuth = tls.RequestClientCert
-	testServer1.TLS.NextProtos = []string{"http/1.1"}
-	testServer1.StartTLS()
-
-	request, err := http.NewRequest("GET", testServer1.URL+"/"+SystemPrefix+"/info", nil)
-	assert.NoError(t, err)
-	response, err := httpClient.Do(request)
-	assert.NoError(t, err)
-	body, _ := ioutil.ReadAll(response.Body)
-	response.Body.Close()
-
-	err = os.RemoveAll("_test/")
-	assert.NoError(t, err)
-
-	assert.Equal(t, 200, response.StatusCode)
-	assert.NotEmpty(t, body)
-
-	dataLocal := accountInformation{
-		DiskUsed:  fmt.Sprintf("%d", sizeLocal),
-		DiskLimit: fmt.Sprintf("%d", config2.DiskLimit),
-	}
-	jsonData, err := json.Marshal(dataLocal)
-	assert.Equal(t, body, jsonData)
 }

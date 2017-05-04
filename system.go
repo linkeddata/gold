@@ -672,21 +672,42 @@ func accountStatus(w http.ResponseWriter, req *httpRequest, s *Server) SystemRet
 }
 
 func accountInfo(w http.ResponseWriter, req *httpRequest, s *Server) SystemReturn {
-	resource, _ := req.pathInfo(req.BaseURI())
-	totalSize, err := DiskUsage(resource.Root)
-	if err != nil {
-		return SystemReturn{Status: 500, Body: err.Error()}
+	if len(req.User) == 0 {
+		return SystemReturn{Status: 401, Body: "Please log in to view your account information"}
+	}
+	if !req.IsOwner {
+		return SystemReturn{Status: 403, Body: "You are not allowed to view this page"}
 	}
 
-	data := accountInformation{
-		DiskUsed:  fmt.Sprintf("%d", totalSize),
-		DiskLimit: fmt.Sprintf("%d", s.Config.DiskLimit),
+	tokensHtml := "<div>"
+
+	if len(req.FormValue("revokeAuthz")) > 0 {
+		delStatus := "<p style=\"color: green;\">Successfully revoked token!</p>"
+		err := s.deletePersistedToken("Authorization", req.Host, req.FormValue("revokeAuthz"))
+		if err != nil {
+			delStatus = "<p>Could not revoke token. Error: " + err.Error() + "</p>"
+		}
+		tokensHtml += delStatus
 	}
-	jsonData, err := json.Marshal(data)
-	if err != nil {
-		s.debug.Println("Marshal error: " + err.Error())
+
+	tokens, err := s.getTokensByType("Authorization", req.Host)
+	tokensHtml += "<h2>Authorization tokens for applications</h2>\n"
+	tokensHtml += "<div>"
+	if err == nil {
+		for token, values := range tokens {
+			tokensHtml += "<p>Token: " + string(token) + "<br>\n"
+			tokensHtml += "Application: <strong>" + values["origin"] + "</strong>"
+			tokensHtml += " <a href=\"" + req.BaseURI() + "?revokeAuthz=" + encodeQuery(token) + "\">Revoke</a></p>\n"
+		}
+		tokensHtml += "</ul>\n"
+		if len(tokens) == 0 {
+			tokensHtml += "No authorization tokens found."
+		}
 	}
-	return SystemReturn{Status: 200, Body: string(jsonData)}
+
+	tokensHtml += "</div>"
+
+	return SystemReturn{Status: 200, Body: TokensTemplate(req.User, tokensHtml)}
 }
 
 // DiskUsage returns the total size occupied by dir and contents
@@ -779,4 +800,31 @@ func (s *Server) deletePersistedToken(tokenType, host, token string) error {
 		return tx.Bucket([]byte(host)).Bucket([]byte(tokenType)).Delete([]byte(token))
 	})
 	return err
+}
+
+func (s *Server) getTokensByType(tokenType, host string) (map[string]map[string]string, error) {
+	tokens := make(map[string]map[string]string)
+	err := s.BoltDB.View(func(tx *bolt.Tx) error {
+		// Assume bucket exists and has keys
+		b := tx.Bucket([]byte(host))
+		if b == nil {
+			return errors.New("No bucket for host " + host)
+		}
+		ba := b.Bucket([]byte(tokenType))
+		if ba == nil {
+			return errors.New("No bucket for type " + tokenType)
+		}
+
+		c := ba.Cursor()
+
+		for k, _ := c.First(); k != nil; k, _ = c.Next() {
+			key := string(k)
+			token, err := s.getPersistedToken(tokenType, host, key)
+			if err == nil {
+				tokens[key] = token
+			}
+		}
+		return nil
+	})
+	return tokens, err
 }

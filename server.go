@@ -80,6 +80,7 @@ type httpRequest struct {
 	AcceptType  string
 	ContentType string
 	User        string
+	IsOwner     bool
 }
 
 func (req httpRequest) BaseURI() string {
@@ -219,7 +220,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	defer func() {
 		req.Body.Close()
 	}()
-	r := s.handle(w, &httpRequest{req, s, "", "", ""})
+	r := s.handle(w, &httpRequest{req, s, "", "", "", false})
 	for key := range r.headers {
 		w.Header().Set(key, r.headers.Get(key))
 	}
@@ -317,6 +318,16 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 	w.Header().Set("User", user)
 	acl := NewWAC(req, s, w, user, rKey)
 
+	// check if is owner
+	req.IsOwner = false
+	resource, _ := req.pathInfo(req.BaseURI())
+	if len(user) > 0 {
+		aclStatus, err := acl.AllowWrite(resource.Base)
+		if aclStatus == 200 && err == nil {
+			req.IsOwner = true
+		}
+	}
+
 	// Intercept API requests
 	if strings.Contains(req.Request.URL.Path, "/"+SystemPrefix) && req.Method != "OPTIONS" {
 		resp := HandleSystem(w, req, s)
@@ -344,7 +355,6 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 		return TwinqlQuery(w, req, s)
 	}
 
-	resource, _ := req.pathInfo(req.BaseURI())
 	s.debug.Println(req.RemoteAddr + " requested resource URI: " + req.URL.String())
 	s.debug.Println(req.RemoteAddr + " requested resource Path: " + resource.File)
 

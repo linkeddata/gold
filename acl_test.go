@@ -1022,7 +1022,7 @@ func TestACLCleanUp(t *testing.T) {
 func TestACLwalkPath(t *testing.T) {
 	config.Debug = false
 	s := NewServer(config)
-	req := &httpRequest{nil, s, "", "", ""}
+	req := &httpRequest{nil, s, "", "", "", false}
 
 	path := "http://example.org/foo/bar/baz"
 	p, _ := req.pathInfo(path)

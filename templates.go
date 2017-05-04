@@ -207,3 +207,16 @@ func LogoutTemplate(webid string) string {
 </html>`
 	return template
 }
+
+func TokensTemplate(webid, tokens string) string {
+	template := `<!DOCTYPE html>
+<html id="docHTML">
+<head>
+</head>
+<body>
+    <h1>You are logged in as ` + webid + `.</h1>
+    ` + tokens + `
+</body>
+</html>`
+	return template
+}
