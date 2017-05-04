@@ -67,13 +67,14 @@ func (req *httpRequest) authn(w http.ResponseWriter) string {
 func (req *httpRequest) userCookie() (string, error) {
 	value := make(map[string]string)
 	cookie, err := req.Cookie("Session")
-	if err == nil {
-		err = req.Server.cookie.Decode("Session", cookie.Value, &value)
-		if err == nil {
-			return value["user"], nil
-		}
+	if err != nil {
+		return "", errors.New(err.Error() + " Got: " + fmt.Sprintf("%s", req.Cookies()))
 	}
-	return "", err
+	err = req.Server.cookie.Decode("Session", cookie.Value, &value)
+	if err != nil {
+		return "", err
+	}
+	return value["user"], nil
 }
 
 func (srv *Server) userCookieSet(w http.ResponseWriter, user string) error {
