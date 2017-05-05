@@ -753,18 +753,17 @@ func TestPATCHJson(t *testing.T) {
 }
 
 func TestPATCHSPARQL(t *testing.T) {
-	sparqlData := `INSERT DATA { <a> <b> <c> . } ; INSERT DATA { <a> <d> "123"^^<http://www.w3.org/2001/XMLSchema#int> . }`
-	request, err := http.NewRequest("PATCH", testServer.URL+"/_test/abc", strings.NewReader(sparqlData))
+	request, err := http.NewRequest("PATCH", testServer.URL+"/_test/abc", strings.NewReader(""))
 	assert.NoError(t, err)
 	request.Header.Add("Content-Type", "application/sparql-update")
 	response, err := httpClient.Do(request)
 	assert.NoError(t, err)
 	body, err := ioutil.ReadAll(response.Body)
 	response.Body.Close()
-	assert.Empty(t, string(body))
-	assert.Equal(t, 200, response.StatusCode)
+	assert.NotEmpty(t, string(body))
+	assert.Equal(t, 400, response.StatusCode)
 
-	sparqlData = `DELETE DATA { <a> <b> <c> . }; DELETE DATA { <a> <d> "123"^^<http://www.w3.org/2001/XMLSchema#int> . }`
+	sparqlData := `INSERT DATA { <http://a.com> <http://b.com> <http://c.com> . } ; INSERT DATA { <http://a.com> <http://b.com> "123"^^<http://www.w3.org/2001/XMLSchema#int> . }`
 	request, err = http.NewRequest("PATCH", testServer.URL+"/_test/abc", strings.NewReader(sparqlData))
 	assert.NoError(t, err)
 	request.Header.Add("Content-Type", "application/sparql-update")
@@ -775,12 +774,26 @@ func TestPATCHSPARQL(t *testing.T) {
 	assert.Empty(t, string(body))
 	assert.Equal(t, 200, response.StatusCode)
 
-	request, err = http.NewRequest("GET", testServer.URL+"/_test/abc", nil)
+	g := NewGraph(testServer.URL + "/_test/abc")
+	g.LoadURI(testServer.URL + "/_test/abc")
+	assert.NotNil(t, g.One(NewResource("http://a.com"), NewResource("http://b.com"), NewResource("http://c.com")))
+	s, err := g.Serialize("text/turtle")
 	assert.NoError(t, err)
-	request.Header.Add("Accept", "text/turtle")
+
+	sparqlData = `DELETE DATA { <http://a.com> <http://b.com> <http://c.com>  . }; DELETE DATA { <http://a.com> <http://b.com> "123"^^<http://www.w3.org/2001/XMLSchema#int> . }`
+	request, err = http.NewRequest("PATCH", testServer.URL+"/_test/abc", strings.NewReader(sparqlData))
+	assert.NoError(t, err)
+	request.Header.Add("Content-Type", "application/sparql-update")
 	response, err = httpClient.Do(request)
 	assert.NoError(t, err)
+	body, err = ioutil.ReadAll(response.Body)
+	response.Body.Close()
+	assert.Empty(t, string(body))
 	assert.Equal(t, 200, response.StatusCode)
+
+	g = NewGraph(testServer.URL + "/_test/abc")
+	g.LoadURI(testServer.URL + "/_test/abc")
+	assert.Nil(t, g.One(NewResource("http://a.com"), NewResource("http://b.com"), NewResource("http://c.com")))
 }
 
 func TestPATCHFailParse(t *testing.T) {

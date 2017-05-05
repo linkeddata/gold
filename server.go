@@ -804,22 +804,32 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 		}
 
 		if dataHasParser {
+			s.debug.Println("Preparing to PATCH resource", resource.URI, " with file", resource.File)
+			buf, _ := ioutil.ReadAll(req.Body)
+			body := ioutil.NopCloser(bytes.NewBuffer(buf))
+
+			req.Body.Close()
+
+			if req.Header.Get("Content-Length") == "0" || len(buf) == 0 {
+				return r.respond(400, "Empty PATCH body. No SPARQL statements found in the request.")
+			}
+
 			g := NewGraph(resource.URI)
 			g.ReadFile(resource.File)
 
 			switch dataMime {
 			case "application/json":
-				g.JSONPatch(req.Body)
+				g.JSONPatch(body)
 			case "application/sparql-update":
 				sparql := NewSPARQLUpdate(g.URI())
-				sparql.Parse(req.Body)
+				sparql.Parse(body)
 				ecode, err := g.SPARQLUpdate(sparql)
 				if err != nil {
 					return r.respond(ecode, "Error processing SPARQL Update: "+err.Error())
 				}
 			default:
 				if dataHasParser {
-					g.Parse(req.Body, dataMime)
+					g.Parse(body, dataMime)
 				}
 			}
 
@@ -845,7 +855,7 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 			if err != nil {
 				return r.respond(500, err)
 			}
-
+			s.debug.Println("Succefully PATCHed resource", resource.URI)
 			onUpdateURI(resource.URI)
 			onUpdateURI(resource.ParentURI)
 
