@@ -777,8 +777,6 @@ func TestPATCHSPARQL(t *testing.T) {
 	g := NewGraph(testServer.URL + "/_test/abc")
 	g.LoadURI(testServer.URL + "/_test/abc")
 	assert.NotNil(t, g.One(NewResource("http://a.com"), NewResource("http://b.com"), NewResource("http://c.com")))
-	s, err := g.Serialize("text/turtle")
-	assert.NoError(t, err)
 
 	sparqlData = `DELETE DATA { <http://a.com> <http://b.com> <http://c.com>  . }; DELETE DATA { <http://a.com> <http://b.com> "123"^^<http://www.w3.org/2001/XMLSchema#int> . }`
 	request, err = http.NewRequest("PATCH", testServer.URL+"/_test/abc", strings.NewReader(sparqlData))

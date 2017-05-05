@@ -850,9 +850,6 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 			err = g.WriteFile(f, "text/turtle")
 			if err != nil {
 				s.debug.Println("PATCH g.WriteFile err: " + err.Error())
-			}
-
-			if err != nil {
 				return r.respond(500, err)
 			}
 			s.debug.Println("Succefully PATCHed resource", resource.URI)
