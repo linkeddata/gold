@@ -17,6 +17,9 @@ type ServerConfig struct {
 	// PortHTTPS contains the HTTPS listening port number in format ":443"
 	ListenHTTPS string
 
+	// WebIDTLS enables/disables client cert authentication (WebID-TLS) (on by default)
+	WebIDTLS bool
+
 	// TLSCert holds the server certificate eg. cert.pem
 	TLSCert string
 
@@ -96,6 +99,7 @@ func NewServerConfig() *ServerConfig {
 		CookieAge:  8736, // hours (1 year)
 		TokenAge:   5,
 		HSTS:       true,
+		WebIDTLS:   true,
 		MetaSuffix: ".meta",
 		ACLSuffix:  ".acl",
 		DataApp:    "tabulator",

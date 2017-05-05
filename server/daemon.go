@@ -17,11 +17,12 @@ import (
 var (
 	conf = flag.String("conf", "", "use this configuration file")
 
-	httpA    = flag.String("http", ":80", "HTTP listener address (redirects to HTTPS)")
-	httpsA   = flag.String("https", ":443", "HTTPS listener address")
-	insecure = flag.Bool("insecure", false, "provide insecure/plain HTTP access (only)")
-	nohttp   = flag.Bool("nohttp", false, "disable HTTP redirects to HTTPS?")
-	hsts     = flag.Bool("enabbleHSTS", true, "enable strict transport security (HSTS)?")
+	httpA          = flag.String("http", ":80", "HTTP listener address (redirects to HTTPS)")
+	httpsA         = flag.String("https", ":443", "HTTPS listener address")
+	insecure       = flag.Bool("insecure", false, "provide insecure/plain HTTP access (only)")
+	nohttp         = flag.Bool("nohttp", false, "disable HTTP redirects to HTTPS?")
+	hsts           = flag.Bool("enabbleHSTS", true, "enable strict transport security (HSTS)?")
+	enableWebIDTLS = flag.Bool("enabbleWebIDTLS", true, "enable WebID-TLS authentication?")
 
 	cookieT = flag.Int64("cookieAge", 24, "lifetime for cookies (in hours)")
 	debug   = flag.Bool("debug", false, "output extra logging?")
@@ -114,6 +115,7 @@ func main() {
 		config.ListenHTTPS = *httpsA
 		config.TLSCert = *tlsCert
 		config.TLSKey = *tlsKey
+		config.WebIDTLS = *enableWebIDTLS
 		config.Salt = *salt
 		config.CookieAge = *cookieT
 		config.TokenAge = *tokenT
@@ -185,6 +187,8 @@ func main() {
 		tcpL net.Listener
 		tlsL net.Listener
 	)
+
+	tlsConfig := NewTLSConfig(config.WebIDTLS)
 
 	tlsConfig.Certificates = make([]tls.Certificate, 1)
 	if len(config.TLSCert) == 0 && len(config.TLSKey) == 0 {

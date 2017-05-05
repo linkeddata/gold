@@ -5,22 +5,6 @@ import (
 )
 
 var (
-	tlsConfig = &tls.Config{
-		MinVersion:               tls.VersionTLS12,
-		PreferServerCipherSuites: true,
-		CurvePreferences:         []tls.CurveID{tls.CurveP521, tls.CurveP384, tls.CurveP256},
-		CipherSuites: []uint16{
-			tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
-			tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
-			tls.TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,
-			tls.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA,
-			tls.TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA,
-			tls.TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA,
-		},
-		ClientAuth: tls.RequestClientCert,
-		NextProtos: []string{"h2"},
-	}
-
 	tlsTestCert = []byte(`-----BEGIN CERTIFICATE-----
 MIIB4TCCAUygAwIBAgIBADALBgkqhkiG9w0BAQUwEjEQMA4GA1UEChMHQWNtZSBD
 bzAeFw0xNDAxMzAyMzUyMTlaFw0yNDAxMjgyMzUyMTlaMBIxEDAOBgNVBAoTB0Fj
@@ -50,3 +34,24 @@ masboX0eV9RZUYLEuySxAkBLfEizykRCZ1CYkIUtKsq6HOtj+ELPBVtVPMCx3O10
 LMEOXuCrAMT/nApK629bgSlTU6P9PZd+05yRbHt4Ds1S
 -----END RSA PRIVATE KEY-----`)
 )
+
+func NewTLSConfig(enableWebIDTLS bool) *tls.Config {
+	tlsConfig := &tls.Config{
+		MinVersion:               tls.VersionTLS12,
+		PreferServerCipherSuites: true,
+		CurvePreferences:         []tls.CurveID{tls.CurveP521, tls.CurveP384, tls.CurveP256},
+		CipherSuites: []uint16{
+			tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
+			tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
+			tls.TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,
+			tls.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA,
+			tls.TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA,
+			tls.TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA,
+		},
+		NextProtos: []string{"h2"},
+	}
+	if enableWebIDTLS {
+		tlsConfig.ClientAuth = tls.RequestClientCert
+	}
+	return tlsConfig
+}
