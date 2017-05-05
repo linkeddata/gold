@@ -31,6 +31,7 @@ func (req *httpRequest) authn(w http.ResponseWriter) string {
 		return user
 	}
 
+	// try WebID-RSA
 	if len(req.Header.Get("Authorization")) > 0 {
 		user, err = WebIDDigestAuth(req)
 		if err != nil {
@@ -38,20 +39,24 @@ func (req *httpRequest) authn(w http.ResponseWriter) string {
 		}
 		if len(user) > 0 {
 			req.Server.debug.Println("WebID-RSA auth OK for User: " + user)
-			return user
+		}
+	}
+	// fall back to WebID-TLS
+	if len(user) == 0 {
+		user, err = WebIDTLSAuth(req)
+		if err != nil {
+			req.Server.debug.Println("WebID-TLS error:", err)
+		}
+		if len(user) > 0 {
+			req.Server.debug.Println("WebID-TLS auth OK for User: " + user)
 		}
 	}
 
-	user, err = WebIDTLSAuth(req)
-	if err != nil {
-		req.Server.debug.Println("WebID-TLS error:", err)
-	}
 	if len(user) > 0 {
-		req.Server.debug.Println("WebID-TLS auth OK for User: " + user)
 		if len(req.Header.Get("On-Behalf-Of")) > 0 {
 			delegator := debrack(req.Header.Get("On-Behalf-Of"))
 			if verifyDelegator(delegator, user) {
-				req.Server.debug.Println("Request User ID (delegation):", user)
+				req.Server.debug.Println("Setting delegation user to:", delegator)
 				user = delegator
 			}
 		}

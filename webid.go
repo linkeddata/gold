@@ -92,7 +92,7 @@ func WebIDDigestAuth(req *httpRequest) (string, error) {
 	}
 
 	if len(authH.Username) == 0 || len(claim) == 0 || len(signature) == 0 {
-		return "", errors.New("No WebID and/or claim found in the Authorization header")
+		return "", errors.New("No WebID and/or claim found in the Authorization header.\n" + req.Header.Get("Authorization"))
 	}
 
 	// fetch WebID to get pubKey

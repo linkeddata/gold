@@ -804,14 +804,16 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 		}
 
 		if dataHasParser {
-			s.debug.Println("Preparing to PATCH resource", resource.URI, " with file", resource.File)
+			s.debug.Println("Preparing to PATCH resource", resource.URI, "with file", resource.File)
 			buf, _ := ioutil.ReadAll(req.Body)
 			body := ioutil.NopCloser(bytes.NewBuffer(buf))
 
 			req.Body.Close()
 
 			if req.Header.Get("Content-Length") == "0" || len(buf) == 0 {
-				return r.respond(400, "Empty PATCH body. No SPARQL statements found in the request.")
+				errmsg := "Could not patch resource. No SPARQL statements found in the request."
+				s.debug.Println(errmsg)
+				return r.respond(400, errmsg)
 			}
 
 			g := NewGraph(resource.URI)
