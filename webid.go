@@ -23,18 +23,19 @@ const (
 )
 
 type webidAccount struct {
-	Root      string
-	BaseURI   string
-	Document  string
-	WebID     string
-	PrefURI   string
-	TypeIndex string
-	Name      string
-	Email     string
-	Agent     string
-	ProxyURI  string
-	QueryURI  string
-	Img       string
+	Root          string
+	BaseURI       string
+	Document      string
+	WebID         string
+	PrefURI       string
+	PubTypeIndex  string
+	PrivTypeIndex string
+	Name          string
+	Email         string
+	Agent         string
+	ProxyURI      string
+	QueryURI      string
+	Img           string
 }
 
 type workspace struct {
@@ -371,7 +372,8 @@ func NewWebIDProfile(account webidAccount) *Graph {
 	}
 	g.AddTriple(userTerm, ns.space.Get("storage"), NewResource(account.BaseURI+"/"))
 	g.AddTriple(userTerm, ns.space.Get("preferencesFile"), NewResource(account.PrefURI))
-	g.AddTriple(userTerm, ns.st.Get("privateTypeIndex"), NewResource(account.TypeIndex))
+	g.AddTriple(userTerm, ns.st.Get("privateTypeIndex"), NewResource(account.PrivTypeIndex))
+	g.AddTriple(userTerm, ns.st.Get("publicTypeIndex"), NewResource(account.PubTypeIndex))
 	g.AddTriple(userTerm, ns.st.Get("inbox"), NewResource(account.BaseURI+"/Inbox/"))
 	g.AddTriple(userTerm, ns.st.Get("timeline"), NewResource(account.BaseURI+"/Timeline/"))
 
@@ -502,27 +504,30 @@ func (req *httpRequest) AddWorkspaces(account webidAccount, g *Graph) error {
 	f.Close()
 
 	// write the typeIndex
-	typeIndex := NewGraph(account.TypeIndex)
-	typeIndex.AddTriple(NewResource(account.TypeIndex), ns.rdf.Get("type"), ns.st.Get("TypeIndex"))
-	typeIndex.AddTriple(NewResource(account.TypeIndex), ns.rdf.Get("type"), ns.st.Get("UnlistedDocument"))
+	createTypeIndex(req, "ListedDocument", account.PubTypeIndex)
+	createTypeIndex(req, "UnlistedDocument", account.PrivTypeIndex)
 
-	resource, _ = req.pathInfo(account.TypeIndex)
-	err = os.MkdirAll(_path.Dir(resource.File), 0755)
+	return nil
+}
+
+func createTypeIndex(req *httpRequest, indexType, url string) error {
+	typeIndex := NewGraph(url)
+	typeIndex.AddTriple(NewResource(url), ns.rdf.Get("type"), ns.st.Get("TypeIndex"))
+	typeIndex.AddTriple(NewResource(url), ns.rdf.Get("type"), ns.st.Get(indexType))
+
+	resource, _ := req.pathInfo(url)
+	err := os.MkdirAll(_path.Dir(resource.File), 0755)
 	if err != nil {
 		return err
 	}
 	// open account acl file
-	f, err = os.OpenFile(resource.File, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
+	f, err := os.OpenFile(resource.File, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
 	if err != nil {
 		return err
 	}
+	defer f.Close()
 
 	// write account acl to disk
 	err = typeIndex.WriteFile(f, "text/turtle")
-	if err != nil {
-		return err
-	}
-	f.Close()
-
-	return nil
+	return err
 }

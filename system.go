@@ -81,6 +81,8 @@ func passwordAuth(w http.ResponseWriter, req *httpRequest, s *Server) SystemRetu
 	redirTo := req.FormValue("redirect")
 	origin := req.FormValue("origin")
 
+	s.debug.Println("Got login request. Optional params: ", redirTo, origin)
+
 	// if cookie is set, just redirect
 	if len(req.User) > 0 {
 		values := map[string]string{
@@ -170,6 +172,7 @@ func loginRedirect(w http.ResponseWriter, req *httpRequest, s *Server, values ma
 	}
 	s.debug.Println("Generated new token for", values["webid"], "->", key)
 	redirTo += "?webid=" + encodeQuery(values["webid"]) + "&key=" + encodeQuery(key)
+	s.debug.Println("Redirecting user to", redirTo)
 	http.Redirect(w, req.Request, redirTo, 301)
 	return SystemReturn{Status: 200}
 }
@@ -340,16 +343,17 @@ func newAccount(w http.ResponseWriter, req *httpRequest, s *Server) SystemReturn
 	resource, _ = req.pathInfo(accountBase)
 
 	account := webidAccount{
-		Root:      resource.Root,
-		BaseURI:   resource.Base,
-		Document:  resource.File,
-		WebID:     webidURI,
-		Agent:     s.Config.Agent,
-		PrefURI:   accountBase + "Preferences/prefs.ttl",
-		TypeIndex: accountBase + "Preferences/typeIndex.ttl",
-		Email:     req.FormValue("email"),
-		Name:      req.FormValue("name"),
-		Img:       req.FormValue("img"),
+		Root:          resource.Root,
+		BaseURI:       resource.Base,
+		Document:      resource.File,
+		WebID:         webidURI,
+		Agent:         s.Config.Agent,
+		PrefURI:       accountBase + "Preferences/prefs.ttl",
+		PubTypeIndex:  accountBase + "Preferences/pubTypeIndex.ttl",
+		PrivTypeIndex: accountBase + "Preferences/privTypeIndex.ttl",
+		Email:         req.FormValue("email"),
+		Name:          req.FormValue("name"),
+		Img:           req.FormValue("img"),
 	}
 	if len(s.Config.ProxyTemplate) > 0 {
 		account.ProxyURI = accountBase + ",proxy?uri="
