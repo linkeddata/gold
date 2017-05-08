@@ -340,15 +340,16 @@ func newAccount(w http.ResponseWriter, req *httpRequest, s *Server) SystemReturn
 	resource, _ = req.pathInfo(accountBase)
 
 	account := webidAccount{
-		Root:     resource.Root,
-		BaseURI:  resource.Base,
-		Document: resource.File,
-		WebID:    webidURI,
-		Agent:    s.Config.Agent,
-		PrefURI:  accountBase + "Preferences/prefs.ttl",
-		Email:    req.FormValue("email"),
-		Name:     req.FormValue("name"),
-		Img:      req.FormValue("img"),
+		Root:      resource.Root,
+		BaseURI:   resource.Base,
+		Document:  resource.File,
+		WebID:     webidURI,
+		Agent:     s.Config.Agent,
+		PrefURI:   accountBase + "Preferences/prefs.ttl",
+		TypeIndex: accountBase + "Preferences/typeIndex.ttl",
+		Email:     req.FormValue("email"),
+		Name:      req.FormValue("name"),
+		Img:       req.FormValue("img"),
 	}
 	if len(s.Config.ProxyTemplate) > 0 {
 		account.ProxyURI = accountBase + ",proxy?uri="

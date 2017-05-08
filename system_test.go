@@ -73,6 +73,18 @@ func TestNewAccountWithoutVhosts(t *testing.T) {
 	assert.Empty(t, body)
 	assert.Equal(t, 200, response.StatusCode)
 
+	// request, err = http.NewRequest("HEAD", ts.URL+"/Preferences/prefs.ttl", nil)
+	// assert.NoError(t, err)
+	// response, err = httpClient.Do(request)
+	// assert.NoError(t, err)
+	// assert.Equal(t, 200, response.StatusCode)
+
+	// request, err = http.NewRequest("HEAD", ts.URL+"/Preferences/typeIndex.ttl", nil)
+	// assert.NoError(t, err)
+	// response, err = httpClient.Do(request)
+	// assert.NoError(t, err)
+	// assert.Equal(t, 200, response.StatusCode)
+
 	// request, err = http.NewRequest("HEAD", ts.URL+"/user/"+config1.ACLSuffix, nil)
 	// assert.NoError(t, err)
 	// response, err = httpClient.Do(request)
