@@ -412,10 +412,10 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 		w.Header().Add("Link", brack("http://www.w3.org/ns/ldp#Resource")+"; rel=\"type\"")
 
 		// set API Link headers
-		w.Header().Add("Link", brack(resource.Base+"/"+SystemPrefix+"/login")+"; rel=\"https://solid.github.io/vocab/solid-terms.ttl#loginEndpoint\"")
-		w.Header().Add("Link", brack(resource.Base+"/"+SystemPrefix+"/logout")+"; rel=\"https://solid.github.io/vocab/solid-terms.ttl#logoutEndpoint\"")
-		w.Header().Add("Link", brack(resource.Base+"/,query")+"; rel=\"https://solid.github.io/vocab/solid-terms.ttl#twinqlEndpoint\"")
-		w.Header().Add("Link", brack(resource.Base+"/,proxy?uri=")+"; rel=\"https://solid.github.io/vocab/solid-terms.ttl#proxyEndpoint\"")
+		w.Header().Add("Link", brack(resource.Base+"/"+SystemPrefix+"/login")+"; rel=\"http://solid.github.io/vocab/solid-terms.ttl#loginEndpoint\"")
+		w.Header().Add("Link", brack(resource.Base+"/"+SystemPrefix+"/logout")+"; rel=\"http://solid.github.io/vocab/solid-terms.ttl#logoutEndpoint\"")
+		w.Header().Add("Link", brack(resource.Base+"/,query")+"; rel=\"http://solid.github.io/vocab/solid-terms.ttl#twinqlEndpoint\"")
+		w.Header().Add("Link", brack(resource.Base+"/,proxy?uri=")+"; rel=\"http://solid.github.io/vocab/solid-terms.ttl#proxyEndpoint\"")
 
 		return r.respond(200)
 
