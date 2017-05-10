@@ -106,7 +106,9 @@ func passwordAuth(w http.ResponseWriter, req *httpRequest, s *Server) SystemRetu
 	passF := req.FormValue("password")
 
 	if req.Method == "GET" {
-		return SystemReturn{Status: 200, Body: LoginTemplate(redirTo, origin)}
+		// try to guess WebID from account
+		webid = req.getAccountWebID()
+		return SystemReturn{Status: 200, Body: LoginTemplate(redirTo, origin, webid)}
 	}
 
 	if len(webid) == 0 && len(passF) == 0 {
@@ -225,7 +227,7 @@ func sendRecoveryToken(w http.ResponseWriter, req *httpRequest, s *Server) Syste
 	token, err := NewSecureToken("Recovery", values, t, s)
 	if err != nil {
 		s.debug.Println("Could not generate recovery token for " + webid + ", err: " + err.Error())
-		return SystemReturn{Status: 500, Body: "Could not generate recovery token for " + webid + ", err: " + err.Error()}
+		return SystemReturn{Status: 400, Body: "Could not generate recovery token for " + webid + ", err: " + err.Error()}
 	}
 	// create recovery URL
 	IP, _, _ := net.SplitHostPort(req.Request.RemoteAddr)

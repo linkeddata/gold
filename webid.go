@@ -411,6 +411,23 @@ func (req *httpRequest) LinkToWebID(account webidAccount) error {
 	return nil
 }
 
+func (req *httpRequest) getAccountWebID() string {
+	resource, err := req.pathInfo(req.BaseURI())
+	if err == nil {
+		resource, _ = req.pathInfo(resource.Base)
+		g := NewGraph(resource.MetaURI)
+		g.ReadFile(resource.MetaFile)
+		if g.Len() >= 1 {
+			webid := g.One(nil, ns.st.Get("account"), NewResource(resource.MetaURI))
+			if webid != nil {
+				return debrack(webid.Subject.String())
+			}
+		}
+	}
+
+	return ""
+}
+
 // AddWorkspaces creates all the necessary workspaces corresponding to a new account
 func (req *httpRequest) AddWorkspaces(account webidAccount, g *Graph) error {
 	pref := NewGraph(account.PrefURI)

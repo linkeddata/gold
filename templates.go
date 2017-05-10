@@ -142,7 +142,7 @@ func NewPassTemplate(token string, err string) string {
 	return template
 }
 
-func LoginTemplate(redir, origin string) string {
+func LoginTemplate(redir, origin, webid string) string {
 	template := `<!DOCTYPE html>
 <html id="docHTML">
 <body>
@@ -150,11 +150,11 @@ func LoginTemplate(redir, origin string) string {
     <h2>Login</h2>
     WebID:
     <br>
-    <input type="text" name="webid" autocorrect="off">
+    <input type="text" name="webid" value="` + webid + `" autocorrect="off">
     <br>
     Password:
     <br>
-    <input type="password" name="password">
+    <input type="password" name="password" autofocus>
     <br>
     <input type="submit" value="Login">
     </form>
