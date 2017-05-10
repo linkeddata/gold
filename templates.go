@@ -45,7 +45,7 @@ document.addEventListener('DOMContentLoaded', function() {
     <form method="POST">
     What is your WebID?
     <br>
-    <input type="text" name="webid" autocorrect="off">
+    <input type="url" name="webid" autocorrect="off">
     <input type="submit" value="Recover account">
     </form>
 </body>
@@ -60,7 +60,7 @@ document.addEventListener('DOMContentLoaded', function() {
     <h2>Login</h2>
     WebID:
     <br>
-    <input type="text" name="webid" autocorrect="off">
+    <input type="url" name="webid" autocorrect="off">
     <br>
     Password:
     <br>
@@ -150,7 +150,7 @@ func LoginTemplate(redir, origin, webid string) string {
     <h2>Login</h2>
     WebID:
     <br>
-    <input type="text" name="webid" value="` + webid + `" autocorrect="off">
+    <input type="url" name="webid" value="` + webid + `" autocorrect="off">
     <br>
     Password:
     <br>
@@ -167,7 +167,7 @@ func LoginTemplate(redir, origin, webid string) string {
 	return template
 }
 
-func UnauthorizedTemplate(redirTo string) string {
+func UnauthorizedTemplate(redirTo, webid string) string {
 	template := `<!DOCTYPE html>
 <html id="docHTML">
 <head>
@@ -178,11 +178,11 @@ func UnauthorizedTemplate(redirTo string) string {
     <h2>Login</h2>
     WebID:
     <br>
-    <input type="text" name="webid" autocorrect="off">
+    <input type="url" name="webid" value="` + webid + `" autocorrect="off">
     <br>
     Password:
     <br>
-    <input type="password" name="password">
+    <input type="password" name="password" autofocus>
     <br>
     <input type="submit" value="Login">
     </form>

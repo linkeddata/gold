@@ -167,10 +167,16 @@ func passwordAuth(w http.ResponseWriter, req *httpRequest, s *Server) SystemRetu
 }
 
 func loginRedirect(w http.ResponseWriter, req *httpRequest, s *Server, values map[string]string, redirTo string) SystemReturn {
-	key, err := s.newPersistedToken("Authorization", req.Host, values)
-	if err != nil {
-		s.debug.Println("Could not generate authorization token for " + values["webid"] + ", err: " + err.Error())
-		return SystemReturn{Status: 500, Body: "Could not generate auth token for " + values["webid"] + ", err: " + err.Error()}
+	key := ""
+	// try to get existing token
+	key, err := s.getTokenByOrigin("Authorization", req.Host, values["origin"])
+	if err != nil || len(key) == 0 {
+		s.debug.Println("Could not find a token for origin:", values["origin"])
+		key, err = s.newPersistedToken("Authorization", req.Host, values)
+		if err != nil {
+			s.debug.Println("Could not generate authorization token for " + values["webid"] + ", err: " + err.Error())
+			return SystemReturn{Status: 500, Body: "Could not generate auth token for " + values["webid"] + ", err: " + err.Error()}
+		}
 	}
 	s.debug.Println("Generated new token for", values["webid"], "->", key)
 	redirTo += "?webid=" + encodeQuery(values["webid"]) + "&key=" + encodeQuery(key)
@@ -680,7 +686,7 @@ func accountStatus(w http.ResponseWriter, req *httpRequest, s *Server) SystemRet
 
 func accountInfo(w http.ResponseWriter, req *httpRequest, s *Server) SystemReturn {
 	if len(req.User) == 0 {
-		return SystemReturn{Status: 401, Body: "Please log in to view your account information"}
+		return SystemReturn{Status: 401, Body: UnauthorizedTemplate(req.FormValue("redirect"), "")}
 	}
 	if !req.IsOwner {
 		return SystemReturn{Status: 403, Body: "You are not allowed to view this page"}
@@ -745,6 +751,7 @@ func (s *Server) newPersistedToken(tokenType, host string, values map[string]str
 	if len(tokenType) == 0 || len(host) == 0 {
 		return token, errors.New("Can't retrieve token from db. Missing values for token or host.")
 	}
+	// bucket(host) -> bucket(type) -> values
 	err := s.BoltDB.Update(func(tx *bolt.Tx) error {
 		userBucket, err := tx.CreateBucketIfNotExists([]byte(host))
 		if err != nil {
@@ -797,6 +804,39 @@ func (s *Server) getPersistedToken(tokenType, host, token string) (map[string]st
 		return err
 	})
 	return tokenValues, err
+}
+
+func (s *Server) getTokenByOrigin(tokenType, host, origin string) (string, error) {
+	token := ""
+	if len(tokenType) == 0 || len(host) == 0 || len(origin) == 0 {
+		return token, errors.New("Can't retrieve token from db. tokenType, host and token value are requrired.")
+	}
+	s.debug.Println("Checking existing tokens for host:", host, "and origin:", origin)
+	err := s.BoltDB.View(func(tx *bolt.Tx) error {
+		userBucket := tx.Bucket([]byte(host))
+		if userBucket == nil {
+			return errors.New(host + " bucket not found!")
+		}
+		bucket := userBucket.Bucket([]byte(tokenType))
+		if bucket == nil {
+			return errors.New(tokenType + " bucket not found!")
+		}
+
+		// unmarshal
+		c := bucket.Cursor()
+
+		for k, _ := c.First(); k != nil; k, _ = c.Next() {
+			key := string(k)
+			values, err := s.getPersistedToken(tokenType, host, key)
+			if err == nil && values["origin"] == origin {
+				token = key
+				break
+			}
+		}
+
+		return nil
+	})
+	return token, err
 }
 
 func (s *Server) deletePersistedToken(tokenType, host, token string) error {
