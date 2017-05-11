@@ -60,11 +60,11 @@ func HandleSystem(w http.ResponseWriter, req *httpRequest, s *Server) SystemRetu
 	} else if strings.HasSuffix(req.Request.URL.Path, "cert") {
 		return newCert(w, req, s)
 	} else if strings.HasSuffix(req.Request.URL.Path, "login") {
-		return passwordAuth(w, req, s)
+		return logIn(w, req, s)
 	} else if strings.HasSuffix(req.Request.URL.Path, "logout") {
 		return logOut(w, req, s)
-	} else if strings.HasSuffix(req.Request.URL.Path, "info") {
-		return accountInfo(w, req, s)
+	} else if strings.HasSuffix(req.Request.URL.Path, "tokens") {
+		return accountTokens(w, req, s)
 	} else if strings.HasSuffix(req.Request.URL.Path, "recovery") {
 		return accountRecovery(w, req, s)
 	}
@@ -76,7 +76,7 @@ func logOut(w http.ResponseWriter, req *httpRequest, s *Server) SystemReturn {
 	return SystemReturn{Status: 200, Body: "You have been signed out!"}
 }
 
-func passwordAuth(w http.ResponseWriter, req *httpRequest, s *Server) SystemReturn {
+func logIn(w http.ResponseWriter, req *httpRequest, s *Server) SystemReturn {
 	var passL string
 	redirTo := req.FormValue("redirect")
 	origin := req.FormValue("origin")
@@ -684,7 +684,7 @@ func accountStatus(w http.ResponseWriter, req *httpRequest, s *Server) SystemRet
 	return SystemReturn{Status: 200, Body: string(jsonData)}
 }
 
-func accountInfo(w http.ResponseWriter, req *httpRequest, s *Server) SystemReturn {
+func accountTokens(w http.ResponseWriter, req *httpRequest, s *Server) SystemReturn {
 	if len(req.User) == 0 {
 		return SystemReturn{Status: 401, Body: UnauthorizedTemplate(req.FormValue("redirect"), "")}
 	}
@@ -720,7 +720,7 @@ func accountInfo(w http.ResponseWriter, req *httpRequest, s *Server) SystemRetur
 
 	tokensHtml += "</div>"
 
-	return SystemReturn{Status: 200, Body: TokensTemplate(req.User, tokensHtml)}
+	return SystemReturn{Status: 200, Body: TokensTemplate(tokensHtml)}
 }
 
 // DiskUsage returns the total size occupied by dir and contents

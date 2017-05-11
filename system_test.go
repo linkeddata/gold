@@ -419,14 +419,14 @@ func TestAccountRecovery(t *testing.T) {
 	assert.NotNil(t, cookie)
 
 	// Server info without credentials
-	request, err = http.NewRequest("GET", testServer1.URL+"/"+SystemPrefix+"/info", nil)
+	request, err = http.NewRequest("GET", testServer1.URL+"/"+SystemPrefix+"/tokens", nil)
 	assert.NoError(t, err)
 	response, err = httpClient.Do(request)
 	assert.NoError(t, err)
 	assert.Equal(t, 401, response.StatusCode)
 
 	// Server info without credentials
-	request, err = http.NewRequest("GET", testServer1.URL+"/"+SystemPrefix+"/info", nil)
+	request, err = http.NewRequest("GET", testServer1.URL+"/"+SystemPrefix+"/tokens", nil)
 	assert.NoError(t, err)
 	request.Header.Add("Cookie", cookie)
 	response, err = httpClient.Do(request)
