@@ -10,6 +10,7 @@ import (
 	"io/ioutil"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	_path "path"
 	"path/filepath"
@@ -179,9 +180,16 @@ func loginRedirect(w http.ResponseWriter, req *httpRequest, s *Server, values ma
 		}
 	}
 	s.debug.Println("Generated new token for", values["webid"], "->", key)
-	redirTo += "?webid=" + encodeQuery(values["webid"]) + "&key=" + encodeQuery(key)
-	s.debug.Println("Redirecting user to", redirTo)
-	http.Redirect(w, req.Request, redirTo, 301)
+	redir, err := url.Parse(redirTo)
+	if err != nil {
+		return SystemReturn{Status: 400, Body: "Could not parse URL " + redirTo + ". Error: " + err.Error()}
+	}
+	q := redir.Query()
+	q.Set("webid", values["webid"])
+	q.Set("key", key)
+	redir.RawQuery = q.Encode()
+	s.debug.Println("Redirecting user to", redir.String())
+	http.Redirect(w, req.Request, redir.String(), 301)
 	return SystemReturn{Status: 200}
 }
 
