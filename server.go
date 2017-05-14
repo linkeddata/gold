@@ -298,6 +298,12 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 	r = new(response)
 	var err error
 
+	defer func() {
+		if rec := recover(); rec != nil {
+			s.debug.Println("\nRecovered from panic: ", rec)
+		}
+	}()
+
 	s.debug.Println("\n------ New " + req.Method + " request from " + req.RemoteAddr + " ------")
 
 	// CORS
@@ -949,7 +955,7 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 					defer f.Close()
 					_, err = io.Copy(f, buf)
 					if err != nil {
-						s.debug.Println("PUT io.Copy err: " + err.Error())
+						s.debug.Println("POST io.Copy err: " + err.Error())
 					}
 				}
 
