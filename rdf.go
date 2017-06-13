@@ -17,7 +17,7 @@ var (
 		ldp:   NewNS("http://www.w3.org/ns/ldp#"),
 		dct:   NewNS("http://purl.org/dc/terms/"),
 		space: NewNS("http://www.w3.org/ns/pim/space#"),
-		st:    NewNS("http://solid.github.io/vocab/solid-terms.ttl#"),
+		st:    NewNS("http://www.w3.org/ns/solid/terms#"),
 	}
 )
 
