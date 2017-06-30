@@ -9,5 +9,6 @@ RUN \
 EXPOSE 443
 EXPOSE 80
 VOLUME ["/data"]
+ENV TMPDIR="/tmp"
 
-CMD ["server", "-https=:443", "-http=:80", "-root=/data/", "-debug"]
+CMD ["server", "-https=:443", "-http=:80", "-root=/data/", "-boltPath=/tmp/bold.db", "-debug"]
