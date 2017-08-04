@@ -374,7 +374,7 @@ func NewWebIDProfile(account webidAccount) *Graph {
 	g.AddTriple(userTerm, ns.space.Get("preferencesFile"), NewResource(account.PrefURI))
 	g.AddTriple(userTerm, ns.st.Get("privateTypeIndex"), NewResource(account.PrivTypeIndex))
 	g.AddTriple(userTerm, ns.st.Get("publicTypeIndex"), NewResource(account.PubTypeIndex))
-	g.AddTriple(userTerm, ns.st.Get("inbox"), NewResource(account.BaseURI+"/Inbox/"))
+	g.AddTriple(userTerm, ns.ldp.Get("inbox"), NewResource(account.BaseURI+"/Inbox/"))
 	g.AddTriple(userTerm, ns.st.Get("timeline"), NewResource(account.BaseURI+"/Timeline/"))
 
 	// add proxy and query endpoints
