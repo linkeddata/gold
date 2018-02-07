@@ -148,5 +148,11 @@ To run the unit tests (assuming you've installed `assert` via
 make test
 ```
 
+## Notes
+
+* HOWTO : [Get an example X.509 cert](https://gist.github.com/melvincarvalho/e14753a7137d02d756f19299fed292b4)
+* HOWTO : [Login after getting a 401](https://gist.github.com/melvincarvalho/72eaff2fbf1b51a805846320e0bff0cc)
+* HOWTO : [Recover an account](https://gist.github.com/melvincarvalho/bcc04e1529dd3a4509892346109b1d37)
+
 ## License
 [MIT](http://joe.mit-license.org/)
