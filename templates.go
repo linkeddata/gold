@@ -6,19 +6,34 @@ var (
 		"tabulator": `<!DOCTYPE html>
 <html id="docHTML">
 <head>
-    <link type="text/css" rel="stylesheet" href="https://w3.scripts.mit.edu/tabulator/tabbedtab.css" />
-    <script type="text/javascript" src="https://w3.scripts.mit.edu/tabulator/js/mashup/mashlib.js"></script>
-<script>
+    <link type="text/css" rel="stylesheet" href="https://solid.github.io/solid-panes/style/tabbedtab.css" />
+    <script>
+      var $SOLID_GLOBAL_config = {
+        popupUri: window.location.origin + '/common/popup.html'
+      }
+    </script>
+    <script type="text/javascript" src="https://linkeddata.github.io/mashlib/dist/mashlib.min.js"></script>
+    <script>
+      document.addEventListener('DOMContentLoaded', function () {
+        const panes = require('mashlib')
+        const UI = panes.UI
 
-document.addEventListener('DOMContentLoaded', function() {
-    $rdf.Fetcher.crossSiteProxyTemplate = document.origin + '/` + ProxyPath + `?uri={uri}';
-    var uri = window.location.href;
-    window.document.title = uri;
-    var kb = tabulator.kb;
-    var subject = kb.sym(uri);
-    tabulator.outline.GotoSubject(subject, true, undefined, true, undefined);
-});
-</script>
+        // Set up cross-site proxy
+        const $rdf = UI.rdf
+        $rdf.Fetcher.crossSiteProxyTemplate = document.origin + '/xss/?uri={uri}'
+
+        // Authenticate the user
+        UI.authn.checkUser()
+          .then(function () {
+            // Set up the view for the current subject
+            const kb = UI.store
+            const uri = window.location.href
+            const subject = kb.sym(uri)
+            const outliner = panes.getOutliner(document)
+            outliner.GotoSubject(subject, true, undefined, true, undefined)
+          })
+      })
+    </script>
 </head>
 <body>
 <div class="TabulatorOutline" id="DummyUUID">
