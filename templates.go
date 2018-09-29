@@ -3,44 +3,6 @@ package gold
 var (
 	// Apps contains a list of default apps that get server instead of RDF
 	Apps = map[string]string{
-		"tabulator": `<!DOCTYPE html>
-<html id="docHTML">
-<head>
-    <link type="text/css" rel="stylesheet" href="https://solid.github.io/solid-panes/style/tabbedtab.css" />
-    <script>
-      var $SOLID_GLOBAL_config = {
-        popupUri: window.location.origin + '/common/popup.html'
-      }
-    </script>
-    <script type="text/javascript" src="https://linkeddata.github.io/mashlib/dist/mashlib.min.js"></script>
-    <script>
-      document.addEventListener('DOMContentLoaded', function () {
-        const panes = require('mashlib')
-        const UI = panes.UI
-
-        // Set up cross-site proxy
-        const $rdf = UI.rdf
-        $rdf.Fetcher.crossSiteProxyTemplate = document.origin + '/xss/?uri={uri}'
-
-        // Authenticate the user
-        UI.authn.checkUser()
-          .then(function () {
-            // Set up the view for the current subject
-            const kb = UI.store
-            const uri = window.location.href
-            const subject = kb.sym(uri)
-            const outliner = panes.getOutliner(document)
-            outliner.GotoSubject(subject, true, undefined, true, undefined)
-          })
-      })
-    </script>
-</head>
-<body>
-<div class="TabulatorOutline" id="DummyUUID">
-    <table id="outline"></table>
-</div>
-</body>
-</html>`,
 		"newCert": `<!DOCTYPE html>
 <html id="docHTML">
 <body>
@@ -95,14 +57,6 @@ var (
 <body>
     <h1>403 - oh noes, access denied!</h1>
     <h2>Please visit the <a href="/` + SystemPrefix + `/accountRecovery">recovery page</a> in case you have lost access to your credentials.</h2>
-</body>
-</html>`,
-		"404": `<!DOCTYPE html>
-<html id="docHTML">
-<head>
-</head>
-<body>
-    <h1>404 - oh noes, there's nothing here</h1>
 </body>
 </html>`,
 	}

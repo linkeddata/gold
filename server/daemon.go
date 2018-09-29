@@ -165,6 +165,15 @@ func main() {
 		return
 	}
 
+	// Serve files from /statics/
+	if os.Getenv("SERVE_STATIC_FILES") == "true" {
+		fs := http.FileServer(http.Dir("statics"))
+		http.Handle("/statics/", http.StripPrefix("/statics/", fs))
+	}
+
+	// Main handler
+	http.Handle("/", handler)
+	
 	if config.Insecure {
 		err = http.ListenAndServe(config.ListenHTTP, handler)
 		if err != nil {
@@ -183,11 +192,12 @@ func main() {
 	}
 
 	var (
-		srv  = &http.Server{Addr: config.ListenHTTPS, Handler: handler}
+		srv  = &http.Server{Addr: config.ListenHTTPS}
 		tcpL net.Listener
 		tlsL net.Listener
 	)
 
+	
 	tlsConfig := NewTLSConfig(config.WebIDTLS)
 
 	tlsConfig.Certificates = make([]tls.Certificate, 1)

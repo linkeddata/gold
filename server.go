@@ -19,6 +19,9 @@ import (
 	"github.com/boltdb/bolt"
 	"github.com/gorilla/securecookie"
 	"golang.org/x/net/webdav"
+
+	"github.com/linkeddata/gold/pkg/apps"
+//	"github.com/linkeddata/gold/pkg/routes"
 )
 
 const (
@@ -195,6 +198,14 @@ func (r *response) respond(status int, a ...interface{}) *response {
 	return r
 }
 
+func (r *response) respondNotFound() *response {
+	page404, err := apps.NotFound()
+	if err != nil {
+		return r.respond(500, err)
+	}
+	return r.respond(404, page404)
+}
+
 // ServeHTTP handles the response
 func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	// add HSTS
@@ -315,7 +326,7 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 	w.Header().Set("MS-Author-Via", "DAV, SPARQL")
 	w.Header().Set("Updates-Via", "wss://"+req.Host+"/")
 
-	// Get request key
+ 	// Get request key
 	rKey := req.Request.FormValue("key")
 
 	// Authentication
@@ -455,7 +466,7 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 		}
 
 		if !resource.Exists {
-			return r.respond(404, Apps["404"])
+			return r.respondNotFound()
 		}
 
 		// First redirect to path + trailing slash if it's missing
@@ -699,7 +710,12 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 				w.Header().Set("Link", brack(resource.MetaURI)+"; rel=\"meta\", "+brack(resource.AclURI)+"; rel=\"acl\"")
 				if maybeRDF {
 					w.Header().Set(HCType, contentType)
-					return r.respond(200, Apps[s.Config.DataApp])
+					s.debug.Println("Rendering data app")
+					app, err := apps.DataApp()
+					if err != nil {
+						return r.respond(500, "")
+					}
+					return r.respond(200, app)
 				}
 				w.Header().Set(HCType, magicType)
 				w.WriteHeader(200)
@@ -1193,7 +1209,7 @@ func (s *Server) handle(w http.ResponseWriter, req *httpRequest) (r *response) {
 		err = os.Remove(resource.File)
 		if err != nil {
 			if os.IsNotExist(err) {
-				return r.respond(404, Apps["404"])
+				return r.respondNotFound()
 			}
 			return r.respond(500, err)
 		}
