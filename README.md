@@ -15,54 +15,69 @@ Written in Go, based on
 
 ### From docker repository:
 
-    sudo docker pull linkeddata/gold
-
-    sudo docker run -p ip:port:443 linkeddata/gold
-
+```
+sudo docker pull linkeddata/gold
+sudo docker run -p ip:port:443 linkeddata/gold
+```
 Replace `ip` and `port` with your host computer's IP address and port number.
 
 To check the status of the container, type:
 
-    sudo docker ps
+```
+sudo docker ps
+```
 
 `IMPORTANT`: if you want to mount a host directory into the container, you can use the -v parameter:
 
-    sudo docker run -p ip:port:443 -v /home/user/data:/data linkeddata/gold
+```
+sudo docker run -p ip:port:443 -v /home/user/data:/data linkeddata/gold
+```
 
 This will mount the host directory, `/home/user/data`, into the container as the `/data/` directory. Doing this will allow you to reuse the data directory without worrying about persistence inside the container.
 
 ### From Github:
 
-1. Setup Go + dependencies:
+1. Setup Go:
 
-  * **Mac OS X**: `brew install go raptor libmagic`
-  * **Ubuntu**: `sudo apt-get install golang-go libraptor2-dev libmagic-dev`
+    * **Mac OS X**: `brew install go`
+    * **Ubuntu**: `sudo apt-get install golang-go`
+    * **Fedora**: `sudo dnf install golang`
 
-2. Set the `GOPATH` variable (required by Go):
+1. Set the `GOPATH` variable (required by Go):
 
-  ```bash
-  mkdir ~/go
-  export GOPATH=~/go
-  ```
+      ```bash
+      mkdir ~/go
+      export GOPATH=~/go
+      ```
+    
+      (Optionally consider adding `export GOPATH=~/go` to your `.bashrc` or profile).
 
-  (Optionally consider adding `export GOPATH=~/go` to your `.bashrc` or profile).
+1. Check that you have the required Go version (**Go 1.4 or later**):
 
-3. Check that you have the required Go version (**Go 1.4 or later**):
+      ```
+      go version
+      ```
+    
+      If you don't, please [install](http://golang.org/doc/install) a more recent
+      version.
 
-  ```
-  go version
-  ```
+1. Use the `go get` command to install the server and all the dependencies:
 
-  If you don't, please [install](http://golang.org/doc/install) a more recent
-  version.
-
-4. Use the `go get` command to install the server and all the dependencies:
-
+    ```
     go get github.com/linkeddata/gold/server
+    ```
+    
+1. Install dependencies:
+    * **Mac OS X**: `brew install raptor libmagic`
+    * **Ubuntu**: `sudo apt-get install libraptor2-dev libmagic-dev`
+    * **Fedora**: `sudo dnf install raptor2-devel file-devel`
+  
 
-5. (Optional) Install extra dependencies used by the tests:
+1. (Optional) Install extra dependencies used by the tests:
 
+    ```
     go get github.com/stretchr/testify/assert
+    ```
 
 ## Running the Server
 
@@ -80,28 +95,28 @@ Something like: `-root=/var/www/data/` or `-root=~/data/`.
 
 1. If you installed it from package via `go get`, you can run it by:
 
-  ```
-  $GOPATH/bin/server -http=":8080" -https=":8443" -debug
-  ```
+    ```
+    $GOPATH/bin/server -http=":8080" -https=":8443" -debug
+    ```
 
-2. When developing locally, you can `cd` into the repo cloned by `go get`:
-
-  ```
-  cd $GOPATH/src/github.com/linkeddata/gold
-  ```
-
-  And launch the server by:
-
-  ```
-  go run server/*.go -http=":8080" -https=":8443" -debug -boltPath=/tmp/bold.db
-  ```
-
-  Alternatively, you can compile and run it from the source dir in one command:
-
-  ```
-  go run $GOPATH/src/github.com/linkeddata/gold/server/*.go -http=":8080" -https=":8443" \
+1. When developing locally, you can `cd` into the repo cloned by `go get`:
+    
+    ```
+    cd $GOPATH/src/github.com/linkeddata/gold
+    ```
+    
+    And launch the server by:
+    
+    ```
+    go run server/*.go -http=":8080" -https=":8443" -debug -boltPath=/tmp/bold.db
+    ```
+    
+    Alternatively, you can compile and run it from the source dir in one command:
+    
+    ```
+    go run $GOPATH/src/github.com/linkeddata/gold/server/*.go -http=":8080" -https=":8443" \
     -root=/home/user/data/ -debug -boltPath=/tmp/bold.db
-  ```
+    ```
 
 ## Configuration
 
