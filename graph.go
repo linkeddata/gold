@@ -54,11 +54,11 @@ func NewGraph(uri string) *Graph {
 	if uri[:5] != "http:" && uri[:6] != "https:" {
 		panic(uri)
 	}
+
 	return &Graph{
 		triples: make(map[*Triple]bool),
-
-		uri:  uri,
-		term: NewResource(uri),
+		uri:     uri,
+		term:    NewResource(uri),
 	}
 }
 
@@ -107,40 +107,25 @@ func jterm2term(term jsonld.Term) Term {
 	return nil
 }
 
+func skipOnNilEqual(c *Triple, t Term, part string) bool {
+	if t == nil {
+		return true
+	}
+
+	switch part {
+	case "subject":
+		return c.Subject.Equal(t)
+	case "predicate":
+		return c.Predicate.Equal(t)
+	default:
+		return c.Object.Equal(t)
+	}
+}
+
 // One returns one triple based on a triple pattern of S, P, O objects
 func (g *Graph) One(s Term, p Term, o Term) *Triple {
 	for triple := range g.IterTriples() {
-		if s != nil {
-			if p != nil {
-				if o != nil {
-					if triple.Subject.Equal(s) && triple.Predicate.Equal(p) && triple.Object.Equal(o) {
-						return triple
-					}
-				} else {
-					if triple.Subject.Equal(s) && triple.Predicate.Equal(p) {
-						return triple
-					}
-				}
-			} else {
-				if triple.Subject.Equal(s) {
-					return triple
-				}
-			}
-		} else if p != nil {
-			if o != nil {
-				if triple.Predicate.Equal(p) && triple.Object.Equal(o) {
-					return triple
-				}
-			} else {
-				if triple.Predicate.Equal(p) {
-					return triple
-				}
-			}
-		} else if o != nil {
-			if triple.Object.Equal(o) {
-				return triple
-			}
-		} else {
+		if skipOnNilEqual(triple, s, "subject") && skipOnNilEqual(triple, p, "predicate") && skipOnNilEqual(triple, o, "object") {
 			return triple
 		}
 	}
@@ -178,36 +163,12 @@ func (g *Graph) Remove(t *Triple) {
 func (g *Graph) All(s Term, p Term, o Term) []*Triple {
 	var triples []*Triple
 	for triple := range g.IterTriples() {
-		if s != nil {
-			if p != nil {
-				if o != nil {
-					if triple.Subject.Equal(s) && triple.Predicate.Equal(p) && triple.Object.Equal(o) {
-						triples = append(triples, triple)
-					}
-				} else {
-					if triple.Subject.Equal(s) && triple.Predicate.Equal(p) {
-						triples = append(triples, triple)
-					}
-				}
-			} else {
-				if triple.Subject.Equal(s) {
-					triples = append(triples, triple)
-				}
-			}
-		} else if p != nil {
-			if o != nil {
-				if triple.Predicate.Equal(p) && triple.Object.Equal(o) {
-					triples = append(triples, triple)
-				}
-			} else {
-				if triple.Predicate.Equal(p) {
-					triples = append(triples, triple)
-				}
-			}
-		} else if o != nil {
-			if triple.Object.Equal(o) {
-				triples = append(triples, triple)
-			}
+		if s == nil && p == nil && o == nil {
+			continue
+		}
+
+		if skipOnNilEqual(triple, s, "subject") && skipOnNilEqual(triple, p, "predicate") && skipOnNilEqual(triple, o, "object") {
+			triples = append(triples, triple)
 		}
 	}
 	return triples
@@ -243,17 +204,17 @@ func (g *Graph) Parse(reader io.Reader, mime string) {
 		for t := range dataSet.IterTriples() {
 			g.AddTriple(jterm2term(t.Subject), jterm2term(t.Predicate), jterm2term(t.Object))
 		}
+		return
+	}
 
-	} else {
-		parser := crdf.NewParser(parserName)
-		parser.SetLogHandler(func(level int, message string) {
-			log.Println(message)
-		})
-		defer parser.Free()
-		out := parser.Parse(reader, g.uri)
-		for s := range out {
-			g.AddStatement(s)
-		}
+	parser := crdf.NewParser(parserName)
+	parser.SetLogHandler(func(level int, message string) {
+		log.Println(message)
+	})
+	defer parser.Free()
+
+	for s := range parser.Parse(reader, g.uri) {
+		g.AddStatement(s)
 	}
 }
 
@@ -279,9 +240,11 @@ func (g *Graph) ReadFile(filename string) {
 	stat, err := os.Stat(filename)
 	if os.IsNotExist(err) {
 		return
-	} else if stat.IsDir() {
+	}
+	if stat.IsDir() {
 		return
-	} else if !stat.IsDir() && err != nil {
+	}
+	if !stat.IsDir() && err != nil {
 		log.Println(err)
 		return
 	}
