@@ -107,26 +107,10 @@ func jterm2term(term jsonld.Term) Term {
 	return nil
 }
 
-// helper function returns true if term is nil, otherwise checks with triple
-func skipOnNilEqual(c *Triple, t Term, part string) bool {
-	if t == nil {
-		return true
-	}
-
-	switch part {
-	case "subject":
-		return c.Subject.Equal(t)
-	case "predicate":
-		return c.Predicate.Equal(t)
-	default:
-		return c.Object.Equal(t)
-	}
-}
-
 // One returns one triple based on a triple pattern of S, P, O objects
 func (g *Graph) One(s Term, p Term, o Term) *Triple {
 	for triple := range g.IterTriples() {
-		if skipOnNilEqual(triple, s, "subject") && skipOnNilEqual(triple, p, "predicate") && skipOnNilEqual(triple, o, "object") {
+		if isNilOrEquals(s, triple.Subject) && isNilOrEquals(p, triple.Predicate) && isNilOrEquals(o, triple.Object) {
 			return triple
 		}
 	}
@@ -168,7 +152,7 @@ func (g *Graph) All(s Term, p Term, o Term) []*Triple {
 			continue
 		}
 
-		if skipOnNilEqual(triple, s, "subject") && skipOnNilEqual(triple, p, "predicate") && skipOnNilEqual(triple, o, "object") {
+		if isNilOrEquals(s, triple.Subject) && isNilOrEquals(p, triple.Predicate) && isNilOrEquals(o, triple.Object) {
 			triples = append(triples, triple)
 		}
 	}
@@ -453,4 +437,13 @@ func (g *Graph) JSONPatch(r io.Reader) error {
 		}
 	}
 	return nil
+}
+
+// isNilOrEquals is a helper function returns true if first term is nil, otherwise checks equality
+func isNilOrEquals(t1 Term, t2 Term) bool {
+	if t1 == nil {
+		return true
+	}
+
+	return t2.Equal(t1)
 }

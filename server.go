@@ -45,8 +45,6 @@ var (
 	debugFlags  = log.Flags() | log.Lshortfile
 	debugPrefix = "[debug] "
 
-	// magic *magicmime.Magic
-
 	methodsAll = []string{
 		"OPTIONS", "HEAD", "GET",
 		"PATCH", "POST", "PUT", "MKCOL", "DELETE",

@@ -2,11 +2,13 @@ package gold
 
 import (
 	"errors"
-	crdf "github.com/presbrey/goraptor"
+	"fmt"
 	"mime"
 	"path/filepath"
 
-	"github.com/rakyll/magicmime"
+	"github.com/gabriel-vasile/mimetype"
+	crdf "github.com/presbrey/goraptor"
+
 	"regexp"
 	"sync"
 )
@@ -76,25 +78,21 @@ func init() {
 		}
 		serializerMimes = append(serializerMimes, mime)
 	}
-
-	magicmime.Open(magicmime.MAGIC_MIME_TYPE)
 }
 
-func GuessMimeType(path string) (mimeType string, err error) {
-	// Get the mime type of the file. In some cases, MagicMime
-	// returns an empty string, and in rare cases (about 1 in 10000),
-	// it returns unprintable characters. These are not valid mime
-	// types and cause ingest to fail. So we default to the safe
-	// text/plain and then set the MimeType only if
-	// MagicMime returned something that looks legit.
-	// Open the Mime Magic DB only once.
-	mimeType = "text/plain"
-	mutex.Lock()
-	guessedType, _ := magicmime.TypeByFile(path)
-	mutex.Unlock()
+func GuessMimeType(path string) (string, error) {
+	mimeType := "text/plain"
+
+	guessedType, _, err := mimetype.DetectFile(path)
+	if err != nil {
+		fmt.Printf("Unknown mimeType from file: %s ==> %s", path, err)
+		return mimeType, err
+	}
+
 	if guessedType != "" && validMimeType.MatchString(guessedType) {
 		mimeType = guessedType
 	}
+
 	return mimeType, nil
 }
 
