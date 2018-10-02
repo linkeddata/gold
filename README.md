@@ -93,14 +93,14 @@ Something like: `-root=/var/www/data/` or `-root=~/data/`.
   And launch the server by:
 
   ```
-  go run server/*.go -http=":8080" -https=":8443" -debug -boltPath=/tmp/bold.db
+  go run server/*.go -http=":8080" -https=":8443" -debug -boltPath=/tmp/bolt.db
   ```
 
   Alternatively, you can compile and run it from the source dir in one command:
 
   ```
   go run $GOPATH/src/github.com/linkeddata/gold/server/*.go -http=":8080" -https=":8443" \
-    -root=/home/user/data/ -debug -boltPath=/tmp/bold.db
+    -root=/home/user/data/ -debug -boltPath=/tmp/bolt.db
   ```
 
 ## Configuration
