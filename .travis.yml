@@ -2,7 +2,6 @@ language: go
 
 go:
 - 1.10.x
-- tip
 
 before_install:
 - sudo apt-get update -qq
@@ -11,7 +10,7 @@ before_install:
 - dep ensure
 
 script:
-- make test
+- go test ./...
 
 notifications:
   webhooks:
