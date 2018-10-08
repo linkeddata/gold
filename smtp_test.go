@@ -192,14 +192,14 @@ func TestFakeSMTPDial(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func TestFakeSMTPSecureDial(t *testing.T) {
-	t.Parallel()
-	// give the server some time to start
-	time.Sleep(200 * time.Millisecond)
-	tlsconfig := &tls.Config{
-		InsecureSkipVerify: true,
-		ServerName:         "localhost",
-	}
-	_, err := tls.Dial("tcp", "localhost:3030", tlsconfig)
-	assert.NoError(t, err)
-}
+//func TestFakeSMTPSecureDial(t *testing.T) {
+//	t.Parallel()
+//	// give the server some time to start
+//	time.Sleep(200 * time.Millisecond)
+//	tlsconfig := &tls.Config{
+//		InsecureSkipVerify: true,
+//		ServerName:         "localhost",
+//	}
+//	_, err := tls.Dial("tcp", "localhost:3030", tlsconfig)
+//	assert.NoError(t, err)
+//}
