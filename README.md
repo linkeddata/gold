@@ -95,28 +95,29 @@ Something like: `-root=/var/www/data/` or `-root=~/data/`.
 
 1. If you installed it from package via `go get`, you can run it by:
 
-    ```
-    $GOPATH/bin/server -http=":8080" -https=":8443" -debug
-    ```
+  ```
+  $GOPATH/bin/server -http=":8080" -https=":8443" -debug
+  ```
 
-1. When developing locally, you can `cd` into the repo cloned by `go get`:
-    
-    ```
-    cd $GOPATH/src/github.com/linkeddata/gold
-    ```
-    
-    And launch the server by:
-    
-    ```
-    go run server/*.go -http=":8080" -https=":8443" -debug -boltPath=/tmp/bold.db
-    ```
-    
-    Alternatively, you can compile and run it from the source dir in one command:
-    
-    ```
-    go run $GOPATH/src/github.com/linkeddata/gold/server/*.go -http=":8080" -https=":8443" \
-    -root=/home/user/data/ -debug -boltPath=/tmp/bold.db
-    ```
+2. When developing locally, you can `cd` into the repo cloned by `go get`:
+
+  ```
+  cd $GOPATH/src/github.com/linkeddata/gold
+  ```
+
+  And launch the server by:
+
+  ```
+  go run server/*.go -http=":8080" -https=":8443" -debug -boltPath=/tmp/bolt.db
+  ```
+
+  Alternatively, you can compile and run it from the source dir in one command:
+
+  ```
+  go run $GOPATH/src/github.com/linkeddata/gold/server/*.go -http=":8080" -https=":8443" \
+    -root=/home/user/data/ -debug -boltPath=/tmp/bolt.db
+  ```
+
 
 ## Configuration
 

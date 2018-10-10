@@ -31,7 +31,7 @@ var (
 	tlsCert = flag.String("tlsCertFile", "", "TLS certificate eg. cert.pem")
 	tlsKey  = flag.String("tlsKeyFile", "", "TLS certificate eg. key.pem")
 	vhosts  = flag.Bool("vhosts", false, "run in virtual hosts mode?")
-	bolt    = flag.String("boltPath", "", "path to the location of the Bolt db file (uses /tmp/bold.db by default)")
+	bolt    = flag.String("boltPath", "", "path to the location of the Bolt db file (uses /tmp/bolt.db by default)")
 
 	metaSuffix = flag.String("metaSuffix", ",meta", "default suffix for meta files")
 	aclSuffix  = flag.String("aclSuffix", ",acl", "default suffix for ACL files")
