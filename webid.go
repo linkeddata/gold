@@ -491,15 +491,15 @@ func (req *httpRequest) AddWorkspaces(account webidAccount, g *Graph) error {
 		}
 
 		// Append workspace URL to the preferencesFile
-		if ws.Name != "Inbox" || ws.Name != "Timeline" {
-			pref.AddTriple(wsTerm, ns.rdf.Get("type"), ns.space.Get("Workspace"))
-			if len(ws.Type) > 0 {
-				pref.AddTriple(wsTerm, ns.rdf.Get("type"), ns.space.Get(ws.Type))
-			}
-			pref.AddTriple(wsTerm, ns.dct.Get("title"), NewLiteral(ws.Label))
-
-			pref.AddTriple(NewResource(account.WebID), ns.space.Get("workspace"), wsTerm)
+		//if ws.Name != "Inbox" || ws.Name != "Timeline" { <- this assertion is always true ...
+		pref.AddTriple(wsTerm, ns.rdf.Get("type"), ns.space.Get("Workspace"))
+		if len(ws.Type) > 0 {
+			pref.AddTriple(wsTerm, ns.rdf.Get("type"), ns.space.Get(ws.Type))
 		}
+		pref.AddTriple(wsTerm, ns.dct.Get("title"), NewLiteral(ws.Label))
+
+		pref.AddTriple(NewResource(account.WebID), ns.space.Get("workspace"), wsTerm)
+		//}
 	}
 
 	resource, _ := req.pathInfo(account.PrefURI)

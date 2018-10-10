@@ -86,9 +86,9 @@ func TestGraphAll(t *testing.T) {
 	g.AddTriple(NewResource("g"), NewResource("b2"), NewResource("e"))
 	g.AddTriple(NewResource("g"), NewResource("b2"), NewResource("c"))
 
-	assert.Equal(t, len(g.All(nil, nil, nil)), 0)
-	assert.Equal(t, len(g.All(NewResource("a"), nil, nil)), 3)
-	assert.Equal(t, len(g.All(nil, NewResource("b"), nil)), 2)
-	assert.Equal(t, len(g.All(nil, nil, NewResource("d"))), 1)
-	assert.Equal(t, len(g.All(nil, nil, NewResource("c"))), 2)
+	assert.Equal(t, 0, len(g.All(nil, nil, nil)))
+	assert.Equal(t, 3, len(g.All(NewResource("a"), nil, nil)))
+	assert.Equal(t, 2, len(g.All(nil, NewResource("b"), nil)))
+	assert.Equal(t, 1, len(g.All(nil, nil, NewResource("d"))))
+	assert.Equal(t, 2, len(g.All(nil, nil, NewResource("c"))))
 }

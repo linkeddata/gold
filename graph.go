@@ -54,11 +54,11 @@ func NewGraph(uri string) *Graph {
 	if uri[:5] != "http:" && uri[:6] != "https:" {
 		panic(uri)
 	}
+
 	return &Graph{
 		triples: make(map[*Triple]bool),
-
-		uri:  uri,
-		term: NewResource(uri),
+		uri:     uri,
+		term:    NewResource(uri),
 	}
 }
 
@@ -110,37 +110,7 @@ func jterm2term(term jsonld.Term) Term {
 // One returns one triple based on a triple pattern of S, P, O objects
 func (g *Graph) One(s Term, p Term, o Term) *Triple {
 	for triple := range g.IterTriples() {
-		if s != nil {
-			if p != nil {
-				if o != nil {
-					if triple.Subject.Equal(s) && triple.Predicate.Equal(p) && triple.Object.Equal(o) {
-						return triple
-					}
-				} else {
-					if triple.Subject.Equal(s) && triple.Predicate.Equal(p) {
-						return triple
-					}
-				}
-			} else {
-				if triple.Subject.Equal(s) {
-					return triple
-				}
-			}
-		} else if p != nil {
-			if o != nil {
-				if triple.Predicate.Equal(p) && triple.Object.Equal(o) {
-					return triple
-				}
-			} else {
-				if triple.Predicate.Equal(p) {
-					return triple
-				}
-			}
-		} else if o != nil {
-			if triple.Object.Equal(o) {
-				return triple
-			}
-		} else {
+		if isNilOrEquals(s, triple.Subject) && isNilOrEquals(p, triple.Predicate) && isNilOrEquals(o, triple.Object) {
 			return triple
 		}
 	}
@@ -178,36 +148,12 @@ func (g *Graph) Remove(t *Triple) {
 func (g *Graph) All(s Term, p Term, o Term) []*Triple {
 	var triples []*Triple
 	for triple := range g.IterTriples() {
-		if s != nil {
-			if p != nil {
-				if o != nil {
-					if triple.Subject.Equal(s) && triple.Predicate.Equal(p) && triple.Object.Equal(o) {
-						triples = append(triples, triple)
-					}
-				} else {
-					if triple.Subject.Equal(s) && triple.Predicate.Equal(p) {
-						triples = append(triples, triple)
-					}
-				}
-			} else {
-				if triple.Subject.Equal(s) {
-					triples = append(triples, triple)
-				}
-			}
-		} else if p != nil {
-			if o != nil {
-				if triple.Predicate.Equal(p) && triple.Object.Equal(o) {
-					triples = append(triples, triple)
-				}
-			} else {
-				if triple.Predicate.Equal(p) {
-					triples = append(triples, triple)
-				}
-			}
-		} else if o != nil {
-			if triple.Object.Equal(o) {
-				triples = append(triples, triple)
-			}
+		if s == nil && p == nil && o == nil {
+			continue
+		}
+
+		if isNilOrEquals(s, triple.Subject) && isNilOrEquals(p, triple.Predicate) && isNilOrEquals(o, triple.Object) {
+			triples = append(triples, triple)
 		}
 	}
 	return triples
@@ -215,11 +161,7 @@ func (g *Graph) All(s Term, p Term, o Term) []*Triple {
 
 // AddStatement adds a Statement object
 func (g *Graph) AddStatement(st *crdf.Statement) {
-	s, p, o := term2term(st.Subject), term2term(st.Predicate), term2term(st.Object)
-	for range g.All(s, p, o) {
-		return
-	}
-	g.AddTriple(s, p, o)
+	g.AddTriple(term2term(st.Subject), term2term(st.Predicate), term2term(st.Object))
 }
 
 // Parse is used to parse RDF data from a reader, using the provided mime type
@@ -228,10 +170,20 @@ func (g *Graph) Parse(reader io.Reader, mime string) {
 	if len(parserName) == 0 {
 		parserName = "guess"
 	}
+
 	if parserName == "jsonld" {
 		buf := new(bytes.Buffer)
-		buf.ReadFrom(reader)
+		if _, err := buf.ReadFrom(reader); err != nil {
+			log.Println(err)
+			return
+		}
+
 		jsonData, err := jsonld.ReadJSON(buf.Bytes())
+		if err != nil {
+			log.Println(err)
+			return
+		}
+
 		options := &jsonld.Options{}
 		options.Base = ""
 		options.ProduceGeneralizedRdf = false
@@ -240,20 +192,22 @@ func (g *Graph) Parse(reader io.Reader, mime string) {
 			log.Println(err)
 			return
 		}
+
 		for t := range dataSet.IterTriples() {
 			g.AddTriple(jterm2term(t.Subject), jterm2term(t.Predicate), jterm2term(t.Object))
 		}
 
-	} else {
-		parser := crdf.NewParser(parserName)
-		parser.SetLogHandler(func(level int, message string) {
-			log.Println(message)
-		})
-		defer parser.Free()
-		out := parser.Parse(reader, g.uri)
-		for s := range out {
-			g.AddStatement(s)
-		}
+		return
+	}
+
+	parser := crdf.NewParser(parserName)
+	parser.SetLogHandler(func(level int, message string) {
+		log.Println(message)
+	})
+	defer parser.Free()
+
+	for s := range parser.Parse(reader, g.uri) {
+		g.AddStatement(s)
 	}
 }
 
@@ -279,9 +233,11 @@ func (g *Graph) ReadFile(filename string) {
 	stat, err := os.Stat(filename)
 	if os.IsNotExist(err) {
 		return
-	} else if stat.IsDir() {
+	}
+	if stat.IsDir() {
 		return
-	} else if !stat.IsDir() && err != nil {
+	}
+	if !stat.IsDir() && err != nil {
 		log.Println(err)
 		return
 	}
@@ -481,4 +437,13 @@ func (g *Graph) JSONPatch(r io.Reader) error {
 		}
 	}
 	return nil
+}
+
+// isNilOrEquals is a helper function returns true if first term is nil, otherwise checks equality
+func isNilOrEquals(t1 Term, t2 Term) bool {
+	if t1 == nil {
+		return true
+	}
+
+	return t2.Equal(t1)
 }
