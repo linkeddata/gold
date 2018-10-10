@@ -1,9 +1,16 @@
 language: go
-go: 1.5.1
-install: go get -t -v ./...
+
+go:
+- 1.10.x
+
 before_install:
- - sudo apt-get update -qq
- - sudo apt-get install -qq libraptor2-dev libmagic-dev
+- sudo apt-get update -qq
+- sudo apt-get install -qq libraptor2-dev libmagic-dev
+- go get -u github.com/golang/dep/...
+- dep ensure
+
+script:
+- go test ./...
 
 notifications:
   webhooks:
